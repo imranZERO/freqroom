@@ -48,12 +48,17 @@ export function HowItWorksModal({ isOpen, onClose }) {
 
         <div className="info-modal-body">
 
+          <div className="info-warning">
+            <strong>Volume warning</strong> — EQ boosts can be significantly louder than the flat reference.
+            Set your volume to a comfortable level before starting, and avoid listening at high volumes for extended periods.
+          </div>
+
           <div className="info-section">
             <h3>1 · Choose a source</h3>
             <p>
               Pick <strong>Pink Noise</strong> to start — its equal energy per octave makes every
-              frequency band equally audible, which is ideal for ear training. <strong>White Noise</strong>
-              has a brighter, high-frequency bias. <strong>Upload your own audio</strong> (MP3, WAV, FLAC)
+              frequency band equally audible, which is ideal for ear training. <strong>White Noise</strong>{' '}
+              has a brighter, high-frequency bias. <strong>Upload your own audio</strong> (MP3, WAV, FLAC, OGG)
               once you want to practice on real music — that's where the training counts.
             </p>
           </div>
@@ -87,7 +92,7 @@ export function HowItWorksModal({ isOpen, onClose }) {
           <div className="info-section">
             <h3>4 · Adaptive difficulty (levels 2–15)</h3>
             <p>
-              Your level is the number of candidate frequency bands shown each trial. At <strong>level 2</strong>
+              Your level is the number of candidate frequency bands shown per trial. At <strong>level 2</strong>
               you're choosing between two widely-spaced frequencies. At <strong>level 15</strong> you're
               distinguishing 15 bands spread logarithmically across 20Hz–20kHz — a serious challenge even
               for experienced engineers.

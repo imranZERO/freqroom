@@ -366,6 +366,16 @@ body {
   max-height: 70vh;
   overflow-y: auto;
 }
+.info-warning {
+  background: color-mix(in srgb, var(--a) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--a) 40%, transparent);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--text);
+}
+.info-warning strong { color: var(--a); }
 .info-section h3 {
   font-size: 0.7rem;
   font-weight: 700;
