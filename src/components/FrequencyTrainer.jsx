@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const FREQ_MIN = 20;
 const FREQ_MAX = 20000;
@@ -52,13 +52,27 @@ function gainForMode(mode) {
   return Math.random() < 0.5 ? GAIN_DB : -GAIN_DB;
 }
 
-export function FrequencyTrainer({ engine, onScore }) {
+export function FrequencyTrainer({ engine, onScore, onEqChange }) {
   const [testMode, setTestMode] = useState(null);
   const [level, setLevel] = useState(2);
   const [correctStreak, setCorrectStreak] = useState(0);
   const [wrongStreak, setWrongStreak] = useState(0);
   const [trial, setTrial] = useState(null);
   const [playMode, setPlayMode] = useState(null);
+
+  useEffect(() => {
+    if (trial) {
+      const gains = testMode === 'both' ? [GAIN_DB, -GAIN_DB] : [trial.activeGain];
+      onEqChange?.({
+        bands: trial.shownBands,
+        gains,
+        gainDb: trial.activeGain,
+        centerFreq: trial.answered ? trial.activeBand : null,
+      });
+    } else {
+      onEqChange?.(null);
+    }
+  }, [trial, testMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function selectMode(mode) {
     engine.stop();

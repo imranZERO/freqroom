@@ -4,6 +4,7 @@ import { TrackSelector } from './components/TrackSelector.jsx';
 import { FrequencyTrainer } from './components/FrequencyTrainer.jsx';
 import { ScoreBoard } from './components/ScoreBoard.jsx';
 import { HowItWorksModal, InfoIcon } from './components/HowItWorksModal.jsx';
+import { FreqGraph } from './components/FreqGraph.jsx';
 
 function SunIcon() {
   return (
@@ -32,6 +33,7 @@ export default function App() {
     () => window.matchMedia('(prefers-color-scheme: dark)').matches
   );
   const [showInfo, setShowInfo] = useState(false);
+  const [activeEq, setActiveEq] = useState(null);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
@@ -68,7 +70,16 @@ export default function App() {
 
       <main className="app-main">
         <TrackSelector engine={engine} />
-        <FrequencyTrainer engine={engine} onScore={handleScore} />
+        <section className="card freq-graph-card">
+          <h2>Frequency Response</h2>
+          <FreqGraph
+            bands={activeEq?.bands ?? []}
+            gains={activeEq?.gains ?? []}
+            gainDb={activeEq?.gainDb ?? 6}
+            centerFreq={activeEq?.centerFreq ?? null}
+          />
+        </section>
+        <FrequencyTrainer engine={engine} onScore={handleScore} onEqChange={setActiveEq} />
         <ScoreBoard scores={scores} onReset={() => setScores({ total: 0, correct: 0 })} />
       </main>
 

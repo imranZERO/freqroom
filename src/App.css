@@ -710,26 +710,71 @@ body {
 }
 .play-toggle {
   background: var(--card-2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border: 2px solid var(--border);
+  border-radius: 10px;
   color: var(--text);
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 7px;
-  font-size: 0.88rem;
-  font-weight: 500;
-  padding: 8px 16px;
+  gap: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 12px 22px;
   transition: all 0.15s;
+  flex: 1;
+  justify-content: center;
 }
-.play-toggle:hover { border-color: var(--border-hover); }
+.play-toggle:hover { border-color: var(--border-hover); background: var(--card-hover); }
 .play-toggle.ptog-eq  { background: rgba(99,102,241,0.15); border-color: var(--a); color: var(--a); }
+.play-toggle.ptog-eq:hover  { background: rgba(99,102,241,0.25); }
 .play-toggle.ptog-flat { background: rgba(100,116,139,0.15); border-color: #475569; color: #94a3b8; }
+.play-toggle.ptog-flat:hover { background: rgba(100,116,139,0.25); }
 .playback-tip {
   color: var(--muted);
   font-size: 0.75rem;
   margin-left: 4px;
 }
+
+/* Frequency response graph */
+.freq-graph-wrap {
+  background: var(--card-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  line-height: 0;
+}
+.freq-graph-svg { display: block; }
+
+.graph-label {
+  font-size: 9px;
+  fill: var(--muted);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+.graph-grid   { stroke: var(--border); stroke-width: 1; }
+.graph-hline  { }
+.graph-vline  { }
+.graph-zero   { stroke: var(--border-hover); stroke-width: 1.5; }
+.graph-curve-gray { fill: none; stroke: var(--muted); stroke-width: 1.2; opacity: 0.35; }
+.graph-border { fill: none; stroke: var(--border); stroke-width: 1; }
+
+/* Revealed curve */
+@keyframes graph-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.graph-reveal { animation: graph-in 0.25s ease; }
+
+.graph-fill-boost  { fill: rgba(99, 102, 241, 0.13); }
+.graph-fill-cut    { fill: rgba(249, 115, 22, 0.13); }
+
+.graph-curve-boost { fill: none; stroke: var(--a);   stroke-width: 2; stroke-linejoin: round; }
+.graph-curve-cut   { fill: none; stroke: #f97316;    stroke-width: 2; stroke-linejoin: round; }
+
+.graph-peak-boost  { stroke: var(--a);   stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.5; }
+.graph-peak-cut    { stroke: #f97316;    stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.5; }
+.graph-placeholder { font-size: 11px; fill: var(--muted); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; opacity: 0.5; }
+
+.freq-graph-card { padding-bottom: 14px; }
 
 /* Frequency grid */
 .freq-grid {
