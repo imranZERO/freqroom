@@ -113,8 +113,9 @@ export function TrackSelector({ engine, gainDb, setGainDb, q, setQ }) {
 
       <div className="audio-controls">
         <div className="control-row">
-          <span className="control-label">Volume</span>
+          <label htmlFor="ctrl-volume" className="control-label">Volume</label>
           <input
+            id="ctrl-volume"
             type="range"
             className="control-slider"
             min="0" max="1" step="0.01"
@@ -127,8 +128,9 @@ export function TrackSelector({ engine, gainDb, setGainDb, q, setQ }) {
 
         <div className="control-row-pair">
           <div className="control-row">
-            <span className="control-label">Gain</span>
+            <label htmlFor="ctrl-gain" className="control-label">Gain</label>
             <input
+              id="ctrl-gain"
               type="range"
               className="control-slider"
               min="1" max="18" step="1"
@@ -139,8 +141,9 @@ export function TrackSelector({ engine, gainDb, setGainDb, q, setQ }) {
             <span className="control-value">±{gainDb} dB</span>
           </div>
           <div className="control-row">
-            <span className="control-label">Q (Bandwidth)</span>
+            <label htmlFor="ctrl-q" className="control-label">Q (Bandwidth)</label>
             <input
+              id="ctrl-q"
               type="range"
               className="control-slider"
               min="0.5" max="8" step="0.1"
@@ -154,8 +157,9 @@ export function TrackSelector({ engine, gainDb, setGainDb, q, setQ }) {
 
         {isUpload && engine.duration > 0 && (
           <div className="control-row">
-            <span className="control-label">Position</span>
+            <label htmlFor="ctrl-position" className="control-label">Position</label>
             <input
+              id="ctrl-position"
               type="range"
               className="control-slider"
               min="0"
