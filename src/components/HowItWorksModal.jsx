@@ -104,7 +104,7 @@ export function HowItWorksModal({ isOpen, onClose }) {
           <div className="info-section">
             <h3>5 · Adaptive difficulty (levels 2–15)</h3>
             <p>
-              Your level is the number of candidate frequency bands shown per trial. At <strong>level 2</strong>
+              Your level is the number of candidate frequency bands shown per trial. At <strong>level 2</strong>{' '}
               you're choosing between two widely-spaced frequencies. At <strong>level 15</strong> you're
               distinguishing 15 bands spread logarithmically across 20Hz–20kHz — a serious challenge even
               for experienced engineers.

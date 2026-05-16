@@ -139,7 +139,7 @@ export function TrackSelector({ engine, gainDb, setGainDb, q, setQ }) {
             <span className="control-value">±{gainDb} dB</span>
           </div>
           <div className="control-row">
-            <span className="control-label">Q</span>
+            <span className="control-label">Q (Bandwidth)</span>
             <input
               type="range"
               className="control-slider"
