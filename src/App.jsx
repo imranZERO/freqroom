@@ -47,7 +47,7 @@ export default function App() {
     <div className="app">
       <header className="app-header">
         <div className="header-top">
-          <h1>Fr<span className="title-eq">eq</span>Lab</h1>
+          <h1>Fr<span className="title-eq">eq</span>Room</h1>
           <div className="header-actions">
             <button
               className="icon-btn"
@@ -86,7 +86,7 @@ export default function App() {
       <HowItWorksModal isOpen={showInfo} onClose={() => setShowInfo(false)} />
 
       <footer className="app-footer">
-        <p>Created by <a href="https://github.com/imranZERO" target="_blank" rel="noopener noreferrer">imranZERO</a></p>
+        <p>Created by <a href="https://github.com/imranZERO/freqroom" target="_blank" rel="noopener noreferrer">imranZERO</a></p>
         <p>Inspired by <a href="https://harmanhowtolisten.blogspot.com" target="_blank" rel="noopener noreferrer">Harman: How to Listen</a></p>
       </footer>
     </div>

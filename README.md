@@ -1,10 +1,10 @@
-# Fr*eq*Lab
+# Fr*eq*Room
 
 Interactive EQ ear training for producers, engineers, and audiophiles.
 
 ## What it does
 
-FreqLab trains your ears to identify frequency changes in audio. Each trial applies a ±6dB peak EQ filter at a hidden frequency — you toggle between the processed signal and a flat reference, then pick the band you hear changing.
+FreqRoom trains your ears to identify frequency changes in audio. Each trial applies a ±6dB peak EQ filter at a hidden frequency — you toggle between the processed signal and a flat reference, then pick the band you hear changing.
 
 Difficulty adapts automatically: get 3 correct in a row and you advance to a harder level with more candidate bands. Miss 2 in a row and it steps back down. Levels range from 2 to 15 bands spread logarithmically across 20Hz–20kHz.
 
