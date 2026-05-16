@@ -187,8 +187,8 @@ export function FrequencyTrainer({ engine, onScore, onEqChange, gainDb, q }) {
         <div className="mode-grid">
           {MODES.map(m => (
             <button key={m.id} className="mode-card" onClick={() => selectMode(m.id)}>
-              <span className="mode-sign">{m.sign}{gainDb}dB</span>
               <span className="mode-label">{m.label}</span>
+              <span className="mode-sign">{m.sign}{gainDb}dB</span>
               <span className="mode-desc">{m.desc}</span>
             </button>
           ))}

@@ -497,15 +497,15 @@ body {
   text-align: center;
 }
 .mode-card:hover { border-color: var(--a); background: rgba(99,102,241,0.08); }
+.mode-label {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
 .mode-sign {
-  font-size: 1.5rem;
-  font-weight: 800;
+  font-size: 1rem;
+  font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--a);
-}
-.mode-label {
-  font-size: 0.95rem;
-  font-weight: 700;
 }
 .mode-desc {
   font-size: 0.75rem;
