@@ -320,27 +320,23 @@ export function FrequencyTrainer({ engine, onScore, onEqChange, gainDb, q }) {
       )}
 
       {/* Streak progress */}
-      <div className="streak-row">
-        {wrongStreak > 0 ? (
-          <>
-            <span className="streak-label wrong-label">{wrongStreak}/{WRONG_TO_DECREASE} wrong → level down</span>
+      {(() => {
+        const isWrong = wrongStreak > 0;
+        const count = isWrong ? wrongStreak : correctStreak;
+        const max   = isWrong ? WRONG_TO_DECREASE : CORRECT_TO_ADVANCE;
+        const label = isWrong ? `${count}/${max} wrong → level down` : `${count}/${max} correct → level up`;
+        const pip   = isWrong ? 'pip-wrong' : 'pip-correct';
+        return (
+          <div className="streak-row">
+            <span className={`streak-label ${isWrong ? 'wrong-label' : ''}`}>{label}</span>
             <div className="streak-pips">
-              {Array.from({ length: WRONG_TO_DECREASE }, (_, i) => (
-                <span key={i} className={`pip ${i < wrongStreak ? 'pip-wrong' : ''}`} />
+              {Array.from({ length: max }, (_, i) => (
+                <span key={i} className={`pip ${i < count ? pip : ''}`} />
               ))}
             </div>
-          </>
-        ) : (
-          <>
-            <span className="streak-label">{correctStreak}/{CORRECT_TO_ADVANCE} correct → level up</span>
-            <div className="streak-pips">
-              {Array.from({ length: CORRECT_TO_ADVANCE }, (_, i) => (
-                <span key={i} className={`pip ${i < correctStreak ? 'pip-correct' : ''}`} />
-              ))}
-            </div>
-          </>
-        )}
-      </div>
+          </div>
+        );
+      })()}
 
       {/* Action button */}
       <div className="trainer-action">
