@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { InfoIcon } from './HowItWorksModal.jsx';
 
 const FREQ_MIN = 20;
 const FREQ_MAX = 20000;
@@ -28,6 +29,25 @@ const FREQ_LABEL = (hz) => {
   return `${hz}`;
 };
 const FREQ_UNIT = (hz) => hz >= 1000 ? 'kHz' : 'Hz';
+
+const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+function freqToNote(hz) {
+  const midi = Math.round(69 + 12 * Math.log2(hz / 440));
+  const name = NOTE_NAMES[((midi % 12) + 12) % 12];
+  const octave = Math.floor(midi / 12) - 1;
+  return `~${name}${octave}`;
+}
+
+function freqRegion(hz) {
+  if (hz < 80)   return 'Sub Bass';
+  if (hz < 250)  return 'Bass';
+  if (hz < 500)  return 'Low Mid';
+  if (hz < 2000) return 'Midrange';
+  if (hz < 4000) return 'Upper Mid';
+  if (hz < 8000) return 'Presence';
+  return 'Brilliance';
+}
 
 function makeFilter(freq, gain, q) {
   return [{ type: 'peaking', frequency: freq, Q: q, gain }];
@@ -65,6 +85,37 @@ export function FrequencyTrainer({ engine, onScore, onEqChange, gainDb, q }) {
       onEqChange?.(null);
     }
   }, [trial, testMode, gainDb]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    function onKey(e) {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      const key = e.key;
+
+      if (key === 'Enter') {
+        if (!testMode) return;
+        if (!trial || trial.answered) { startTrial(); return; }
+        if (trial.userSelection !== null) { e.preventDefault(); checkAnswer(); }
+        return;
+      }
+
+      if (!trial || trial.answered) return;
+
+      if (key === ' ') {
+        e.preventDefault();
+        handlePlayMode(playMode === 'eq' ? 'flat' : 'eq');
+      } else if ((key === 'ArrowLeft' || key === 'ArrowRight') && testMode !== 'both') {
+        e.preventDefault();
+        const bands = trial.shownBands;
+        const cur = trial.userSelection ? bands.indexOf(trial.userSelection.freq) : -1;
+        if (key === 'ArrowLeft' && cur <= 0) return;
+        const next = key === 'ArrowLeft' ? cur - 1 : Math.min(bands.length - 1, cur + 1);
+        selectBand(bands[next === -1 ? 0 : next], trial.activeSign);
+      }
+    }
+
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [trial, testMode, playMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function selectMode(mode) {
     engine.stop();
@@ -215,6 +266,7 @@ export function FrequencyTrainer({ engine, onScore, onEqChange, gainDb, q }) {
         ) : (
           <span className={`trainer-result ${wasCorrect ? 'result-correct' : 'result-incorrect'}`}>
             {wasCorrect ? '✓ Correct!' : '✗ Incorrect'}
+            <span className="result-note">{freqToNote(activeBand)} · {freqRegion(activeBand)}</span>
           </span>
         )}
       </div>
@@ -295,6 +347,13 @@ export function FrequencyTrainer({ engine, onScore, onEqChange, gainDb, q }) {
 
       {/* Action button */}
       <div className="trainer-action">
+        <button
+          className="icon-btn trainer-kb-hint"
+          aria-label="Keyboard shortcuts"
+          data-tooltip={isMixed ? 'Space toggle · Enter check/next' : 'Space toggle · ← → select · Enter check/next'}
+        >
+          <InfoIcon />
+        </button>
         {!answered ? (
           <button className="btn-primary" onClick={checkAnswer} disabled={!hasSelection}>
             Check Answer ({hasSelection ? 1 : 0}/1)
