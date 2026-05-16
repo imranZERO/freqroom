@@ -68,9 +68,6 @@ export function FrequencyTrainer({ engine, onScore, onEqChange, gainDb, q }) {
   const [trial, setTrial] = useState(null);
   const [playMode, setPlayMode] = useState(null);
 
-  // trial.activeSign is ±1; activeGain is always derived from live gainDb prop
-  const activeGain = trial ? trial.activeSign * gainDb : null;
-
   useEffect(() => {
     if (trial) {
       const liveGain = trial.activeSign * gainDb;

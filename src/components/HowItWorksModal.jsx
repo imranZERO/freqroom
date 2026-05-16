@@ -95,7 +95,7 @@ export function HowItWorksModal({ isOpen, onClose }) {
             <h3>4 · Compare EQ vs. flat</h3>
             <p>
               Each trial applies a peak filter at one hidden frequency using your current Gain and Q settings.
-              Toggle between <strong>With EQ</strong> and <strong>Flat Reference</strong> as many times
+              Toggle between <strong>EQ</strong> and <strong>Flat</strong> as many times
               as you need — the gap between them is exactly what you're training your ears to hear.
               There's no time limit.
             </p>
