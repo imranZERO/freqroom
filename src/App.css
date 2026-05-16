@@ -461,9 +461,12 @@ body {
   border-top: 1px solid var(--border);
   padding-top: 20px;
   margin-top: 8px;
-  text-align: center;
   font-size: 0.82rem;
   color: var(--muted);
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 .app-footer a {
   color: var(--a);

@@ -38,6 +38,10 @@ npm run preview  # preview the production build
 - Web Audio API (no audio libraries)
 - Vite
 
+## Inspired by
+
+[Harman: How to Listen](https://harmanhowtolisten.blogspot.com)
+
 ## Created by
 
 [imranZERO](https://github.com/imranZERO)

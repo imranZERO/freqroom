@@ -76,6 +76,7 @@ export default function App() {
 
       <footer className="app-footer">
         <p>Created by <a href="https://github.com/imranZERO" target="_blank" rel="noopener noreferrer">imranZERO</a></p>
+        <p>Inspired by <a href="https://harmanhowtolisten.blogspot.com" target="_blank" rel="noopener noreferrer">Harman: How to Listen</a></p>
       </footer>
     </div>
   );
