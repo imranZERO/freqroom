@@ -55,6 +55,7 @@ export default function App() {
               className="icon-btn"
               onClick={() => setShowInfo(true)}
               aria-label="How it works"
+              data-tooltip="How it works"
             >
               <InfoIcon />
             </button>
@@ -62,6 +63,7 @@ export default function App() {
               className="icon-btn"
               onClick={() => setIsDark(d => !d)}
               aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+              data-tooltip={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
             >
               {isDark ? <SunIcon /> : <MoonIcon />}
             </button>
