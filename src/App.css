@@ -598,11 +598,14 @@ body {
   flex: 1;
   justify-content: center;
 }
-.play-toggle:hover { border-color: var(--border-hover); background: var(--card-hover); }
-.play-toggle.ptog-eq  { background: rgba(99,102,241,0.15); border-color: var(--a); color: var(--a); }
-.play-toggle.ptog-eq:hover  { background: rgba(99,102,241,0.25); }
-.play-toggle.ptog-flat { background: rgba(100,116,139,0.15); border-color: #475569; color: #94a3b8; }
-.play-toggle.ptog-flat:hover { background: rgba(100,116,139,0.25); }
+.play-toggle-eq  { background: rgba(99,102,241,0.22); border-color: #6366f1; color: #6366f1; }
+.play-toggle-eq:hover  { background: rgba(99,102,241,0.32); color: #818cf8; }
+.play-toggle-eq.ptog-eq  { background: var(--a); border-color: var(--a); color: #fff; }
+.play-toggle-eq.ptog-eq:hover  { background: #4f52d4; border-color: #4f52d4; }
+.play-toggle-flat { background: rgba(20,184,166,0.22); border-color: #14b8a6; color: #14b8a6; }
+.play-toggle-flat:hover { background: rgba(20,184,166,0.32); color: #2dd4bf; }
+.play-toggle-flat.ptog-flat { background: #14b8a6; border-color: #14b8a6; color: #fff; }
+.play-toggle-flat.ptog-flat:hover { background: #0d9488; border-color: #0d9488; }
 .playback-tip {
   color: var(--muted);
   font-size: 0.75rem;
@@ -646,7 +649,7 @@ body {
 
 .graph-peak-boost  { stroke: var(--a);   stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.5; }
 .graph-peak-cut    { stroke: #f97316;    stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.5; }
-.graph-placeholder { font-size: 11px; fill: var(--muted); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; opacity: 0.5; }
+.graph-placeholder { font-size: 11px; fill: var(--muted); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; stroke: var(--card-2); stroke-width: 8; paint-order: stroke; }
 
 .freq-graph-card { padding-bottom: 14px; }
 

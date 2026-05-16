@@ -234,16 +234,16 @@ export function FrequencyTrainer({ engine, onScore, onEqChange, gainDb, q }) {
       {/* Playback controls */}
       <div className="playback-row">
         <button
-          className={`play-toggle ${playMode === 'eq' ? 'ptog-eq' : ''}`}
+          className={`play-toggle play-toggle-eq ${playMode === 'eq' ? 'ptog-eq' : ''}`}
           onClick={() => handlePlayMode('eq')}
         >
-          {playMode === 'eq' ? '◼' : '▶'} {isMixed ? 'With EQ' : activeSign > 0 ? 'With Boost' : 'With Cut'}
+          {playMode === 'eq' ? '◼' : '▶'} EQ
         </button>
         <button
-          className={`play-toggle ${playMode === 'flat' ? 'ptog-flat' : ''}`}
+          className={`play-toggle play-toggle-flat ${playMode === 'flat' ? 'ptog-flat' : ''}`}
           onClick={() => handlePlayMode('flat')}
         >
-          {playMode === 'flat' ? '◼' : '▶'} Flat Reference
+          {playMode === 'flat' ? '◼' : '▶'} Flat
         </button>
         <span className="playback-tip">Toggle between both to compare</span>
       </div>
