@@ -15,21 +15,9 @@ const MODES = [
 
 function generateBands(n) {
   if (n === 0) return [];
-  const intervals = [[FREQ_MIN, FREQ_MAX]];
-  const bands = [];
-  while (bands.length < n) {
-    let best = 0;
-    for (let i = 1; i < intervals.length; i++) {
-      const aSize = Math.log(intervals[best][1] / intervals[best][0]);
-      const bSize = Math.log(intervals[i][1] / intervals[i][0]);
-      if (bSize > aSize || (bSize === aSize && intervals[i][0] < intervals[best][0])) best = i;
-    }
-    const [lo, hi] = intervals.splice(best, 1)[0];
-    const mid = Math.round(Math.sqrt(lo * hi));
-    bands.push(mid);
-    intervals.push([lo, mid], [mid, hi]);
-  }
-  return bands.sort((a, b) => a - b);
+  return Array.from({ length: n }, (_, i) =>
+    Math.round(FREQ_MIN * Math.pow(FREQ_MAX / FREQ_MIN, (i + 0.5) / n))
+  );
 }
 
 const FREQ_LABEL = (hz) => {
