@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 
 const FREQ_MIN = 20;
 const FREQ_MAX = 20000;
-const GAIN_DB = 6;
 const CORRECT_TO_ADVANCE = 3;
 const WRONG_TO_DECREASE = 2;
 const MAX_LEVEL = 15;
@@ -42,17 +41,18 @@ const FREQ_LABEL = (hz) => {
 };
 const FREQ_UNIT = (hz) => hz >= 1000 ? 'kHz' : 'Hz';
 
-function makeFilter(freq, gain) {
-  return [{ type: 'peaking', frequency: freq, Q: 1.4, gain }];
+function makeFilter(freq, gain, q) {
+  return [{ type: 'peaking', frequency: freq, Q: q, gain }];
 }
 
-function gainForMode(mode) {
-  if (mode === 'boost') return GAIN_DB;
-  if (mode === 'cut') return -GAIN_DB;
-  return Math.random() < 0.5 ? GAIN_DB : -GAIN_DB;
+// Returns +1 or -1
+function signForMode(mode) {
+  if (mode === 'boost') return 1;
+  if (mode === 'cut') return -1;
+  return Math.random() < 0.5 ? 1 : -1;
 }
 
-export function FrequencyTrainer({ engine, onScore, onEqChange }) {
+export function FrequencyTrainer({ engine, onScore, onEqChange, gainDb, q }) {
   const [testMode, setTestMode] = useState(null);
   const [level, setLevel] = useState(2);
   const [correctStreak, setCorrectStreak] = useState(0);
@@ -60,19 +60,23 @@ export function FrequencyTrainer({ engine, onScore, onEqChange }) {
   const [trial, setTrial] = useState(null);
   const [playMode, setPlayMode] = useState(null);
 
+  // trial.activeSign is ±1; activeGain is always derived from live gainDb prop
+  const activeGain = trial ? trial.activeSign * gainDb : null;
+
   useEffect(() => {
     if (trial) {
-      const gains = testMode === 'both' ? [GAIN_DB, -GAIN_DB] : [trial.activeGain];
+      const liveGain = trial.activeSign * gainDb;
+      const gains = testMode === 'both' ? [gainDb, -gainDb] : [liveGain];
       onEqChange?.({
         bands: trial.shownBands,
         gains,
-        gainDb: trial.activeGain,
+        gainDb: liveGain,
         centerFreq: trial.answered ? trial.activeBand : null,
       });
     } else {
       onEqChange?.(null);
     }
-  }, [trial, testMode]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [trial, testMode, gainDb]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function selectMode(mode) {
     engine.stop();
@@ -89,26 +93,26 @@ export function FrequencyTrainer({ engine, onScore, onEqChange }) {
     setPlayMode(null);
     const shownBands = generateBands(level);
     const activeBand = shownBands[Math.floor(Math.random() * shownBands.length)];
-    const activeGain = gainForMode(testMode);
-    setTrial({ shownBands, activeBand, activeGain, userSelection: null, answered: false, wasCorrect: null });
+    const activeSign = signForMode(testMode);
+    setTrial({ shownBands, activeBand, activeSign, userSelection: null, answered: false, wasCorrect: null });
   }
 
   function handlePlayMode(mode) {
     if (playMode === mode) { engine.stop(); setPlayMode(null); return; }
-    engine.play(mode === 'eq' ? makeFilter(trial.activeBand, trial.activeGain) : []);
+    engine.play(mode === 'eq' ? makeFilter(trial.activeBand, trial.activeSign * gainDb, q) : []);
     setPlayMode(mode);
   }
 
-  // userSelection is { freq, gain } | null
-  function selectBand(freq, gain) {
+  // userSelection stores { freq, sign } where sign is ±1
+  function selectBand(freq, sign) {
     if (!trial || trial.answered) return;
-    setTrial(prev => ({ ...prev, userSelection: { freq, gain } }));
+    setTrial(prev => ({ ...prev, userSelection: { freq, sign } }));
   }
 
   function checkAnswer() {
     if (!trial || trial.userSelection === null) return;
-    const { activeBand, activeGain, userSelection } = trial;
-    const correct = userSelection.freq === activeBand && userSelection.gain === activeGain;
+    const { activeBand, activeSign, userSelection } = trial;
+    const correct = userSelection.freq === activeBand && userSelection.sign === activeSign;
 
     onScore(correct);
     engine.stop();
@@ -144,7 +148,7 @@ export function FrequencyTrainer({ engine, onScore, onEqChange }) {
         <div className="mode-grid">
           {MODES.map(m => (
             <button key={m.id} className="mode-card" onClick={() => selectMode(m.id)}>
-              <span className="mode-sign">{m.sign}{GAIN_DB}dB</span>
+              <span className="mode-sign">{m.sign}{gainDb}dB</span>
               <span className="mode-label">{m.label}</span>
               <span className="mode-desc">{m.desc}</span>
             </button>
@@ -164,7 +168,7 @@ export function FrequencyTrainer({ engine, onScore, onEqChange }) {
           <div className="level-chip">Level {level}</div>
           <button className="btn-ghost" onClick={() => setTestMode(null)}>Change mode</button>
         </div>
-        <div className="mode-badge">{currentMode.sign}{GAIN_DB}dB · {currentMode.label}</div>
+        <div className="mode-badge">{currentMode.sign}{gainDb}dB · {currentMode.label}</div>
         <p className="start-desc">{currentMode.desc} — pick from <strong>{level}</strong> {level === 1 ? 'band' : 'bands'}</p>
         <button className="btn-primary large" onClick={startTrial}>Start Trial</button>
       </section>
@@ -172,13 +176,13 @@ export function FrequencyTrainer({ engine, onScore, onEqChange }) {
   }
 
   // ── Active trial ────────────────────────────────────────────────────────
-  const { shownBands, activeBand, activeGain, userSelection, answered, wasCorrect } = trial;
+  const { shownBands, activeBand, activeSign, userSelection, answered, wasCorrect } = trial;
   const isMixed = testMode === 'both';
-  const dirLabel = activeGain > 0 ? 'boost' : 'cut';
+  const dirLabel = activeSign > 0 ? 'boost' : 'cut';
 
-  function getBtnState(freq, gain) {
-    const isSel = userSelection !== null && userSelection.freq === freq && userSelection.gain === gain;
-    const isAct = freq === activeBand && gain === activeGain;
+  function getBtnState(freq, sign) {
+    const isSel = userSelection !== null && userSelection.freq === freq && userSelection.sign === sign;
+    const isAct = freq === activeBand && sign === activeSign;
     if (answered) {
       if (isAct && isSel) return 'f-hit';
       if (isAct) return 'f-missed';
@@ -187,14 +191,14 @@ export function FrequencyTrainer({ engine, onScore, onEqChange }) {
     return isSel ? 'f-selected' : '';
   }
 
-  function FreqRow({ gain }) {
+  function FreqRow({ sign }) {
     return (
       <div className="freq-grid">
         {shownBands.map(freq => (
           <button
             key={freq}
-            className={`freq-btn ${getBtnState(freq, gain)}`}
-            onClick={() => selectBand(freq, gain)}
+            className={`freq-btn ${getBtnState(freq, sign)}`}
+            onClick={() => selectBand(freq, sign)}
             disabled={answered}
           >
             <span className="freq-num">{FREQ_LABEL(freq)}</span>
@@ -213,11 +217,11 @@ export function FrequencyTrainer({ engine, onScore, onEqChange }) {
       {/* Header row */}
       <div className="trainer-header">
         <div className="level-chip">Level {level}</div>
-        <div className="mode-badge">{currentMode.sign}{GAIN_DB}dB · {currentMode.label}</div>
+        <div className="mode-badge">{currentMode.sign}{gainDb}dB · {currentMode.label}</div>
         {!answered ? (
           <span className="trainer-status">
             {!hasSelection
-              ? isMixed ? 'Pick the frequency and direction' : `Select the ${activeGain > 0 ? 'boosted' : 'cut'} band`
+              ? isMixed ? 'Pick the frequency and direction' : `Select the ${activeSign > 0 ? 'boosted' : 'cut'} band`
               : 'Ready to check'}
           </span>
         ) : (
@@ -233,7 +237,7 @@ export function FrequencyTrainer({ engine, onScore, onEqChange }) {
           className={`play-toggle ${playMode === 'eq' ? 'ptog-eq' : ''}`}
           onClick={() => handlePlayMode('eq')}
         >
-          {playMode === 'eq' ? '◼' : '▶'} {isMixed ? 'With EQ' : activeGain > 0 ? 'With Boost' : 'With Cut'}
+          {playMode === 'eq' ? '◼' : '▶'} {isMixed ? 'With EQ' : activeSign > 0 ? 'With Boost' : 'With Cut'}
         </button>
         <button
           className={`play-toggle ${playMode === 'flat' ? 'ptog-flat' : ''}`}
@@ -249,15 +253,15 @@ export function FrequencyTrainer({ engine, onScore, onEqChange }) {
         <div className="freq-grid-mixed">
           <div className="mixed-row">
             <div className="mixed-row-label boost-label">▲ Boost</div>
-            <FreqRow gain={GAIN_DB} />
+            <FreqRow sign={1} />
           </div>
           <div className="mixed-row">
             <div className="mixed-row-label cut-label">▼ Cut</div>
-            <FreqRow gain={-GAIN_DB} />
+            <FreqRow sign={-1} />
           </div>
         </div>
       ) : (
-        <FreqRow gain={activeGain} />
+        <FreqRow sign={activeSign} />
       )}
 
       {/* Legend */}

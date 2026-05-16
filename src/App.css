@@ -146,6 +146,14 @@ body {
   align-items: center;
   gap: 10px;
 }
+.control-row-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 480px) {
+  .control-row-pair { grid-template-columns: 1fr; }
+}
 .control-label {
   font-size: 0.75rem;
   font-weight: 600;

@@ -12,7 +12,7 @@ function formatTime(s) {
   return `${m}:${sec.toString().padStart(2, '0')}`;
 }
 
-export function TrackSelector({ engine }) {
+export function TrackSelector({ engine, gainDb, setGainDb, q, setQ }) {
   const fileRef = useRef(null);
   const [activeId, setActiveId] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -123,6 +123,33 @@ export function TrackSelector({ engine }) {
             onChange={e => engine.setVolume(parseFloat(e.target.value))}
           />
           <span className="control-value">{Math.round(engine.volume * 100)}%</span>
+        </div>
+
+        <div className="control-row-pair">
+          <div className="control-row">
+            <span className="control-label">Gain</span>
+            <input
+              type="range"
+              className="control-slider"
+              min="1" max="18" step="1"
+              value={gainDb}
+              style={{ '--fill': `${((gainDb - 1) / 17) * 100}%` }}
+              onChange={e => setGainDb(parseInt(e.target.value, 10))}
+            />
+            <span className="control-value">±{gainDb} dB</span>
+          </div>
+          <div className="control-row">
+            <span className="control-label">Q</span>
+            <input
+              type="range"
+              className="control-slider"
+              min="0.5" max="8" step="0.1"
+              value={q}
+              style={{ '--fill': `${((q - 0.5) / 7.5) * 100}%` }}
+              onChange={e => setQ(parseFloat(e.target.value))}
+            />
+            <span className="control-value">{q.toFixed(1)}</span>
+          </div>
         </div>
 
         {isUpload && engine.duration > 0 && (

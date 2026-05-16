@@ -34,6 +34,8 @@ export default function App() {
   );
   const [showInfo, setShowInfo] = useState(false);
   const [activeEq, setActiveEq] = useState(null);
+  const [gainDb, setGainDb] = useState(6);
+  const [q, setQ] = useState(1.4);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
@@ -69,17 +71,18 @@ export default function App() {
       </header>
 
       <main className="app-main">
-        <TrackSelector engine={engine} />
+        <TrackSelector engine={engine} gainDb={gainDb} setGainDb={setGainDb} q={q} setQ={setQ} />
         <section className="card freq-graph-card">
           <h2>Frequency Response</h2>
           <FreqGraph
             bands={activeEq?.bands ?? []}
             gains={activeEq?.gains ?? []}
-            gainDb={activeEq?.gainDb ?? 6}
+            gainDb={activeEq?.gainDb ?? gainDb}
             centerFreq={activeEq?.centerFreq ?? null}
+            Q={q}
           />
         </section>
-        <FrequencyTrainer engine={engine} onScore={handleScore} onEqChange={setActiveEq} />
+        <FrequencyTrainer engine={engine} onScore={handleScore} onEqChange={setActiveEq} gainDb={gainDb} q={q} />
         <ScoreBoard scores={scores} onReset={() => setScores({ total: 0, correct: 0 })} />
       </main>
 

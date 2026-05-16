@@ -67,22 +67,34 @@ export function HowItWorksModal({ isOpen, onClose }) {
             <h3>2 · Pick a test mode</h3>
             <div className="info-mode-list">
               <div className="info-mode-item">
-                <strong>+6dB Boosts</strong> — one frequency band is boosted; identify which one.
+                <strong>Boosts</strong> — one frequency band is boosted; identify which one.
               </div>
               <div className="info-mode-item">
-                <strong>−6dB Cuts</strong> — one band is cut; identify which one.
+                <strong>Cuts</strong> — one band is cut; identify which one.
               </div>
               <div className="info-mode-item">
-                <strong>±6dB Mixed</strong> — a band is either boosted or cut; identify the frequency
+                <strong>Mixed</strong> — a band is either boosted or cut; identify the frequency
                 <em> and</em> the direction. The hardest mode.
               </div>
             </div>
           </div>
 
           <div className="info-section">
-            <h3>3 · Compare EQ vs. flat</h3>
+            <h3>3 · Adjust the filter</h3>
             <p>
-              Each trial applies a <strong>±6dB peak filter</strong> (Q 1.4) at one hidden frequency.
+              Use the <strong>Gain</strong> and <strong>Q</strong> sliders to control the shape of the peak filter
+              applied each trial. <strong>Gain</strong> sets the boost or cut amplitude (1–18 dB) —
+              start high (12+ dB) if you're new, then work down as your ears improve. <strong>Q</strong>{' '}
+              controls bandwidth: a low Q (0.5–1) creates a broad, gentle shelf-like curve that's easier to hear;
+              a high Q (4–8) creates a narrow notch that's much harder to identify. Both sliders take effect
+              immediately, even mid-trial.
+            </p>
+          </div>
+
+          <div className="info-section">
+            <h3>4 · Compare EQ vs. flat</h3>
+            <p>
+              Each trial applies a peak filter at one hidden frequency using your current Gain and Q settings.
               Toggle between <strong>With EQ</strong> and <strong>Flat Reference</strong> as many times
               as you need — the gap between them is exactly what you're training your ears to hear.
               There's no time limit.
@@ -90,7 +102,7 @@ export function HowItWorksModal({ isOpen, onClose }) {
           </div>
 
           <div className="info-section">
-            <h3>4 · Adaptive difficulty (levels 2–15)</h3>
+            <h3>5 · Adaptive difficulty (levels 2–15)</h3>
             <p>
               Your level is the number of candidate frequency bands shown per trial. At <strong>level 2</strong>
               you're choosing between two widely-spaced frequencies. At <strong>level 15</strong> you're
@@ -108,7 +120,7 @@ export function HowItWorksModal({ isOpen, onClose }) {
           </div>
 
           <div className="info-section">
-            <h3>Tips</h3>
+            <h3>6 · Tips</h3>
             <p>
               Use <strong>headphones or studio monitors</strong> — laptop speakers compress the frequency
               response and defeat the purpose. In Mixed mode, listen for the <em>hollow, recessed</em> character

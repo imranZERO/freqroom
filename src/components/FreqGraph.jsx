@@ -1,6 +1,6 @@
 const SR = 48000;
 const F_MIN = 20, F_MAX = 20000;
-const DB_MIN = -9, DB_MAX = 9;
+const DB_MIN = -12, DB_MAX = 12;
 const N = 300;
 const P = { t: 14, r: 14, b: 28, l: 32 };
 const VW = 600, VH = 160;
@@ -8,7 +8,7 @@ const IW = VW - P.l - P.r;
 const IH = VH - P.t - P.b;
 
 const FREQ_TICKS = [20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000];
-const DB_TICKS = [-6, -3, 0, 3, 6];
+const DB_TICKS = [-12, -6, 0, 6, 12];
 
 const toX = f => P.l + (Math.log10(f / F_MIN) / Math.log10(F_MAX / F_MIN)) * IW;
 const toY = db => P.t + ((DB_MAX - db) / (DB_MAX - DB_MIN)) * IH;
