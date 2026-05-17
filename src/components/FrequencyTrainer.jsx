@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { InfoIcon } from './HowItWorksModal.jsx';
 
 const FREQ_MIN = 20;
@@ -85,6 +85,7 @@ export function FrequencyTrainer({ engine, onScore, onEqChange, gainDb, q }) {
   const [wrongStreak, setWrongStreak] = useState(0);
   const [trial, setTrial] = useState(null);
   const [playMode, setPlayMode] = useState(null);
+  const answeringRef = useRef(false);
 
   useEffect(() => {
     if (trial) {
@@ -130,9 +131,10 @@ export function FrequencyTrainer({ engine, onScore, onEqChange, gainDb, q }) {
 
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [trial, testMode, playMode, gainDb, q]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [trial, testMode, playMode, gainDb, q, level]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function selectMode(mode) {
+    answeringRef.current = false;
     engine.stop();
     setTestMode(mode);
     setTrial(null);
@@ -143,6 +145,7 @@ export function FrequencyTrainer({ engine, onScore, onEqChange, gainDb, q }) {
   }
 
   function startTrial() {
+    answeringRef.current = false;
     engine.stop();
     setPlayMode(null);
     const shownBands = generateBands(level);
@@ -164,7 +167,8 @@ export function FrequencyTrainer({ engine, onScore, onEqChange, gainDb, q }) {
   }
 
   function checkAnswer() {
-    if (!trial || trial.userSelection === null) return;
+    if (!trial || trial.userSelection === null || answeringRef.current) return;
+    answeringRef.current = true;
     const { activeBand, activeSign, userSelection } = trial;
     const correct = userSelection.freq === activeBand && userSelection.sign === activeSign;
 
