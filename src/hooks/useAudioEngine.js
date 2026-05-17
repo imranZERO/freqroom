@@ -63,10 +63,10 @@ export function useAudioEngine() {
     }
   }, []);
 
-  const play = useCallback((filters = [], fromOffset = undefined) => {
+  const play = useCallback(async (filters = [], fromOffset = undefined) => {
     if (!bufferRef.current) return;
     const ctx = getCtx();
-    if (ctx.state === 'suspended') ctx.resume();
+    if (ctx.state === 'suspended') await ctx.resume();
 
     const offset = fromOffset !== undefined ? fromOffset
       : (sourceRef.current ? getCurrentOffset() : startOffsetRef.current);
