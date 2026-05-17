@@ -9,8 +9,10 @@ export function useAudioEngine() {
   const startOffsetRef = useRef(0);
   const volumeRef = useRef(0.8);
   const currentFiltersRef = useRef([]);
+  const filterNodesRef = useRef([]);
 
   const [isLoaded, setIsLoaded] = useState(false);
+  const [sampleRate, setSampleRate] = useState(48000);
   const [isLoading, setIsLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [loadError, setLoadError] = useState(null);
@@ -25,6 +27,7 @@ export function useAudioEngine() {
   }
 
   function buildFilterChain(ctx, filters, outputNode) {
+    filterNodesRef.current = [];
     if (!filters || filters.length === 0) return outputNode;
     const nodes = filters.map(({ type, frequency, Q, gain }) => {
       const n = ctx.createBiquadFilter();
@@ -36,6 +39,7 @@ export function useAudioEngine() {
     });
     for (let i = 0; i < nodes.length - 1; i++) nodes[i].connect(nodes[i + 1]);
     nodes[nodes.length - 1].connect(outputNode);
+    filterNodesRef.current = nodes;
     return nodes[0];
   }
 
@@ -51,6 +55,8 @@ export function useAudioEngine() {
       try { sourceRef.current.stop(); } catch { /* already stopped */ }
       sourceRef.current = null;
     }
+    filterNodesRef.current.forEach(n => { try { n.disconnect(); } catch {} });
+    filterNodesRef.current = [];
     if (gainRef.current) {
       gainRef.current.disconnect();
       gainRef.current = null;
@@ -123,6 +129,7 @@ export function useAudioEngine() {
 
     try {
       const ctx = getCtx();
+      setSampleRate(ctx.sampleRate);
 
       if (source && typeof source === 'object' && source.numberOfChannels !== undefined) {
         bufferRef.current = source;
@@ -154,6 +161,6 @@ export function useAudioEngine() {
     play, stop, loadBuffer, getCtx,
     volume, setVolume,
     seek, getCurrentOffset,
-    duration,
+    duration, sampleRate,
   };
 }

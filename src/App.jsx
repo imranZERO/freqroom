@@ -90,6 +90,7 @@ export default function App() {
             gainDb={activeEq?.gainDb ?? gainDb}
             centerFreq={activeEq?.centerFreq ?? null}
             Q={q}
+            sampleRate={engine.sampleRate}
           />
         </section>
         <FrequencyTrainer engine={engine} onScore={handleScore} onEqChange={setActiveEq} gainDb={gainDb} q={q} />

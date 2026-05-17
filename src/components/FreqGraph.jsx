@@ -1,4 +1,3 @@
-const SR = 48000;
 const F_MIN = 20, F_MAX = 20000;
 const DB_MIN = -12, DB_MAX = 12;
 const N = 300;
@@ -14,9 +13,9 @@ const toX = f => P.l + (Math.log10(f / F_MIN) / Math.log10(F_MAX / F_MIN)) * IW;
 const toY = db => P.t + ((DB_MAX - db) / (DB_MAX - DB_MIN)) * IH;
 const fmtFreq = f => f >= 1000 ? `${f / 1000}k` : `${f}`;
 
-function computeCurve(centerFreq, gainDb, Q) {
+function computeCurve(centerFreq, gainDb, Q, sr) {
   const A = Math.pow(10, gainDb / 40);
-  const w0 = 2 * Math.PI * centerFreq / SR;
+  const w0 = 2 * Math.PI * centerFreq / sr;
   const alpha = Math.sin(w0) / (2 * Q);
   const b0 = 1 + alpha * A, b1 = -2 * Math.cos(w0), b2 = 1 - alpha * A;
   const a0 = 1 + alpha / A, a1 = -2 * Math.cos(w0), a2 = 1 - alpha / A;
@@ -24,7 +23,7 @@ function computeCurve(centerFreq, gainDb, Q) {
 
   return Array.from({ length: N + 1 }, (_, i) => {
     const f = F_MIN * Math.pow(F_MAX / F_MIN, i / N);
-    const w = 2 * Math.PI * f / SR;
+    const w = 2 * Math.PI * f / sr;
     const cw = Math.cos(w), sw = Math.sin(w);
     const c2 = Math.cos(2 * w), s2 = Math.sin(2 * w);
     const nr = b0n + b1n * cw + b2n * c2;
@@ -46,7 +45,7 @@ function makeFill(pts) {
   return `${makeLine(pts)}L${xN},${y0.toFixed(1)}L${x0},${y0.toFixed(1)}Z`;
 }
 
-export function FreqGraph({ bands = [], gains = [], gainDb = 6, centerFreq = null, Q = 1.4 }) {
+export function FreqGraph({ bands = [], gains = [], gainDb = 6, centerFreq = null, Q = 1.4, sampleRate = 48000 }) {
   const revealed = centerFreq !== null;
   const isBoost = gainDb > 0;
 
@@ -79,14 +78,14 @@ export function FreqGraph({ bands = [], gains = [], gainDb = 6, centerFreq = nul
         {bands.flatMap(f =>
           gains.map(g => {
             if (revealed && f === centerFreq && g === gainDb) return null;
-            const pts = computeCurve(f, g, Q);
+            const pts = computeCurve(f, g, Q, sampleRate);
             return <path key={`${f}-${g}`} d={makeLine(pts)} className="graph-curve-gray" />;
           })
         )}
 
         {/* Correct curve — revealed after answer */}
         {revealed && (() => {
-          const pts = computeCurve(centerFreq, gainDb, Q);
+          const pts = computeCurve(centerFreq, gainDb, Q, sampleRate);
           return (
             <g className="graph-reveal">
               <path d={makeFill(pts)} className={isBoost ? 'graph-fill-boost' : 'graph-fill-cut'} />
