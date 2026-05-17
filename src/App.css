@@ -343,6 +343,21 @@ body {
 .app-footer a:hover {
   text-decoration: underline;
 }
+.footer-created {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.footer-gh-link {
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  transition: color 0.15s;
+}
+.footer-gh-link:hover {
+  color: var(--text);
+  text-decoration: none;
+}
 
 /* Info modal */
 .info-modal {
