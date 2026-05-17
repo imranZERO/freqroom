@@ -49,6 +49,24 @@ function freqRegion(hz) {
   return 'Brilliance';
 }
 
+function FreqRow({ shownBands, sign, getBtnState, selectBand, answered }) {
+  return (
+    <div className="freq-grid">
+      {shownBands.map(freq => (
+        <button
+          key={freq}
+          className={`freq-btn ${getBtnState(freq, sign)}`}
+          onClick={() => selectBand(freq, sign)}
+          disabled={answered}
+        >
+          <span className="freq-num">{FREQ_LABEL(freq)}</span>
+          <span className="freq-unit">{FREQ_UNIT(freq)}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function makeFilter(freq, gain, q) {
   return [{ type: 'peaking', frequency: freq, Q: q, gain }];
 }
@@ -112,7 +130,7 @@ export function FrequencyTrainer({ engine, onScore, onEqChange, gainDb, q }) {
 
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [trial, testMode, playMode]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [trial, testMode, playMode, gainDb, q]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function selectMode(mode) {
     engine.stop();
@@ -227,24 +245,6 @@ export function FrequencyTrainer({ engine, onScore, onEqChange, gainDb, q }) {
     return isSel ? 'f-selected' : '';
   }
 
-  function FreqRow({ sign }) {
-    return (
-      <div className="freq-grid">
-        {shownBands.map(freq => (
-          <button
-            key={freq}
-            className={`freq-btn ${getBtnState(freq, sign)}`}
-            onClick={() => selectBand(freq, sign)}
-            disabled={answered}
-          >
-            <span className="freq-num">{FREQ_LABEL(freq)}</span>
-            <span className="freq-unit">{FREQ_UNIT(freq)}</span>
-          </button>
-        ))}
-      </div>
-    );
-  }
-
   const hasSelection = userSelection !== null;
 
   return (
@@ -290,15 +290,15 @@ export function FrequencyTrainer({ engine, onScore, onEqChange, gainDb, q }) {
         <div className="freq-grid-mixed">
           <div className="mixed-row">
             <div className="mixed-row-label boost-label">▲ Boost</div>
-            <FreqRow sign={1} />
+            <FreqRow shownBands={shownBands} sign={1} getBtnState={getBtnState} selectBand={selectBand} answered={answered} />
           </div>
           <div className="mixed-row">
             <div className="mixed-row-label cut-label">▼ Cut</div>
-            <FreqRow sign={-1} />
+            <FreqRow shownBands={shownBands} sign={-1} getBtnState={getBtnState} selectBand={selectBand} answered={answered} />
           </div>
         </div>
       ) : (
-        <FreqRow sign={activeSign} />
+        <FreqRow shownBands={shownBands} sign={activeSign} getBtnState={getBtnState} selectBand={selectBand} answered={answered} />
       )}
 
       {/* Legend */}
