@@ -1,4 +1,5 @@
 import { useRef, useEffect } from 'react';
+import { Link } from 'wouter';
 
 export function InfoIcon() {
   return (
@@ -130,9 +131,9 @@ export function HowItWorksModal({ isOpen, onClose }) {
           </div>
 
           <div className="info-tech-link">
-            <a href="/technical-details.html">
+            <Link href="/technical-details">
               Technical Details →
-            </a>
+            </Link>
             <span>Filter math, pink noise, and signal chain explained</span>
           </div>
 

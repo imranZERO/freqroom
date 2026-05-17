@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
+import { Router, Route, Switch } from 'wouter';
 import { useAudioEngine } from './hooks/useAudioEngine.js';
 import { TrackSelector } from './components/TrackSelector.jsx';
 import { FrequencyTrainer } from './components/FrequencyTrainer.jsx';
 import { ScoreBoard } from './components/ScoreBoard.jsx';
 import { HowItWorksModal, InfoIcon } from './components/HowItWorksModal.jsx';
 import { FreqGraph } from './components/FreqGraph.jsx';
+import { TechnicalDetails } from './components/TechnicalDetails.jsx';
 
 function SunIcon() {
   return (
@@ -34,7 +36,7 @@ function MoonIcon() {
   );
 }
 
-export default function App() {
+function MainApp() {
   const engine = useAudioEngine();
   const [scores, setScores] = useState({ total: 0, correct: 0 });
   const [isDark, setIsDark] = useState(
@@ -109,5 +111,16 @@ export default function App() {
         <p>Inspired by <a href="https://harmanhowtolisten.blogspot.com" target="_blank" rel="noopener noreferrer">Harman's How to Listen</a></p>
       </footer>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <Router>
+      <Switch>
+        <Route path="/technical-details" component={TechnicalDetails} />
+        <Route component={MainApp} />
+      </Switch>
+    </Router>
   );
 }
