@@ -129,6 +129,13 @@ export function HowItWorksModal({ isOpen, onClose }) {
             </p>
           </div>
 
+          <div className="info-tech-link">
+            <a href="/technical-details.html">
+              Technical Details →
+            </a>
+            <span>Filter math, pink noise, and signal chain explained</span>
+          </div>
+
         </div>
       </div>
     </dialog>

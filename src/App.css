@@ -478,6 +478,24 @@ body {
   margin-bottom: 2px;
 }
 
+.info-tech-link {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+.info-tech-link a {
+  color: var(--a);
+  text-decoration: none;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.info-tech-link a:hover { text-decoration: underline; }
+.info-tech-link span { color: var(--muted); }
+
 /* ── Frequency Trainer ──────────────────────────────────────────────────── */
 
 .trainer-empty {
