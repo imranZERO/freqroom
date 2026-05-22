@@ -4,7 +4,7 @@ Interactive EQ ear training for producers, engineers, and audiophiles.
 
 ## What it does
 
-FreqRoom trains your ears to identify frequency changes in audio. Each trial applies a peak EQ filter at a hidden frequency — you toggle between the processed signal and a flat reference, then pick the band you hear changing. Gain (±3–12dB) and Q are configurable so you can start broad and easy, then tighten the challenge as your ears improve.
+FreqRoom trains your ears to identify frequency changes in audio. Each trial applies a peak EQ filter at a hidden frequency — you toggle between the processed signal and a flat reference, then pick the band you hear changing. Gain (1–18 dB) and Q are configurable so you can start broad and easy, then tighten the challenge as your ears improve.
 
 Difficulty adapts automatically: get 3 correct in a row and you advance to a harder level with more candidate bands. Miss 2 in a row and it steps back down. Levels range from 2 to 15 bands spread evenly across 20Hz–20kHz on a log scale.
 
@@ -34,7 +34,8 @@ npm run preview  # preview the production build
 
 ## Stack
 
-- React 18
+- Preact
+- Wouter (client-side routing)
 - Web Audio API (no audio libraries)
 - Vite
 
