@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { InfoIcon } from './HowItWorksModal.jsx';
+import { InfoIcon } from './Icons.jsx';
 
 const FREQ_MIN = 20;
 const FREQ_MAX = 20000;
