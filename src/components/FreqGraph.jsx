@@ -43,7 +43,28 @@ function makeFill(pts, range) {
   return `${makeLine(pts)}L${xN},${y0.toFixed(1)}L${x0},${y0.toFixed(1)}Z`;
 }
 
-export function FreqGraph({ bands = [], gains = [], gainDb = 6, centerFreq = null, Q = 1.4, sampleRate = 48000 }) {
+const heatClass = acc => acc === null ? 'heat-none' : acc < 0.5 ? 'heat-low' : acc < 0.8 ? 'heat-mid' : 'heat-high';
+
+// Weak-spot strip: one segment per octave bucket, just under the plot area
+function HeatStrip({ heat }) {
+  if (!heat.some(b => b.n > 0)) return null;
+  const y = P.t + IH + 2;
+  return (
+    <g className="graph-heat">
+      {heat.map(({ center, n, hits, acc }) => {
+        const x0 = toX(Math.max(F_MIN, center / Math.SQRT2));
+        const x1 = toX(Math.min(F_MAX, center * Math.SQRT2));
+        return (
+          <rect key={center} x={x0 + 0.5} y={y} width={Math.max(0, x1 - x0 - 1)} height={3} rx={1} className={heatClass(acc)}>
+            <title>{`${center >= 1000 ? `${center / 1000} kHz` : `${center} Hz`} octave: ${n ? `${hits}/${n} correct (${Math.round((hits / n) * 100)}%)` : 'no answers yet'}${acc === null && n ? ' — needs 3+ to rate' : ''}`}</title>
+          </rect>
+        );
+      })}
+    </g>
+  );
+}
+
+export function FreqGraph({ bands = [], gains = [], gainDb = 6, centerFreq = null, Q = 1.4, sampleRate = 48000, heat = [] }) {
   const revealed = centerFreq !== null;
   const isBoost = gainDb > 0;
   // ±12 dB by default; widens in 6 dB steps so high gains aren't clipped
@@ -101,6 +122,8 @@ export function FreqGraph({ bands = [], gains = [], gainDb = 6, centerFreq = nul
             EQ curve appears here during a trial
           </text>
         )}
+
+        <HeatStrip heat={heat} />
 
         {/* Border */}
         <rect x={P.l} y={P.t} width={IW} height={IH} className="graph-border" />

@@ -7,23 +7,42 @@ import { ScoreBoard } from './components/ScoreBoard.jsx';
 import { HowItWorksModal } from './components/HowItWorksModal.jsx';
 import { TechnicalDetails } from './components/TechnicalDetails.jsx';
 import { InfoIcon, SunIcon, MoonIcon, GitHubIcon } from './components/Icons.jsx';
+import { usePersistentState, clearAll } from './lib/storage.js';
+import { EMPTY_PROGRESS, recordResult } from './lib/progress.js';
 
 function MainApp() {
   const engine = useAudioEngine();
   const [scores, setScores] = useState({ total: 0, correct: 0 });
-  const [isDark, setIsDark] = useState(
-    () => window.matchMedia('(prefers-color-scheme: dark)').matches
+  const [isDark, setIsDark] = usePersistentState(
+    'dark', () => window.matchMedia('(prefers-color-scheme: dark)').matches
   );
   const [showInfo, setShowInfo] = useState(false);
-  const [gainDb, setGainDb] = useState(6);
-  const [q, setQ] = useState(1.4);
+  const [gainDb, setGainDb] = usePersistentState('gainDb', 6);
+  const [q, setQ] = usePersistentState('q', 1.4);
+  const [focus, setFocus] = usePersistentState('focus', false);
+  const [progress, setProgress] = usePersistentState('progress', EMPTY_PROGRESS);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
   }, [isDark]);
 
-  function handleScore(correct) {
+  // Called by the trainer for every answered trial
+  function handleResult(result) {
+    const { correct } = result;
     setScores(prev => ({ total: prev.total + 1, correct: prev.correct + (correct ? 1 : 0) }));
+    setProgress(prev => recordResult(prev, result));
+  }
+
+  function resetProgress() {
+    if (!confirm('Reset your levels, lifetime score, and weak-spot stats? Settings are kept.')) return;
+    setProgress(EMPTY_PROGRESS);
+    setScores({ total: 0, correct: 0 });
+  }
+
+  function clearSavedData() {
+    if (!confirm('Clear everything FreqRoom has saved in this browser — progress, settings, and theme?')) return;
+    clearAll();
+    location.reload();
   }
 
   return (
@@ -55,11 +74,21 @@ function MainApp() {
 
       <main className="app-main rack">
         <aside className="rack-side">
-          <TrackSelector engine={engine} gainDb={gainDb} setGainDb={setGainDb} q={q} setQ={setQ} />
+          <TrackSelector
+            engine={engine} gainDb={gainDb} setGainDb={setGainDb} q={q} setQ={setQ}
+            focus={focus} setFocus={setFocus}
+            hasProgress={progress.lifetime.total > 0} onResetProgress={resetProgress}
+          />
         </aside>
         <div className="rack-main">
-          <FrequencyTrainer engine={engine} onScore={handleScore} gainDb={gainDb} q={q} />
-          <ScoreBoard scores={scores} onReset={() => setScores({ total: 0, correct: 0 })} />
+          <FrequencyTrainer
+            engine={engine} gainDb={gainDb} q={q}
+            progress={progress} focus={focus} onResult={handleResult}
+          />
+          <ScoreBoard
+            scores={scores} lifetime={progress.lifetime}
+            onReset={() => setScores({ total: 0, correct: 0 })}
+          />
         </div>
       </main>
 
@@ -72,7 +101,11 @@ function MainApp() {
           </a>
           Created by <a href="https://imranzero.pages.dev" target="_blank" rel="noopener noreferrer">imranZERO</a>
         </p>
-        <p>Inspired by <a href="https://harmanhowtolisten.blogspot.com" target="_blank" rel="noopener noreferrer">Harman's How to Listen</a></p>
+        <p>
+          Inspired by <a href="https://harmanhowtolisten.blogspot.com" target="_blank" rel="noopener noreferrer">Harman's How to Listen</a>
+          <span className="footer-sep">·</span>
+          <button className="footer-link-btn" onClick={clearSavedData}>Clear saved data</button>
+        </p>
       </footer>
     </div>
   );

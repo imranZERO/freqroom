@@ -1,4 +1,4 @@
-export function ScoreBoard({ scores, onReset }) {
+export function ScoreBoard({ scores, lifetime, onReset }) {
   const { total, correct } = scores;
   if (total === 0) return null;
 
@@ -32,6 +32,11 @@ export function ScoreBoard({ scores, onReset }) {
            pct >= 50 ? 'Keep training.' :
            'Chance level — try headphones or turn up the volume.'}
         </p>
+        {lifetime.total > total && (
+          <p className="score-lifetime">
+            Lifetime {lifetime.correct}/{lifetime.total} · {Math.round((lifetime.correct / lifetime.total) * 100)}%
+          </p>
+        )}
       </div>
     </section>
   );

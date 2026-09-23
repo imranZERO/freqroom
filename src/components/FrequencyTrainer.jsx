@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { InfoIcon } from './Icons.jsx';
 import { FreqGraph } from './FreqGraph.jsx';
+import { heatFor, pickWeighted } from '../lib/progress.js';
 
 const FREQ_MIN = 20;
 const FREQ_MAX = 20000;
@@ -80,9 +81,13 @@ function signForMode(mode) {
   return Math.random() < 0.5 ? 1 : -1;
 }
 
-export function FrequencyTrainer({ engine, onScore, gainDb, q }) {
+// Stats family the current modes record under (shelf/pass/sweep modes add their own)
+const FAMILY = 'peak';
+
+export function FrequencyTrainer({ engine, gainDb, q, progress, focus, onResult }) {
   const [testMode, setTestMode] = useState(null);
-  const [level, setLevel] = useState(2);
+  // Level is remembered per mode in saved progress
+  const level = (testMode && progress.levels[testMode]) || MIN_LEVEL;
   const [correctStreak, setCorrectStreak] = useState(0);
   const [wrongStreak, setWrongStreak] = useState(0);
   const [trial, setTrial] = useState(null);
@@ -138,7 +143,6 @@ export function FrequencyTrainer({ engine, onScore, gainDb, q }) {
     setTestMode(mode);
     setTrial(null);
     setPlayMode(null);
-    setLevel(2);
     setCorrectStreak(0);
     setWrongStreak(0);
   }
@@ -148,7 +152,9 @@ export function FrequencyTrainer({ engine, onScore, gainDb, q }) {
     engine.stop();
     setPlayMode(null);
     const shownBands = generateBands(level);
-    const activeBand = shownBands[Math.floor(Math.random() * shownBands.length)];
+    const activeBand = focus
+      ? pickWeighted(shownBands, progress, FAMILY)
+      : shownBands[Math.floor(Math.random() * shownBands.length)];
     const activeSign = signForMode(testMode);
     setTrial({ shownBands, activeBand, activeSign, userSelection: null, answered: false, wasCorrect: null });
   }
@@ -171,7 +177,6 @@ export function FrequencyTrainer({ engine, onScore, gainDb, q }) {
     const { activeBand, activeSign, userSelection } = trial;
     const correct = userSelection.freq === activeBand && userSelection.sign === activeSign;
 
-    onScore(correct);
     engine.stop();
     setPlayMode(null);
 
@@ -184,7 +189,7 @@ export function FrequencyTrainer({ engine, onScore, gainDb, q }) {
 
     setCorrectStreak(cs);
     setWrongStreak(ws);
-    setLevel(lv);
+    onResult({ mode: testMode, family: FAMILY, freq: activeBand, correct, level: lv });
     setTrial(prev => ({ ...prev, answered: true, wasCorrect: correct }));
   }
 
@@ -201,6 +206,7 @@ export function FrequencyTrainer({ engine, onScore, gainDb, q }) {
       centerFreq={trial?.answered ? trial.activeBand : null}
       Q={q}
       sampleRate={engine.sampleRate}
+      heat={heatFor(progress, FAMILY)}
     />
   );
 

@@ -1,4 +1,5 @@
 import { useRef, useState, useCallback } from 'react';
+import { load, save } from '../lib/storage.js';
 
 // Time constant for setTargetAtTime ramps; ~5 time constants to settle (≈25 ms)
 const RAMP_TC = 0.005;
@@ -52,7 +53,7 @@ export function useAudioEngine() {
   const voiceRef = useRef(null);
   const startTimeRef = useRef(0);
   const startOffsetRef = useRef(0);
-  const volumeRef = useRef(0.8);
+  const volumeRef = useRef(load('volume', 0.8));
   const currentFiltersRef = useRef([]);
 
   const [isLoaded, setIsLoaded] = useState(false);
@@ -60,7 +61,7 @@ export function useAudioEngine() {
   const [isLoading, setIsLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [loadError, setLoadError] = useState(null);
-  const [volume, setVolumeState] = useState(0.8);
+  const [volume, setVolumeState] = useState(volumeRef.current);
   const [duration, setDuration] = useState(0);
 
   function getCtx() {
@@ -180,6 +181,7 @@ export function useAudioEngine() {
   const setVolume = useCallback((v) => {
     volumeRef.current = v;
     setVolumeState(v);
+    save('volume', v);
     const graph = graphRef.current;
     if (graph) rampTo(graph.master.gain, v, graph.ctx.currentTime);
   }, []);

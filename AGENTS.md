@@ -44,7 +44,9 @@ App.jsx (Wouter Router)
 
 **`audioInfo.js`** — `probeAudioFile(file)` reads format, original sample rate, bit depth, and channels from WAV/FLAC/MP3/Ogg/Opus headers (M4A reports format only). `decodeAudioData` resamples to the context rate, so this is the only source of the file's real specs. `TrackSelector` shows them, plus average bitrate (file size ÷ duration), on the upload button.
 
-**Theme** — toggled via `data-theme="dark|light"` on `document.documentElement`; CSS variables in `App.css` handle the rest.
+**Persistence (`src/lib/storage.js`, `src/lib/progress.js`)** — all saved state lives in localStorage under the `freqroom:` prefix, and every access is try/catch-guarded, so the app runs on defaults when storage is blocked. `usePersistentState` backs theme (`dark`), `gainDb`, `q`, `focus`, and `progress`; the engine saves `volume`. `progress` holds the level per mode, lifetime totals, and per-octave accuracy (`stats[family][bucket]`, 10 octave buckets from 31.5 Hz). `FrequencyTrainer` reports each answer via `onResult`, and `App` folds it in with `recordResult`. `heatFor` drives the graph's weak-spot strip and `pickWeighted` drives "Focus weak bands". "Reset progress" (Controls) clears progress only; "Clear saved data" (footer) calls `clearAll()` and reloads. `index.html` reads the saved theme before first paint.
+
+**Theme** — toggled via `data-theme="dark|light"` on `document.documentElement`; CSS variables in `App.css` handle the rest. The choice is saved (see Persistence).
 
 ## Deployment
 
