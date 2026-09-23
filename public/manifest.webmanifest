@@ -1,0 +1,15 @@
+{
+  "name": "FreqRoom — EQ Ear Training",
+  "short_name": "FreqRoom",
+  "description": "Interactive EQ ear training for producers, engineers, and audiophiles",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#121110",
+  "theme_color": "#121110",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

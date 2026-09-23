@@ -8,15 +8,25 @@ FreqRoom trains your ears to identify frequency changes in audio. Each trial app
 
 Difficulty adapts automatically: get 3 correct in a row and you advance to a harder level with more candidate bands. Miss 2 in a row and it steps back down. Levels range from 2 to 15 bands spread evenly across 20Hz–20kHz on a log scale.
 
-**Three test modes:**
+**Six test modes:**
 - **Boosts** — identify which band was boosted
 - **Cuts** — identify which band was cut
 - **Mixed** — identify the frequency *and* whether it was a boost or cut
+- **Shelves** — find the corner of a low or high shelf
+- **Pass Filters** — find the cutoff of a high-pass or low-pass filter
+- **Sweep** — drag on the graph to where you hear the boost; scored by how many octaves off you are
 
 **Source audio:**
 - Pink noise (recommended — equal energy per octave)
 - White noise
-- Upload your own music (MP3, WAV, FLAC, OGG)
+- Upload your own music (MP3, WAV, FLAC, OGG) — shows the file's format, sample rate, bit depth, and bitrate, and can loop an A/B section
+
+**Practice tools:**
+- Progress is saved in your browser: level per mode, lifetime score, and a weak-spot strip on the graph showing your accuracy per octave
+- "Focus weak bands" drills the octaves you miss most
+- Keyboard: 1–9/0 pick bands, ← → step, ↑ ↓ switch boost/cut in Mixed, Space toggles EQ/Flat, Enter checks
+- Share links recreate a challenge (mode, level, gain, Q, noise source)
+- Installable and works offline
 
 ## Running locally
 

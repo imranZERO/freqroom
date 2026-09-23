@@ -50,6 +50,8 @@ App.jsx (Wouter Router)
 
 **Theme** — toggled via `data-theme="dark|light"` on `document.documentElement`; CSS variables in `App.css` handle the rest. The choice is saved (see Persistence).
 
+**Offline / install (`public/sw.js`, `public/manifest.webmanifest`)** — the service worker is registered from `main.jsx` in production builds only. Page navigations are network-first with the cached `/` shell as the offline fallback; other same-origin GETs are cache-first and refreshed in the background (asset names are content-hashed). Bump `CACHE` in `sw.js` when changing the caching strategy. Icons: `icon-192/512.png` (rounded), `icon-maskable-512.png` (full-bleed), and `apple-touch-icon.png`, all rendered from `favicon.svg`.
+
 ## Deployment
 
 Deployed on Cloudflare Pages. `public/_redirects` contains `/* /index.html 200` to enable client-side routing — any new Wouter routes will work automatically without changes to this file.
