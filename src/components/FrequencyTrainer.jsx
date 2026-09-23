@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { InfoIcon } from './Icons.jsx';
+import { FreqGraph } from './FreqGraph.jsx';
 
 const FREQ_MIN = 20;
 const FREQ_MAX = 20000;
@@ -49,15 +50,16 @@ function freqRegion(hz) {
   return 'Brilliance';
 }
 
-function FreqRow({ shownBands, sign, getBtnState, selectBand, answered }) {
+function FreqRow({ shownBands, sign, dirLabel, getBtnState, selectBand, answered }) {
   return (
-    <div className="freq-grid">
+    <div className="freq-grid" style={{ '--n': shownBands.length }}>
       {shownBands.map(freq => (
         <button
           key={freq}
           className={`freq-btn ${getBtnState(freq, sign)}`}
           onClick={() => selectBand(freq, sign)}
           disabled={answered}
+          aria-label={`${FREQ_LABEL(freq)} ${FREQ_UNIT(freq)}${dirLabel ? ` ${dirLabel}` : ''}`}
         >
           <span className="freq-num">{FREQ_LABEL(freq)}</span>
           <span className="freq-unit">{FREQ_UNIT(freq)}</span>
@@ -78,7 +80,7 @@ function signForMode(mode) {
   return Math.random() < 0.5 ? 1 : -1;
 }
 
-export function FrequencyTrainer({ engine, onScore, onEqChange, gainDb, q }) {
+export function FrequencyTrainer({ engine, onScore, gainDb, q }) {
   const [testMode, setTestMode] = useState(null);
   const [level, setLevel] = useState(2);
   const [correctStreak, setCorrectStreak] = useState(0);
@@ -86,21 +88,6 @@ export function FrequencyTrainer({ engine, onScore, onEqChange, gainDb, q }) {
   const [trial, setTrial] = useState(null);
   const [playMode, setPlayMode] = useState(null);
   const answeringRef = useRef(false);
-
-  useEffect(() => {
-    if (trial) {
-      const liveGain = trial.activeSign * gainDb;
-      const gains = testMode === 'both' ? [gainDb, -gainDb] : [liveGain];
-      onEqChange?.({
-        bands: trial.shownBands,
-        gains,
-        gainDb: liveGain,
-        centerFreq: trial.answered ? trial.activeBand : null,
-      });
-    } else {
-      onEqChange?.(null);
-    }
-  }, [trial, testMode, gainDb]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Apply Gain/Q slider changes to the live EQ without restarting playback
   useEffect(() => {
@@ -201,73 +188,87 @@ export function FrequencyTrainer({ engine, onScore, onEqChange, gainDb, q }) {
     setTrial(prev => ({ ...prev, answered: true, wasCorrect: correct }));
   }
 
-  // ── Empty state ─────────────────────────────────────────────────────────
-  if (!engine.isLoaded) {
-    return (
-      <section className="card trainer-empty">
-        <p className="muted">Load a source audio track above to start training.</p>
-      </section>
-    );
-  }
-
-  // ── Mode picker ─────────────────────────────────────────────────────────
-  if (!testMode) {
-    return (
-      <section className="card trainer-modepick">
-        <h2>Choose Test Mode</h2>
-        <div className="mode-grid">
-          {MODES.map(m => (
-            <button key={m.id} className="mode-card" onClick={() => selectMode(m.id)}>
-              <span className="mode-label">{m.label}</span>
-              <span className="mode-sign">{m.sign}{gainDb}dB</span>
-              <span className="mode-desc">{m.desc}</span>
-            </button>
-          ))}
-        </div>
-      </section>
-    );
-  }
-
   const currentMode = MODES.find(m => m.id === testMode);
+  const isMixed = testMode === 'both';
+  const liveGain = trial ? trial.activeSign * gainDb : gainDb;
 
-  // ── Start state ─────────────────────────────────────────────────────────
-  if (!trial) {
-    return (
-      <section className="card trainer-start">
-        <div className="trainer-start-top">
-          <div className="level-chip">Level {level}</div>
-          <button className="btn-ghost" onClick={() => setTestMode(null)}>Change mode</button>
-        </div>
+  // The graph is the instrument's "screen" and is shown in every state
+  const screen = (
+    <FreqGraph
+      bands={trial?.shownBands ?? []}
+      gains={!trial ? [] : isMixed ? [gainDb, -gainDb] : [liveGain]}
+      gainDb={liveGain}
+      centerFreq={trial?.answered ? trial.activeBand : null}
+      Q={q}
+      sampleRate={engine.sampleRate}
+    />
+  );
+
+  // `outside` renders below the panel (the empty state's quick-start steps)
+  let header = null, body = null, outside = null;
+
+  if (!engine.isLoaded) {
+    // ── Empty state ───────────────────────────────────────────────────────
+    outside = (
+      <ol className="quickstart">
+        <li><strong>Load a source</strong> — pink noise is best for learning; your own music works too.</li>
+        <li><strong>Choose a mode</strong> — spot boosts, cuts, or both.</li>
+        <li><strong>Compare EQ and Flat</strong>, then pick the band you hear changing.</li>
+      </ol>
+    );
+  } else if (!testMode) {
+    // ── Mode picker ───────────────────────────────────────────────────────
+    header = <h2>Choose Test Mode</h2>;
+    body = (
+      <div className="mode-grid">
+        {MODES.map(m => (
+          <button key={m.id} className="mode-card" onClick={() => selectMode(m.id)}>
+            <span className="mode-label">{m.label}</span>
+            <span className="mode-sign">{m.sign}{gainDb}dB</span>
+            <span className="mode-desc">{m.desc}</span>
+          </button>
+        ))}
+      </div>
+    );
+  } else if (!trial) {
+    // ── Start state ───────────────────────────────────────────────────────
+    header = (
+      <>
+        <div className="level-chip">Level {level}</div>
         <div className="mode-badge">{currentMode.sign}{gainDb}dB · {currentMode.label}</div>
+        <button className="btn-ghost trainer-header-end" onClick={() => setTestMode(null)}>Change mode</button>
+      </>
+    );
+    body = (
+      <div className="trainer-start">
         <p className="start-desc">{currentMode.desc} — pick from <strong>{level}</strong> {level === 1 ? 'band' : 'bands'}</p>
         <button className="btn-primary large" onClick={startTrial}>Start Trial</button>
-      </section>
+      </div>
     );
-  }
+  } else {
+    // ── Active trial ──────────────────────────────────────────────────────
+    const { shownBands, activeBand, activeSign, userSelection, answered, wasCorrect } = trial;
+    const dirLabel = activeSign > 0 ? 'boost' : 'cut';
+    const hasSelection = userSelection !== null;
 
-  // ── Active trial ────────────────────────────────────────────────────────
-  const { shownBands, activeBand, activeSign, userSelection, answered, wasCorrect } = trial;
-  const isMixed = testMode === 'both';
-  const dirLabel = activeSign > 0 ? 'boost' : 'cut';
+    const getBtnState = (freq, sign) => {
+      const isSel = hasSelection && userSelection.freq === freq && userSelection.sign === sign;
+      const isAct = freq === activeBand && sign === activeSign;
+      if (answered) {
+        if (isAct && isSel) return 'f-hit';
+        if (isAct) return 'f-missed';
+        if (isSel) return 'f-wrong';
+      }
+      return isSel ? 'f-selected' : '';
+    };
+    const rowProps = { shownBands, getBtnState, selectBand, answered };
 
-  function getBtnState(freq, sign) {
-    const isSel = userSelection !== null && userSelection.freq === freq && userSelection.sign === sign;
-    const isAct = freq === activeBand && sign === activeSign;
-    if (answered) {
-      if (isAct && isSel) return 'f-hit';
-      if (isAct) return 'f-missed';
-      if (isSel) return 'f-wrong';
-    }
-    return isSel ? 'f-selected' : '';
-  }
+    const isWrongStreak = wrongStreak > 0;
+    const streakCount = isWrongStreak ? wrongStreak : correctStreak;
+    const streakMax = isWrongStreak ? WRONG_TO_DECREASE : CORRECT_TO_ADVANCE;
 
-  const hasSelection = userSelection !== null;
-
-  return (
-    <section className="card trainer-card">
-
-      {/* Header row */}
-      <div className="trainer-header">
+    header = (
+      <>
         <div className="level-chip">Level {level}</div>
         <div className="mode-badge">{currentMode.sign}{gainDb}dB · {currentMode.label}</div>
         {!answered ? (
@@ -282,96 +283,101 @@ export function FrequencyTrainer({ engine, onScore, onEqChange, gainDb, q }) {
             <span className="result-note">{freqToNote(activeBand)} · {freqRegion(activeBand)}</span>
           </span>
         )}
-      </div>
+      </>
+    );
 
-      {/* Playback controls */}
-      <div className="playback-row">
-        <button
-          className={`play-toggle play-toggle-eq ${playMode === 'eq' ? 'ptog-eq' : ''}`}
-          onClick={() => handlePlayMode('eq')}
-        >
-          {playMode === 'eq' ? '◼' : '▶'} EQ
-        </button>
-        <button
-          className={`play-toggle play-toggle-flat ${playMode === 'flat' ? 'ptog-flat' : ''}`}
-          onClick={() => handlePlayMode('flat')}
-        >
-          {playMode === 'flat' ? '◼' : '▶'} Flat
-        </button>
-        <span className="playback-tip">Toggle between both to compare</span>
-      </div>
-
-      {/* Frequency grid — two rows for mixed, one row otherwise */}
-      {isMixed ? (
-        <div className="freq-grid-mixed">
-          <div className="mixed-row">
-            <div className="mixed-row-label boost-label">▲ Boost</div>
-            <FreqRow shownBands={shownBands} sign={1} getBtnState={getBtnState} selectBand={selectBand} answered={answered} />
-          </div>
-          <div className="mixed-row">
-            <div className="mixed-row-label cut-label">▼ Cut</div>
-            <FreqRow shownBands={shownBands} sign={-1} getBtnState={getBtnState} selectBand={selectBand} answered={answered} />
-          </div>
-        </div>
-      ) : (
-        <FreqRow shownBands={shownBands} sign={activeSign} getBtnState={getBtnState} selectBand={selectBand} answered={answered} />
-      )}
-
-      {/* Legend */}
-      {answered && (
-        <div className="freq-legend">
-          <span className="legend-item"><span className="legend-dot ld-hit" />Correct</span>
-          {!wasCorrect && (
-            <span className="legend-item"><span className="legend-dot ld-missed" />Was the answer</span>
-          )}
-          {hasSelection && !wasCorrect && (
-            <span className="legend-item"><span className="legend-dot ld-wrong" />Your pick</span>
-          )}
-          {isMixed && (
-            <span className="legend-item muted mixed-dir-reveal">
-              Answer was a <strong>{dirLabel}</strong>
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* Streak progress */}
-      {(() => {
-        const isWrong = wrongStreak > 0;
-        const count = isWrong ? wrongStreak : correctStreak;
-        const max   = isWrong ? WRONG_TO_DECREASE : CORRECT_TO_ADVANCE;
-        const label = isWrong ? `${count}/${max} wrong → level down` : `${count}/${max} correct → level up`;
-        const pip   = isWrong ? 'pip-wrong' : 'pip-correct';
-        return (
-          <div className="streak-row">
-            <span className={`streak-label ${isWrong ? 'wrong-label' : ''}`}>{label}</span>
-            <div className="streak-pips">
-              {Array.from({ length: max }, (_, i) => (
-                <span key={i} className={`pip ${i < count ? pip : ''}`} />
-              ))}
+    body = (
+      <>
+        {/* Band keys sit directly under their curve peaks; mixed mode adds a cut row */}
+        {isMixed ? (
+          <div className="freq-grid-mixed">
+            <div className="mixed-row">
+              <span className="mixed-row-label boost-label" title="Boost">▲</span>
+              <FreqRow {...rowProps} sign={1} dirLabel="boost" />
+            </div>
+            <div className="mixed-row">
+              <span className="mixed-row-label cut-label" title="Cut">▼</span>
+              <FreqRow {...rowProps} sign={-1} dirLabel="cut" />
             </div>
           </div>
-        );
-      })()}
-
-      {/* Action button */}
-      <div className="trainer-action">
-        <button
-          className="icon-btn trainer-kb-hint"
-          aria-label="Keyboard shortcuts"
-          data-tooltip={isMixed ? 'Space toggle · Enter check/next' : 'Space toggle · ← → select · Enter check/next'}
-        >
-          <InfoIcon />
-        </button>
-        {!answered ? (
-          <button className="btn-primary" onClick={checkAnswer} disabled={!hasSelection}>
-            Check Answer ({hasSelection ? 1 : 0}/1)
-          </button>
         ) : (
-          <button className="btn-primary" onClick={startTrial}>Next Trial →</button>
+          <FreqRow {...rowProps} sign={activeSign} />
         )}
-      </div>
 
-    </section>
+        {answered && (
+          <div className="freq-legend">
+            <span className="legend-item"><span className="legend-dot ld-hit" />Correct</span>
+            {!wasCorrect && (
+              <span className="legend-item"><span className="legend-dot ld-missed" />Was the answer</span>
+            )}
+            {hasSelection && !wasCorrect && (
+              <span className="legend-item"><span className="legend-dot ld-wrong" />Your pick</span>
+            )}
+            {isMixed && (
+              <span className="legend-item muted mixed-dir-reveal">
+                Answer was a <strong>{dirLabel}</strong>
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Transport: compare EQ vs flat, then check */}
+        <div className="transport">
+          <button
+            className={`play-toggle play-toggle-eq ${playMode === 'eq' ? 'ptog-eq' : ''}`}
+            onClick={() => handlePlayMode('eq')}
+          >
+            {playMode === 'eq' ? '◼' : '▶'} EQ
+          </button>
+          <button
+            className={`play-toggle play-toggle-flat ${playMode === 'flat' ? 'ptog-flat' : ''}`}
+            onClick={() => handlePlayMode('flat')}
+          >
+            {playMode === 'flat' ? '◼' : '▶'} Flat
+          </button>
+          <div className="transport-action">
+            <button
+              className="icon-btn trainer-kb-hint"
+              aria-label="Keyboard shortcuts"
+              data-tooltip={isMixed ? 'Space EQ/Flat · Enter check/next' : 'Space EQ/Flat · ← → select · Enter check/next'}
+            >
+              <InfoIcon />
+            </button>
+            {!answered ? (
+              <button className="btn-primary" onClick={checkAnswer} disabled={!hasSelection}>
+                Check Answer
+              </button>
+            ) : (
+              <button className="btn-primary" onClick={startTrial}>Next Trial →</button>
+            )}
+          </div>
+        </div>
+
+        <div className="streak-row">
+          <span className={`streak-label ${isWrongStreak ? 'wrong-label' : ''}`}>
+            {isWrongStreak
+              ? `${streakCount}/${streakMax} wrong → level down`
+              : `${streakCount}/${streakMax} correct → level up`}
+          </span>
+          <div className="streak-pips">
+            {Array.from({ length: streakMax }, (_, i) => (
+              <span key={i} className={`pip ${i < streakCount ? (isWrongStreak ? 'pip-wrong' : 'pip-correct') : ''}`} />
+            ))}
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <div className="panel-group">
+      <h2 className="panel-label">Trainer</h2>
+      <section className="card instrument">
+        {header && <div className="trainer-header">{header}</div>}
+        {screen}
+        {body}
+      </section>
+      {outside}
+    </div>
   );
 }

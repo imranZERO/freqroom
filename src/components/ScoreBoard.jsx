@@ -21,7 +21,7 @@ export function ScoreBoard({ scores, onReset }) {
           <div className="score-bar">
             <div
               className="score-fill"
-              style={{ width: fill, background: pct >= 75 ? '#22c55e' : pct >= 50 ? '#f59e0b' : '#ef4444' }}
+              style={{ width: fill, background: pct >= 75 ? 'var(--green)' : pct >= 50 ? 'var(--a)' : 'var(--red)' }}
             />
           </div>
           <span className="score-pct">{pct}%</span>

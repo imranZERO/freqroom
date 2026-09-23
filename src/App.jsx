@@ -5,7 +5,6 @@ import { TrackSelector } from './components/TrackSelector.jsx';
 import { FrequencyTrainer } from './components/FrequencyTrainer.jsx';
 import { ScoreBoard } from './components/ScoreBoard.jsx';
 import { HowItWorksModal } from './components/HowItWorksModal.jsx';
-import { FreqGraph } from './components/FreqGraph.jsx';
 import { TechnicalDetails } from './components/TechnicalDetails.jsx';
 import { InfoIcon, SunIcon, MoonIcon, GitHubIcon } from './components/Icons.jsx';
 
@@ -16,7 +15,6 @@ function MainApp() {
     () => window.matchMedia('(prefers-color-scheme: dark)').matches
   );
   const [showInfo, setShowInfo] = useState(false);
-  const [activeEq, setActiveEq] = useState(null);
   const [gainDb, setGainDb] = useState(6);
   const [q, setQ] = useState(1.4);
 
@@ -55,21 +53,14 @@ function MainApp() {
         <p>Interactive EQ ear training for producers, engineers, and audiophiles</p>
       </header>
 
-      <main className="app-main">
-        <TrackSelector engine={engine} gainDb={gainDb} setGainDb={setGainDb} q={q} setQ={setQ} />
-        <section className="card freq-graph-card">
-          <h2>Frequency Response</h2>
-          <FreqGraph
-            bands={activeEq?.bands ?? []}
-            gains={activeEq?.gains ?? []}
-            gainDb={activeEq?.gainDb ?? gainDb}
-            centerFreq={activeEq?.centerFreq ?? null}
-            Q={q}
-            sampleRate={engine.sampleRate}
-          />
-        </section>
-        <FrequencyTrainer engine={engine} onScore={handleScore} onEqChange={setActiveEq} gainDb={gainDb} q={q} />
-        <ScoreBoard scores={scores} onReset={() => setScores({ total: 0, correct: 0 })} />
+      <main className="app-main rack">
+        <aside className="rack-side">
+          <TrackSelector engine={engine} gainDb={gainDb} setGainDb={setGainDb} q={q} setQ={setQ} />
+        </aside>
+        <div className="rack-main">
+          <FrequencyTrainer engine={engine} onScore={handleScore} gainDb={gainDb} q={q} />
+          <ScoreBoard scores={scores} onReset={() => setScores({ total: 0, correct: 0 })} />
+        </div>
       </main>
 
       <HowItWorksModal isOpen={showInfo} onClose={() => setShowInfo(false)} />

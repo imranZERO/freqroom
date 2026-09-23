@@ -12,6 +12,18 @@ function formatTime(s) {
   return `${m}:${sec.toString().padStart(2, '0')}`;
 }
 
+// Keeps the extension visible while the base name truncates with an ellipsis
+function FileName({ name }) {
+  const dot = name.lastIndexOf('.');
+  if (dot <= 0) return <span className="file-base">{name}</span>;
+  return (
+    <>
+      <span className="file-base">{name.slice(0, dot)}</span>
+      <span className="file-ext">{name.slice(dot)}</span>
+    </>
+  );
+}
+
 export function TrackSelector({ engine, gainDb, setGainDb, q, setQ }) {
   const fileRef = useRef(null);
   const [activeId, setActiveId] = useState(null);
@@ -78,109 +90,118 @@ export function TrackSelector({ engine, gainDb, setGainDb, q, setQ }) {
   }
 
   return (
-    <section className="card">
-      <h2>Source Audio</h2>
-      <div className="track-grid">
-        {GENERATED_TRACKS.map(t => (
-          <button
-            key={t.id}
-            className={`track-btn ${activeId === t.id ? 'active' : ''}`}
-            onClick={() => loadGenerated(t.id)}
-            disabled={engine.isLoading}
-          >
-            <span className="track-name">{t.label}</span>
-            <span className="track-desc">{t.description}</span>
-          </button>
-        ))}
-        <button
-          className={`track-btn upload-btn ${isUpload ? 'active' : ''}`}
-          onClick={() => fileRef.current?.click()}
-          disabled={engine.isLoading || uploading}
-        >
-          <span className="track-name">
-            {uploading ? 'Loading…' : isUpload ? activeId.slice(7) : 'Upload File'}
-          </span>
-          <span className="track-desc">MP3, WAV, FLAC, OGG</span>
-        </button>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="audio/*"
-          style={{ display: 'none' }}
-          onChange={handleFile}
-        />
+    <>
+      <div className="panel-group">
+        <h2 className="panel-label">Source</h2>
+        <section className="card source-card">
+          <div className="track-grid">
+            {GENERATED_TRACKS.map(t => (
+              <button
+                key={t.id}
+                className={`track-btn ${activeId === t.id ? 'active' : ''}`}
+                onClick={() => loadGenerated(t.id)}
+                disabled={engine.isLoading}
+              >
+                <span className="track-name">{t.label}</span>
+                <span className="track-desc">{t.description}</span>
+              </button>
+            ))}
+            <button
+              className={`track-btn upload-btn ${isUpload ? 'active' : ''}`}
+              onClick={() => fileRef.current?.click()}
+              disabled={engine.isLoading || uploading}
+              title={isUpload ? activeId.slice(7) : undefined}
+            >
+              <span className="track-name">
+                {uploading ? 'Loading…' : isUpload ? <FileName name={activeId.slice(7)} /> : 'Upload File'}
+              </span>
+              <span className="track-desc">MP3, WAV, FLAC, OGG</span>
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="audio/*"
+              style={{ display: 'none' }}
+              onChange={handleFile}
+            />
+          </div>
+          {engine.loadError && <p className="error">{engine.loadError}</p>}
+        </section>
       </div>
 
-      <div className="audio-controls">
-        <div className="control-row">
-          <label htmlFor="ctrl-volume" className="control-label">Volume</label>
-          <input
-            id="ctrl-volume"
-            type="range"
-            className="control-slider"
-            min="0" max="1" step="0.01"
-            value={engine.volume}
-            style={{ '--fill': `${engine.volume * 100}%` }}
-            onChange={e => engine.setVolume(parseFloat(e.target.value))}
-          />
-          <span className="control-value">{Math.round(engine.volume * 100)}%</span>
-        </div>
+      <div className="panel-group">
+        <h2 className="panel-label">Controls</h2>
+        <section className="card controls-card">
+          <div className="audio-controls">
+            <div className="control-row">
+              <label htmlFor="ctrl-volume" className="control-label">Volume</label>
+              <input
+                id="ctrl-volume"
+                type="range"
+                className="control-slider"
+                min="0" max="1" step="0.01"
+                value={engine.volume}
+                style={{ '--fill': `${engine.volume * 100}%` }}
+                onChange={e => engine.setVolume(parseFloat(e.target.value))}
+              />
+              <span className="control-value">{Math.round(engine.volume * 100)}%</span>
+            </div>
 
-        <div className="control-row-pair">
-          <div className="control-row">
-            <label htmlFor="ctrl-gain" className="control-label">Gain</label>
-            <input
-              id="ctrl-gain"
-              type="range"
-              className="control-slider"
-              min="1" max="18" step="1"
-              value={gainDb}
-              style={{ '--fill': `${((gainDb - 1) / 17) * 100}%` }}
-              onChange={e => setGainDb(parseInt(e.target.value, 10))}
-            />
-            <span className="control-value">±{gainDb} dB</span>
-          </div>
-          <div className="control-row">
-            <label htmlFor="ctrl-q" className="control-label">Q (Bandwidth)</label>
-            <input
-              id="ctrl-q"
-              type="range"
-              className="control-slider"
-              min="0.5" max="8" step="0.1"
-              value={q}
-              style={{ '--fill': `${((q - 0.5) / 7.5) * 100}%` }}
-              onChange={e => setQ(parseFloat(e.target.value))}
-            />
-            <span className="control-value">{q.toFixed(1)}</span>
-          </div>
-        </div>
+            <div className="control-row-pair">
+              <div className="control-row">
+                <label htmlFor="ctrl-gain" className="control-label">Gain</label>
+                <input
+                  id="ctrl-gain"
+                  type="range"
+                  className="control-slider"
+                  min="1" max="18" step="1"
+                  value={gainDb}
+                  style={{ '--fill': `${((gainDb - 1) / 17) * 100}%` }}
+                  onChange={e => setGainDb(parseInt(e.target.value, 10))}
+                />
+                <span className="control-value">±{gainDb} dB</span>
+              </div>
+              <div className="control-row">
+                <label htmlFor="ctrl-q" className="control-label">Q (Bandwidth)</label>
+                <input
+                  id="ctrl-q"
+                  type="range"
+                  className="control-slider"
+                  min="0.5" max="8" step="0.1"
+                  value={q}
+                  style={{ '--fill': `${((q - 0.5) / 7.5) * 100}%` }}
+                  onChange={e => setQ(parseFloat(e.target.value))}
+                />
+                <span className="control-value">{q.toFixed(1)}</span>
+              </div>
+            </div>
 
-        {isUpload && engine.duration > 0 && (
-          <div className="control-row">
-            <label htmlFor="ctrl-position" className="control-label">Position</label>
-            <input
-              id="ctrl-position"
-              type="range"
-              className="control-slider"
-              min="0"
-              max={engine.duration}
-              step="0.1"
-              value={position}
-              style={{ '--fill': `${(position / engine.duration) * 100}%` }}
-              onMouseDown={handleSeekStart}
-              onTouchStart={handleSeekStart}
-              onChange={handleSeekChange}
-              onMouseUp={handleSeekEnd}
-              onTouchEnd={handleSeekEnd}
-            />
-            <span className="control-value control-value-time">
-              {formatTime(position)}<span className="control-duration">/{formatTime(engine.duration)}</span>
-            </span>
+            {isUpload && engine.duration > 0 && (
+              <div className="control-row">
+                <label htmlFor="ctrl-position" className="control-label">Position</label>
+                <input
+                  id="ctrl-position"
+                  type="range"
+                  className="control-slider"
+                  min="0"
+                  max={engine.duration}
+                  step="0.1"
+                  value={position}
+                  style={{ '--fill': `${(position / engine.duration) * 100}%` }}
+                  onMouseDown={handleSeekStart}
+                  onTouchStart={handleSeekStart}
+                  onChange={handleSeekChange}
+                  onMouseUp={handleSeekEnd}
+                  onTouchEnd={handleSeekEnd}
+                />
+                <span className="control-value control-value-time">
+                  {formatTime(position)}<span className="control-duration">/{formatTime(engine.duration)}</span>
+                </span>
+              </div>
+            )}
           </div>
-        )}
+        </section>
       </div>
-
-      {engine.loadError && <p className="error">{engine.loadError}</p>}
-    </section>
+    </>
   );
 }

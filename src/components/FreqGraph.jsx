@@ -90,7 +90,7 @@ export function FreqGraph({ bands = [], gains = [], gainDb = 6, centerFreq = nul
           return (
             <g className="graph-reveal">
               <path d={makeFill(pts, range)} className={isBoost ? 'graph-fill-boost' : 'graph-fill-cut'} />
-              <path d={makeLine(pts)} className={isBoost ? 'graph-curve-boost' : 'graph-curve-cut'} />
+              <path d={makeLine(pts)} pathLength="1" className={isBoost ? 'graph-curve-boost' : 'graph-curve-cut'} />
             </g>
           );
         })()}
