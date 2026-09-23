@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { InfoIcon } from './Icons.jsx';
-import { FreqGraph } from './FreqGraph.jsx';
+import { FreqGraph, rowInset } from './FreqGraph.jsx';
 import { heatFor, pickWeighted } from '../lib/progress.js';
 
 const FREQ_MIN = 20;
@@ -10,18 +10,50 @@ const WRONG_TO_DECREASE = 2;
 const MAX_LEVEL = 15;
 const MIN_LEVEL = 2;
 
+// Web Audio reads lowpass/highpass Q in dB; −3.01 dB gives a Butterworth (Q ≈ 0.707) response
+const BUTTERWORTH_Q_DB = -3.01;
+// Shelf corners below this are low shelves, above are high shelves
+const SHELF_SPLIT = 1000;
+
+// family: which stats bucket set a mode records under; maxLevel caps the band count
 const MODES = [
-  { id: 'boost', label: 'Boosts', sign: '+', desc: 'Identify which band was boosted' },
-  { id: 'cut',   label: 'Cuts',   sign: '−', desc: 'Identify which band was cut' },
-  { id: 'both',  label: 'Mixed',  sign: '±', desc: 'Identify the frequency and whether it was a boost or a cut' },
+  { id: 'boost', label: 'Boosts',       family: 'peak',  badge: g => `+${g}dB`, desc: 'Identify which band was boosted' },
+  { id: 'cut',   label: 'Cuts',         family: 'peak',  badge: g => `−${g}dB`, desc: 'Identify which band was cut' },
+  { id: 'both',  label: 'Mixed',        family: 'peak',  badge: g => `±${g}dB`, desc: 'Identify the frequency and whether it was a boost or a cut' },
+  { id: 'shelf', label: 'Shelves',      family: 'shelf', badge: g => `±${g}dB`, desc: 'Find the corner of a low or high shelf', maxLevel: 8 },
+  { id: 'pass',  label: 'Pass Filters', family: 'pass',  badge: () => 'HP / LP', desc: 'Find the cutoff of a high-pass or low-pass filter', maxLevel: 8 },
 ];
 
-function generateBands(n) {
+// Frequency span the candidates are spread over for a trial
+function bandRange(family, kind) {
+  if (family === 'shelf') return [60, 10000];
+  if (family === 'pass') return kind === 'highpass' ? [40, 1000] : [1000, 16000];
+  return [FREQ_MIN, FREQ_MAX];
+}
+
+function generateBands(n, lo = FREQ_MIN, hi = FREQ_MAX) {
   if (n === 0) return [];
   return Array.from({ length: n }, (_, i) =>
-    Math.round(FREQ_MIN * Math.pow(FREQ_MAX / FREQ_MIN, (i + 0.5) / n))
+    Math.round(lo * Math.pow(hi / lo, (i + 0.5) / n))
   );
 }
+
+// Filter type at a band: fixed per trial, except shelves, which follow the corner
+function typeAt(kind, freq) {
+  if (kind === 'shelf') return freq < SHELF_SPLIT ? 'lowshelf' : 'highshelf';
+  return kind;
+}
+
+// One descriptor shape feeds both the audio engine and the graph
+function makeFilter(type, frequency, gain, q) {
+  if (type === 'lowpass' || type === 'highpass') return { type, frequency, Q: BUTTERWORTH_Q_DB };
+  if (type === 'peaking') return { type, frequency, Q: q, gain };
+  return { type, frequency, gain }; // shelves: slope fixed at S = 1
+}
+
+const TYPE_LABELS = {
+  lowshelf: 'low shelf', highshelf: 'high shelf', lowpass: 'low-pass', highpass: 'high-pass',
+};
 
 const FREQ_LABEL = (hz) => {
   if (hz >= 1000) {
@@ -51,9 +83,13 @@ function freqRegion(hz) {
   return 'Brilliance';
 }
 
-function FreqRow({ shownBands, sign, dirLabel, getBtnState, selectBand, answered }) {
+function FreqRow({ shownBands, range, sign, dirLabel, getBtnState, selectBand, answered }) {
+  const inset = rowInset(...range);
   return (
-    <div className="freq-grid" style={{ '--n': shownBands.length }}>
+    <div
+      className="freq-grid"
+      style={{ '--n': shownBands.length, paddingLeft: inset.left, paddingRight: inset.right }}
+    >
       {shownBands.map(freq => (
         <button
           key={freq}
@@ -70,35 +106,32 @@ function FreqRow({ shownBands, sign, dirLabel, getBtnState, selectBand, answered
   );
 }
 
-function makeFilter(freq, gain, q) {
-  return [{ type: 'peaking', frequency: freq, Q: q, gain }];
-}
-
 // Returns +1 or -1
 function signForMode(mode) {
   if (mode === 'boost') return 1;
-  if (mode === 'cut') return -1;
+  if (mode === 'cut' || mode === 'pass') return -1;
   return Math.random() < 0.5 ? 1 : -1;
 }
 
-// Stats family the current modes record under (shelf/pass/sweep modes add their own)
-const FAMILY = 'peak';
-
 export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay, onResult }) {
   const [testMode, setTestMode] = useState(null);
+  const currentMode = MODES.find(m => m.id === testMode);
+  const family = currentMode?.family ?? 'peak';
+  const maxLevel = currentMode?.maxLevel ?? MAX_LEVEL;
   // Level is remembered per mode in saved progress
-  const level = (testMode && progress.levels[testMode]) || MIN_LEVEL;
+  const level = Math.min(maxLevel, (testMode && progress.levels[testMode]) || MIN_LEVEL);
   const [correctStreak, setCorrectStreak] = useState(0);
   const [wrongStreak, setWrongStreak] = useState(0);
   const [trial, setTrial] = useState(null);
   const [playMode, setPlayMode] = useState(null);
   const answeringRef = useRef(false);
 
+  // The hidden filter for a trial at the current Gain/Q settings
+  const activeFilter = t => makeFilter(typeAt(t.kind, t.activeBand), t.activeBand, t.activeSign * gainDb, q);
+
   // Apply Gain/Q slider changes to the live EQ without restarting playback
   useEffect(() => {
-    if (trial && playMode === 'eq') {
-      engine.play(makeFilter(trial.activeBand, trial.activeSign * gainDb, q));
-    }
+    if (trial && playMode === 'eq') engine.play(activeFilter(trial));
   }, [gainDb, q]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Engine stopped elsewhere (e.g. source track changed) — clear the play toggle
@@ -165,21 +198,27 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
     answeringRef.current = false;
     engine.stop();
     setPlayMode(null);
-    const shownBands = generateBands(level);
+    // kind: 'peaking', 'shelf' (low/high chosen by the corner), 'highpass' or 'lowpass'
+    const kind = family === 'shelf' ? 'shelf'
+      : family === 'pass' ? (Math.random() < 0.5 ? 'highpass' : 'lowpass')
+      : 'peaking';
+    const range = bandRange(family, kind);
+    const shownBands = generateBands(level, ...range);
     const activeBand = focus
-      ? pickWeighted(shownBands, progress, FAMILY)
+      ? pickWeighted(shownBands, progress, family)
       : shownBands[Math.floor(Math.random() * shownBands.length)];
     const activeSign = signForMode(testMode);
-    setTrial({ shownBands, activeBand, activeSign, userSelection: null, answered: false, wasCorrect: null });
+    const next = { kind, range, shownBands, activeBand, activeSign, userSelection: null, answered: false, wasCorrect: null };
+    setTrial(next);
     if (autoplay) {
-      engine.play(makeFilter(activeBand, activeSign * gainDb, q));
+      engine.play(activeFilter(next));
       setPlayMode('eq');
     }
   }
 
   function handlePlayMode(mode) {
     if (playMode === mode) { engine.stop(); setPlayMode(null); return; }
-    engine.play(mode === 'eq' ? makeFilter(trial.activeBand, trial.activeSign * gainDb, q) : []);
+    engine.play(mode === 'eq' ? activeFilter(trial) : []);
     setPlayMode(mode);
   }
 
@@ -202,29 +241,32 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
     let ws = correct ? 0 : wrongStreak + 1;
     let lv = level;
 
-    if (cs >= CORRECT_TO_ADVANCE) { lv = Math.min(MAX_LEVEL, level + 1); cs = 0; }
+    if (cs >= CORRECT_TO_ADVANCE) { lv = Math.min(maxLevel, level + 1); cs = 0; }
     else if (ws >= WRONG_TO_DECREASE) { lv = Math.max(MIN_LEVEL, level - 1); ws = 0; }
 
     setCorrectStreak(cs);
     setWrongStreak(ws);
-    onResult({ mode: testMode, family: FAMILY, freq: activeBand, correct, level: lv });
+    onResult({ mode: testMode, family, freq: activeBand, correct, level: lv });
     setTrial(prev => ({ ...prev, answered: true, wasCorrect: correct }));
   }
 
-  const currentMode = MODES.find(m => m.id === testMode);
   const isMixed = testMode === 'both';
-  const liveGain = trial ? trial.activeSign * gainDb : gainDb;
+
+  // Candidates in gray: both directions where the direction is part of the puzzle
+  let curves = [];
+  if (trial) {
+    const gains = isMixed || trial.kind === 'shelf' ? [gainDb, -gainDb] : [trial.activeSign * gainDb];
+    curves = trial.shownBands.flatMap(f => gains.map(g => makeFilter(typeAt(trial.kind, f), f, g, q)));
+  }
 
   // The graph is the instrument's "screen" and is shown in every state
   const screen = (
     <FreqGraph
-      bands={trial?.shownBands ?? []}
-      gains={!trial ? [] : isMixed ? [gainDb, -gainDb] : [liveGain]}
-      gainDb={liveGain}
-      centerFreq={trial?.answered ? trial.activeBand : null}
-      Q={q}
+      curves={curves}
+      answer={trial?.answered ? activeFilter(trial) : null}
+      gainDb={gainDb}
       sampleRate={engine.sampleRate}
-      heat={heatFor(progress, FAMILY)}
+      heat={heatFor(progress, family)}
     />
   );
 
@@ -236,7 +278,7 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
     outside = (
       <ol className="quickstart">
         <li><strong>Load a source</strong> — pink noise is best for learning; your own music works too.</li>
-        <li><strong>Choose a mode</strong> — spot boosts, cuts, or both.</li>
+        <li><strong>Choose a mode</strong> — spot boosts and cuts, shelves, or filter cutoffs.</li>
         <li><strong>Compare EQ and Flat</strong>, then pick the band you hear changing.</li>
       </ol>
     );
@@ -248,7 +290,7 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
         {MODES.map(m => (
           <button key={m.id} className="mode-card" onClick={() => selectMode(m.id)}>
             <span className="mode-label">{m.label}</span>
-            <span className="mode-sign">{m.sign}{gainDb}dB</span>
+            <span className="mode-sign">{m.badge(gainDb)}</span>
             <span className="mode-desc">{m.desc}</span>
           </button>
         ))}
@@ -259,20 +301,24 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
     header = (
       <>
         <div className="level-chip">Level {level}</div>
-        <div className="mode-badge">{currentMode.sign}{gainDb}dB · {currentMode.label}</div>
+        <div className="mode-badge">{currentMode.badge(gainDb)} · {currentMode.label}</div>
         <button className="btn-ghost trainer-header-end" onClick={() => setTestMode(null)}>Change mode</button>
       </>
     );
     body = (
       <div className="trainer-start">
-        <p className="start-desc">{currentMode.desc} — pick from <strong>{level}</strong> {level === 1 ? 'band' : 'bands'}</p>
+        <p className="start-desc">{currentMode.desc} — pick from <strong>{level}</strong> {family === 'shelf' ? 'corners' : family === 'pass' ? 'cutoffs' : 'bands'}</p>
         <button className="btn-primary large" onClick={startTrial}>Start Trial</button>
       </div>
     );
   } else {
     // ── Active trial ──────────────────────────────────────────────────────
-    const { shownBands, activeBand, activeSign, userSelection, answered, wasCorrect } = trial;
+    const { kind, range, shownBands, activeBand, activeSign, userSelection, answered, wasCorrect } = trial;
     const dirLabel = activeSign > 0 ? 'boost' : 'cut';
+    const activeType = typeAt(kind, activeBand);
+    // What the answer was, spelled out after answering (e.g. "low shelf cut")
+    const answerLabel = kind === 'peaking' ? dirLabel
+      : kind === 'shelf' ? `${TYPE_LABELS[activeType]} ${dirLabel}` : TYPE_LABELS[activeType];
     const hasSelection = userSelection !== null;
 
     const getBtnState = (freq, sign) => {
@@ -285,7 +331,7 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
       }
       return isSel ? 'f-selected' : '';
     };
-    const rowProps = { shownBands, getBtnState, selectBand, answered };
+    const rowProps = { shownBands, range, getBtnState, selectBand, answered };
 
     const isWrongStreak = wrongStreak > 0;
     const streakCount = isWrongStreak ? wrongStreak : correctStreak;
@@ -294,17 +340,21 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
     header = (
       <>
         <div className="level-chip">Level {level}</div>
-        <div className="mode-badge">{currentMode.sign}{gainDb}dB · {currentMode.label}</div>
+        <div className="mode-badge">{currentMode.badge(gainDb)} · {currentMode.label}</div>
         {!answered ? (
           <span className="trainer-status">
-            {!hasSelection
-              ? isMixed ? 'Pick the frequency and direction' : `Select the ${activeSign > 0 ? 'boosted' : 'cut'} band`
-              : 'Ready to check'}
+            {hasSelection ? 'Ready to check'
+              : isMixed ? 'Pick the frequency and direction'
+              : kind === 'shelf' ? 'Find the shelf corner'
+              : kind !== 'peaking' ? `Find the ${TYPE_LABELS[kind]} cutoff`
+              : `Select the ${activeSign > 0 ? 'boosted' : 'cut'} band`}
           </span>
         ) : (
           <span className={`trainer-result ${wasCorrect ? 'result-correct' : 'result-incorrect'}`}>
             {wasCorrect ? '✓ Correct!' : '✗ Incorrect'}
-            <span className="result-note">{freqToNote(activeBand)} · {freqRegion(activeBand)}</span>
+            <span className="result-note">
+              {kind === 'peaking' ? freqToNote(activeBand) : answerLabel} · {freqRegion(activeBand)}
+            </span>
           </span>
         )}
       </>
@@ -337,9 +387,9 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
             {hasSelection && !wasCorrect && (
               <span className="legend-item"><span className="legend-dot ld-wrong" />Your pick</span>
             )}
-            {isMixed && (
+            {(isMixed || kind === 'shelf') && (
               <span className="legend-item muted mixed-dir-reveal">
-                Answer was a <strong>{dirLabel}</strong>
+                Answer was a <strong>{answerLabel}</strong>
               </span>
             )}
           </div>

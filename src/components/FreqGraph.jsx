@@ -11,26 +11,64 @@ const toX = f => P.l + (Math.log10(f / F_MIN) / Math.log10(F_MAX / F_MIN)) * IW;
 const toY = (db, range) => P.t + ((range - db) / (2 * range)) * IH;
 const fmtFreq = f => f >= 1000 ? `${f / 1000}k` : `${f}`;
 
-function computeCurve(centerFreq, gainDb, Q, sr, range) {
-  const A = Math.pow(10, gainDb / 40);
-  const w0 = 2 * Math.PI * centerFreq / sr;
-  const alpha = Math.sin(w0) / (2 * Q);
-  const b0 = 1 + alpha * A, b1 = -2 * Math.cos(w0), b2 = 1 - alpha * A;
-  const a0 = 1 + alpha / A, a1 = -2 * Math.cos(w0), a2 = 1 - alpha / A;
-  const b0n = b0/a0, b1n = b1/a0, b2n = b2/a0, a1n = a1/a0, a2n = a2/a0;
+// Biquad coefficients per the Web Audio spec (RBJ cookbook), so the drawn curve
+// matches what BiquadFilterNode plays. Takes the same { type, frequency, Q, gain }
+// descriptor the engine receives. Shelves use slope S = 1; lowpass/highpass read
+// Q in dB, as BiquadFilterNode does.
+export function biquadCoeffs({ type, frequency, Q = 1, gain = 0 }, sr) {
+  const A = Math.pow(10, gain / 40);
+  const w0 = 2 * Math.PI * frequency / sr;
+  const cw = Math.cos(w0), sw = Math.sin(w0);
+  let b0, b1, b2, a0, a1, a2;
 
+  if (type === 'lowpass' || type === 'highpass') {
+    const alpha = sw / (2 * Math.pow(10, Q / 20));
+    const k = type === 'lowpass' ? 1 - cw : 1 + cw;
+    b0 = k / 2; b1 = type === 'lowpass' ? k : -k; b2 = k / 2;
+    a0 = 1 + alpha; a1 = -2 * cw; a2 = 1 - alpha;
+  } else if (type === 'lowshelf' || type === 'highshelf') {
+    const t = 2 * Math.sqrt(A) * (sw / 2) * Math.SQRT2; // 2·√A·alpha with S = 1
+    const s = type === 'lowshelf' ? 1 : -1;
+    b0 = A * ((A + 1) - s * (A - 1) * cw + t);
+    b1 = 2 * s * A * ((A - 1) - s * (A + 1) * cw);
+    b2 = A * ((A + 1) - s * (A - 1) * cw - t);
+    a0 = (A + 1) + s * (A - 1) * cw + t;
+    a1 = -2 * s * ((A - 1) + s * (A + 1) * cw);
+    a2 = (A + 1) + s * (A - 1) * cw - t;
+  } else {
+    const alpha = sw / (2 * Q);
+    b0 = 1 + alpha * A; b1 = -2 * cw; b2 = 1 - alpha * A;
+    a0 = 1 + alpha / A; a1 = -2 * cw; a2 = 1 - alpha / A;
+  }
+  return [b0 / a0, b1 / a0, b2 / a0, a1 / a0, a2 / a0];
+}
+
+export function magnitudeDb([b0, b1, b2, a1, a2], f, sr) {
+  const w = 2 * Math.PI * f / sr;
+  const cw = Math.cos(w), sw = Math.sin(w);
+  const c2 = Math.cos(2 * w), s2 = Math.sin(2 * w);
+  const nr = b0 + b1 * cw + b2 * c2, ni = -(b1 * sw + b2 * s2);
+  const dr = 1 + a1 * cw + a2 * c2, di = -(a1 * sw + a2 * s2);
+  return 10 * Math.log10((nr * nr + ni * ni) / (dr * dr + di * di));
+}
+
+function computeCurve(filter, sr, range) {
+  const coeffs = biquadCoeffs(filter, sr);
   return Array.from({ length: N + 1 }, (_, i) => {
     const f = F_MIN * Math.pow(F_MAX / F_MIN, i / N);
-    const w = 2 * Math.PI * f / sr;
-    const cw = Math.cos(w), sw = Math.sin(w);
-    const c2 = Math.cos(2 * w), s2 = Math.sin(2 * w);
-    const nr = b0n + b1n * cw + b2n * c2;
-    const ni = -(b1n * sw + b2n * s2);
-    const dr = 1 + a1n * cw + a2n * c2;
-    const di = -(a1n * sw + a2n * s2);
-    const db = 20 * Math.log10(Math.sqrt((nr*nr + ni*ni) / (dr*dr + di*di)));
+    const db = magnitudeDb(coeffs, f, sr);
     return { x: toX(f), y: toY(Math.max(-range, Math.min(range, db)), range) };
   });
+}
+
+// Horizontal inset (as % of the graph width) that lines a row of n equal columns
+// up with n bands spaced over [lo, hi] on the plot's log axis
+export function rowInset(lo = F_MIN, hi = F_MAX) {
+  const frac = f => Math.log10(f / F_MIN) / Math.log10(F_MAX / F_MIN);
+  return {
+    left: `${((P.l + IW * frac(lo)) / VW) * 100}%`,
+    right: `${((P.r + IW * (1 - frac(hi))) / VW) * 100}%`,
+  };
 }
 
 function makeLine(pts) {
@@ -64,9 +102,12 @@ function HeatStrip({ heat }) {
   );
 }
 
-export function FreqGraph({ bands = [], gains = [], gainDb = 6, centerFreq = null, Q = 1.4, sampleRate = 48000, heat = [] }) {
-  const revealed = centerFreq !== null;
-  const isBoost = gainDb > 0;
+const sameFilter = (a, b) => a.type === b.type && a.frequency === b.frequency && a.gain === b.gain;
+
+// curves: candidate filters drawn in gray; answer: the revealed filter (or null).
+// gainDb sets the dB range so the axis follows the Gain slider.
+export function FreqGraph({ curves = [], answer = null, gainDb = 6, sampleRate = 48000, heat = [] }) {
+  const isBoost = answer ? (answer.gain ?? 0) > 0 : false;
   // ±12 dB by default; widens in 6 dB steps so high gains aren't clipped
   const range = Math.max(12, Math.ceil(Math.abs(gainDb) / 6) * 6);
   const dbTicks = Array.from({ length: range / 3 + 1 }, (_, i) => i * 6 - range);
@@ -96,18 +137,18 @@ export function FreqGraph({ bands = [], gains = [], gainDb = 6, centerFreq = nul
           </g>
         ))}
 
-        {/* All candidate curves in gray — every band × every gain, skip the revealed one */}
-        {bands.flatMap(f =>
-          gains.map(g => {
-            if (revealed && f === centerFreq && g === gainDb) return null;
-            const pts = computeCurve(f, g, Q, sampleRate, range);
-            return <path key={`${f}-${g}`} d={makeLine(pts)} className="graph-curve-gray" />;
-          })
-        )}
+        {/* Candidate curves in gray, skipping the revealed one */}
+        {curves.map(c => {
+          if (answer && sameFilter(c, answer)) return null;
+          return (
+            <path key={`${c.type}-${c.frequency}-${c.gain}`} d={makeLine(computeCurve(c, sampleRate, range))}
+              className="graph-curve-gray" />
+          );
+        })}
 
         {/* Correct curve — revealed after answer */}
-        {revealed && (() => {
-          const pts = computeCurve(centerFreq, gainDb, Q, sampleRate, range);
+        {answer && (() => {
+          const pts = computeCurve(answer, sampleRate, range);
           return (
             <g className="graph-reveal">
               <path d={makeFill(pts, range)} className={isBoost ? 'graph-fill-boost' : 'graph-fill-cut'} />
@@ -117,7 +158,7 @@ export function FreqGraph({ bands = [], gains = [], gainDb = 6, centerFreq = nul
         })()}
 
         {/* Placeholder */}
-        {bands.length === 0 && (
+        {curves.length === 0 && !answer && (
           <text x={P.l + IW / 2} y={P.t + IH / 2} textAnchor="middle" dominantBaseline="middle" className="graph-placeholder">
             EQ curve appears here during a trial
           </text>

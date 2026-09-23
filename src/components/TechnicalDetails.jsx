@@ -77,6 +77,28 @@ export function TechnicalDetails() {
       </section>
 
       <section className="td-section">
+        <h2 className="td-h2">Shelf and Pass Filters</h2>
+        <p className="td-p">
+          The <strong>Shelves</strong> mode uses <code className="td-code">lowshelf</code> and{' '}
+          <code className="td-code">highshelf</code> filters, which lift or lower everything below or above a
+          corner frequency. Web Audio fixes the shelf slope at <em>S</em> = 1, where the gain at the corner is
+          exactly half the shelf gain:
+        </p>
+        <div className="td-formula">{`α  = sin(ω₀)/2 · √2          (S = 1)\n\nlow shelf:\nb0 = A·((A+1) − (A−1)·cos(ω₀) + 2√A·α)\nb1 = 2A·((A−1) − (A+1)·cos(ω₀))\nb2 = A·((A+1) − (A−1)·cos(ω₀) − 2√A·α)\na0 = (A+1) + (A−1)·cos(ω₀) + 2√A·α\na1 = −2·((A−1) + (A+1)·cos(ω₀))\na2 = (A+1) + (A−1)·cos(ω₀) − 2√A·α\n\nhigh shelf: flip the sign of every (A−1) and cos(ω₀) product pair`}</div>
+        <p className="td-p">
+          The <strong>Pass Filters</strong> mode uses <code className="td-code">highpass</code> and{' '}
+          <code className="td-code">lowpass</code> filters. For these types Web Audio reads Q in decibels, so
+          FreqRoom sets Q = −3.01 dB, which is a Butterworth response (linear Q ≈ 0.707) that is −3 dB at the
+          cutoff:
+        </p>
+        <div className="td-formula">{`α  = sin(ω₀) / (2 · 10^(Q/20))\n\nlow-pass:   b0 = (1 − cos ω₀)/2   b1 = 1 − cos ω₀      b2 = (1 − cos ω₀)/2\nhigh-pass:  b0 = (1 + cos ω₀)/2   b1 = −(1 + cos ω₀)   b2 = (1 + cos ω₀)/2\nboth:       a0 = 1 + α            a1 = −2·cos ω₀       a2 = 1 − α`}</div>
+        <p className="td-p">
+          The graph evaluates the same coefficients as the audio engine, so every drawn curve matches what
+          <code className="td-code">BiquadFilterNode</code> plays.
+        </p>
+      </section>
+
+      <section className="td-section">
         <h2 className="td-h2">Frequency Response Visualisation</h2>
         <p className="td-p">
           The graph displays the filter's frequency response by evaluating the biquad <strong>transfer
@@ -158,12 +180,13 @@ export function TechnicalDetails() {
           All audio processing runs in the browser using the Web Audio API — no server, no external
           libraries. The signal chain per trial is:
         </p>
-        <div className="td-formula">{`AudioBufferSourceNode → BiquadFilterNode → GainNode → AudioContext.destination`}</div>
+        <div className="td-formula">{`AudioBufferSourceNode → voice GainNode ─┬─ flat GainNode ────────────────┬─ master GainNode → limiter → destination\n                                        └─ BiquadFilterNode → EQ GainNode ┘`}</div>
         <p className="td-p">
-          The source loops a pre-generated 30-second noise buffer. Switching between EQ and Flat stops
-          the current source, captures the playback offset, then restarts with or without the filter —
-          giving seamless, position-preserving A/B comparison. Volume is applied by the GainNode and
-          updated in real time without restarting the source.
+          The source loops the loaded buffer continuously. Switching between EQ and Flat crossfades the
+          two parallel paths over a few milliseconds rather than restarting playback, so A/B comparison is
+          click-free and never loses its place. Gain and Q changes ramp the filter in place, volume ramps
+          the master gain, and a <code className="td-code">DynamicsCompressorNode</code> set as a limiter
+          stops large boosts from clipping.
         </p>
       </section>
 

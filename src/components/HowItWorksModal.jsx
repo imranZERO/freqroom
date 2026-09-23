@@ -66,7 +66,15 @@ export function HowItWorksModal({ isOpen, onClose }) {
               </div>
               <div className="info-mode-item">
                 <strong>Mixed</strong> — a band is either boosted or cut; identify the frequency
-                <em> and</em> the direction. The hardest mode.
+                <em> and</em> the direction.
+              </div>
+              <div className="info-mode-item">
+                <strong>Shelves</strong> — a low or high shelf lifts or lowers everything past a corner
+                frequency; find the corner. Corners below 1 kHz are low shelves, above are high shelves.
+              </div>
+              <div className="info-mode-item">
+                <strong>Pass Filters</strong> — a high-pass or low-pass filter removes lows or highs;
+                find the cutoff. The Gain slider doesn't apply here.
               </div>
             </div>
           </div>
