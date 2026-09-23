@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { InfoIcon } from './Icons.jsx';
 import { FreqGraph, rowInset, fmtHz } from './FreqGraph.jsx';
 import { heatFor, pickWeighted } from '../lib/progress.js';
+import { buildChallengeUrl, copyText } from '../lib/challenge.js';
 
 const FREQ_MIN = 20;
 const FREQ_MAX = 20000;
@@ -16,7 +17,7 @@ const BUTTERWORTH_Q_DB = -3.01;
 const SHELF_SPLIT = 1000;
 
 // family: which stats bucket set a mode records under; maxLevel caps the band count
-const MODES = [
+export const MODES = [
   { id: 'boost', label: 'Boosts',       family: 'peak',  badge: g => `+${g}dB`, desc: 'Identify which band was boosted' },
   { id: 'cut',   label: 'Cuts',         family: 'peak',  badge: g => `−${g}dB`, desc: 'Identify which band was cut' },
   { id: 'both',  label: 'Mixed',        family: 'peak',  badge: g => `±${g}dB`, desc: 'Identify the frequency and whether it was a boost or a cut' },
@@ -122,8 +123,9 @@ function signForMode(mode) {
   return Math.random() < 0.5 ? 1 : -1;
 }
 
-export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay, onResult }) {
-  const [testMode, setTestMode] = useState(null);
+export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay, onResult, initialMode, sourceId }) {
+  const [testMode, setTestMode] = useState(initialMode ?? null);
+  const [copied, setCopied] = useState(false);
   const currentMode = MODES.find(m => m.id === testMode);
   const family = currentMode?.family ?? 'peak';
   const isSweep = family === 'sweep';
@@ -204,6 +206,26 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [trial, testMode, playMode, gainDb, q, level]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Copies a link that recreates this setup (only the settings the mode uses)
+  async function shareChallenge() {
+    const url = buildChallengeUrl({
+      mode: testMode,
+      gainDb: family === 'pass' ? undefined : gainDb,
+      q: family === 'peak' || family === 'sweep' ? q : undefined,
+      source: sourceId,
+      level,
+    });
+    if (await copyText(url)) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    }
+  }
+  const shareButton = (
+    <button className="btn-ghost trainer-share" onClick={shareChallenge} title="Copy a link to this exact challenge">
+      {copied ? 'Link copied' : 'Share'}
+    </button>
+  );
 
   function selectMode(mode) {
     answeringRef.current = false;
@@ -330,7 +352,10 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
       <>
         <div className="level-chip">Level {level}</div>
         <div className="mode-badge">{currentMode.badge(gainDb)} · {currentMode.label}</div>
-        <button className="btn-ghost trainer-header-end" onClick={() => setTestMode(null)}>Change mode</button>
+        <span className="trainer-header-end">
+          {shareButton}
+          <button className="btn-ghost" onClick={() => setTestMode(null)}>Change mode</button>
+        </span>
       </>
     );
     body = (
@@ -391,6 +416,7 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
             </span>
           </span>
         )}
+        <span className="trainer-header-end">{shareButton}</span>
       </>
     );
 

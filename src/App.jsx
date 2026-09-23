@@ -2,13 +2,14 @@ import { useState, useEffect } from 'react';
 import { Router, Route, Switch } from 'wouter';
 import { useAudioEngine } from './hooks/useAudioEngine.js';
 import { TrackSelector } from './components/TrackSelector.jsx';
-import { FrequencyTrainer } from './components/FrequencyTrainer.jsx';
+import { FrequencyTrainer, MODES } from './components/FrequencyTrainer.jsx';
 import { ScoreBoard } from './components/ScoreBoard.jsx';
 import { HowItWorksModal } from './components/HowItWorksModal.jsx';
 import { TechnicalDetails } from './components/TechnicalDetails.jsx';
 import { InfoIcon, SunIcon, MoonIcon, GitHubIcon } from './components/Icons.jsx';
 import { usePersistentState, clearAll } from './lib/storage.js';
 import { EMPTY_PROGRESS, recordResult } from './lib/progress.js';
+import { parseChallenge } from './lib/challenge.js';
 
 function MainApp() {
   const engine = useAudioEngine();
@@ -22,6 +23,20 @@ function MainApp() {
   const [focus, setFocus] = usePersistentState('focus', false);
   const [autoplay, setAutoplay] = usePersistentState('autoplay', true);
   const [progress, setProgress] = usePersistentState('progress', EMPTY_PROGRESS);
+  // Which built-in source is loaded ('pink' | 'white'), for challenge links
+  const [sourceId, setSourceId] = useState(null);
+  // Settings from a challenge link, read once on load
+  const [challenge] = useState(() => parseChallenge(location.search, MODES.map(m => m.id)));
+
+  useEffect(() => {
+    if (!challenge) return;
+    history.replaceState(null, '', location.pathname);
+    if (challenge.gainDb) setGainDb(challenge.gainDb);
+    if (challenge.q) setQ(challenge.q);
+    if (challenge.level) {
+      setProgress(p => ({ ...p, levels: { ...p.levels, [challenge.mode]: challenge.level } }));
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
@@ -78,6 +93,7 @@ function MainApp() {
           <TrackSelector
             engine={engine} gainDb={gainDb} setGainDb={setGainDb} q={q} setQ={setQ}
             focus={focus} setFocus={setFocus} autoplay={autoplay} setAutoplay={setAutoplay}
+            initialSource={challenge?.source} onSourceChange={setSourceId}
             hasProgress={progress.lifetime.total > 0} onResetProgress={resetProgress}
           />
         </aside>
@@ -85,6 +101,7 @@ function MainApp() {
           <FrequencyTrainer
             engine={engine} gainDb={gainDb} q={q}
             progress={progress} focus={focus} autoplay={autoplay} onResult={handleResult}
+            initialMode={challenge?.mode} sourceId={sourceId}
           />
           <ScoreBoard
             scores={scores} lifetime={progress.lifetime}

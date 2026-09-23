@@ -143,7 +143,9 @@ export function HowItWorksModal({ isOpen, onClose }) {
               Use <strong>headphones or studio monitors</strong> — laptop speakers compress the frequency
               response and defeat the purpose. In Mixed mode, listen for the <em>hollow, recessed</em> character
               of a cut vs. the <em>forward, present</em> quality of a boost. If you're struggling, drop back
-              to Boosts-only and rebuild from a lower level.
+              to Boosts-only and rebuild from a lower level. To set someone a challenge, press{' '}
+              <strong>Share</strong> in the trainer: it copies a link that opens FreqRoom with the same mode,
+              level, gain, Q, and noise source.
             </p>
           </div>
 

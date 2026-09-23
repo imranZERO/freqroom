@@ -35,7 +35,7 @@ function formatSpec(info, duration) {
   ].map(parts => parts.filter(Boolean).join(' · '));
 }
 
-export function TrackSelector({ engine, gainDb, setGainDb, q, setQ, focus, setFocus, autoplay, setAutoplay, hasProgress, onResetProgress }) {
+export function TrackSelector({ engine, gainDb, setGainDb, q, setQ, focus, setFocus, autoplay, setAutoplay, hasProgress, onResetProgress, initialSource, onSourceChange }) {
   const fileRef = useRef(null);
   const [activeId, setActiveId] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -69,8 +69,14 @@ export function TrackSelector({ engine, gainDb, setGainDb, q, setQ, focus, setFo
     }
   }, [engine.isPlaying, isUpload, engine.duration]);
 
+  // A challenge link can name a source to load straight away
+  useEffect(() => {
+    if (initialSource) loadGenerated(initialSource);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   async function loadGenerated(id) {
     setActiveId(id);
+    onSourceChange?.(id);
     setPosition(0);
     const ctx = engine.getCtx();
     const buf = id === 'pink' ? generatePinkNoise(ctx) : generateWhiteNoise(ctx);
@@ -82,6 +88,7 @@ export function TrackSelector({ engine, gainDb, setGainDb, q, setQ, focus, setFo
     if (!file) return;
     setUploading(true);
     setActiveId(`upload:${file.name}`);
+    onSourceChange?.('upload');
     setPosition(0);
     setLoopA(null);
     setFileInfo(null);

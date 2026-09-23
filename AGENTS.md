@@ -46,6 +46,8 @@ App.jsx (Wouter Router)
 
 **Persistence (`src/lib/storage.js`, `src/lib/progress.js`)** — all saved state lives in localStorage under the `freqroom:` prefix, and every access is try/catch-guarded, so the app runs on defaults when storage is blocked. `usePersistentState` backs theme (`dark`), `gainDb`, `q`, `focus`, and `progress`; the engine saves `volume`. `progress` holds the level per mode, lifetime totals, and per-octave accuracy (`stats[family][bucket]`, 10 octave buckets from 31.5 Hz). `FrequencyTrainer` reports each answer via `onResult`, and `App` folds it in with `recordResult`. `heatFor` drives the graph's weak-spot strip and `pickWeighted` drives "Focus weak bands". "Reset progress" (Controls) clears progress only; "Clear saved data" (footer) calls `clearAll()` and reloads. `index.html` reads the saved theme before first paint.
 
+**Challenge links (`src/lib/challenge.js`)** — `?mode=&gain=&q=&source=&level=` (source: `pink`/`white` only). `App` parses once on load with `parseChallenge` (invalid values are dropped, numbers clamped), applies gain/q/level, passes `initialSource` to `TrackSelector` and `initialMode` to `FrequencyTrainer`, then strips the query with `history.replaceState`. The trainer's Share button builds the link with `buildChallengeUrl`, including only the settings the mode uses, and copies it via `copyText` (clipboard, or a prompt fallback).
+
 **Theme** — toggled via `data-theme="dark|light"` on `document.documentElement`; CSS variables in `App.css` handle the rest. The choice is saved (see Persistence).
 
 ## Deployment

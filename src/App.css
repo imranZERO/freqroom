@@ -974,7 +974,7 @@ body::before {
 .trainer-header h2 { margin: 0; color: var(--text); }
 /* Inner step title — the panel's lamp lives on the outer .panel-label */
 .trainer-header h2::before { display: none; }
-.trainer-header-end { margin-left: auto; }
+.trainer-header-end { margin-left: auto; display: flex; gap: 8px; }
 .trainer-status {
   color: var(--muted);
   font-size: 0.86rem;
