@@ -145,12 +145,13 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
   const [hovered, setHovered] = useState(null);
   const answeringRef = useRef(false);
 
-  // The hidden filter for a trial at the current Gain/Q settings
+  // The hidden filter for a trial at the current Gain/Q settings. engine.play
+  // takes a list of filters, so calls wrap this in [ ]; an empty list is Flat.
   const activeFilter = t => makeFilter(typeAt(t.kind === 'sweep' ? 'peaking' : t.kind, t.activeBand), t.activeBand, t.activeSign * gainDb, q);
 
   // Apply Gain/Q slider changes to the live EQ without restarting playback
   useEffect(() => {
-    if (trial && playMode === 'eq') engine.play(activeFilter(trial));
+    if (trial && playMode === 'eq') engine.play([activeFilter(trial)]);
   }, [gainDb, q]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Engine stopped elsewhere (e.g. source track changed) — clear the play toggle
@@ -264,14 +265,14 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
     const next = { kind, range, shownBands, activeBand, activeSign, userSelection: null, answered: false, wasCorrect: null };
     setTrial(next);
     if (autoplay) {
-      engine.play(activeFilter(next));
+      engine.play([activeFilter(next)]);
       setPlayMode('eq');
     }
   }
 
   function handlePlayMode(mode) {
     if (playMode === mode) { engine.stop(); setPlayMode(null); return; }
-    engine.play(mode === 'eq' ? activeFilter(trial) : []);
+    engine.play(mode === 'eq' ? [activeFilter(trial)] : []);
     setPlayMode(mode);
   }
 
