@@ -1,8 +1,15 @@
 import { Link } from 'wouter';
-import { InfoIcon, SunIcon, MoonIcon, GitHubIcon, DocIcon, WaveIcon } from './Icons.jsx';
+import { InfoIcon, SunIcon, MoonIcon, SystemThemeIcon, GitHubIcon, DocIcon, WaveIcon } from './Icons.jsx';
+
+const THEME_UI = {
+  system: { icon: <SystemThemeIcon />, label: 'System', next: 'Light' },
+  light:  { icon: <SunIcon />,     label: 'Light',  next: 'Dark' },
+  dark:   { icon: <MoonIcon />,    label: 'Dark',   next: 'System' },
+};
 
 // Shared page header: title (links home), subtitle, How it works, theme toggle
-export function SiteHeader({ subtitle, isDark, onToggleTheme, onInfo }) {
+export function SiteHeader({ subtitle, theme, onCycleTheme, onInfo }) {
+  const ui = THEME_UI[theme] ?? THEME_UI.system;
   return (
     <header className="app-header">
       <div className="header-top">
@@ -28,11 +35,11 @@ export function SiteHeader({ subtitle, isDark, onToggleTheme, onInfo }) {
           </button>
           <button
             className="icon-btn"
-            onClick={onToggleTheme}
-            aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-            data-tooltip={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+            onClick={onCycleTheme}
+            aria-label={`Theme: ${ui.label}. Switch to ${ui.next}`}
+            data-tooltip={`Theme: ${ui.label} · click for ${ui.next}`}
           >
-            {isDark ? <SunIcon /> : <MoonIcon />}
+            {ui.icon}
           </button>
         </div>
       </div>

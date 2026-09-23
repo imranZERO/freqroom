@@ -93,9 +93,15 @@ function MainApp({ chrome }) {
           />
           <div className="side-footer">
             {progress.lifetime.total > 0 && (
-              <button className="data-btn" onClick={resetProgress}><ResetIcon />Reset progress</button>
+              <button
+                className="data-btn" onClick={resetProgress}
+                data-tooltip="Clear your levels, lifetime score, and accuracy stats. Settings are kept."
+              ><ResetIcon />Reset progress</button>
             )}
-            <button className="data-btn data-btn-danger" onClick={clearSavedData}><TrashIcon />Clear saved data</button>
+            <button
+              className="data-btn data-btn-danger" onClick={clearSavedData}
+              data-tooltip="Remove everything FreqRoom saved in this browser: progress, settings, and theme."
+            ><TrashIcon />Clear saved data</button>
           </div>
         </aside>
         <div className="rack-main">
@@ -119,19 +125,31 @@ function MainApp({ chrome }) {
 }
 
 // Theme and the How it works dialog are shared by every page
+// The theme button cycles System → Light → Dark
+const THEME_ORDER = ['system', 'light', 'dark'];
+const systemDark = () => window.matchMedia('(prefers-color-scheme: dark)').matches;
+
 export default function App() {
-  const [isDark, setIsDark] = usePersistentState(
-    'dark', () => window.matchMedia('(prefers-color-scheme: dark)').matches
-  );
+  const [theme, setTheme] = usePersistentState('theme', 'system');
+  const [osDark, setOsDark] = useState(systemDark);
   const [showInfo, setShowInfo] = useState(false);
 
+  // Follow the OS setting live while the theme is "system"
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const onChange = e => setOsDark(e.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+
+  const isDark = theme === 'dark' || (theme === 'system' && osDark);
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
   }, [isDark]);
 
   const chrome = {
-    isDark,
-    onToggleTheme: () => setIsDark(d => !d),
+    theme,
+    onCycleTheme: () => setTheme(t => THEME_ORDER[(THEME_ORDER.indexOf(t) + 1) % THEME_ORDER.length]),
     onInfo: () => setShowInfo(true),
   };
 

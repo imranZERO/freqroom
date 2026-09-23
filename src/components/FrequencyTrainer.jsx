@@ -233,7 +233,7 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
     }
   }
   const shareButton = (
-    <button className="btn-ghost trainer-share" onClick={shareChallenge} title="Copy a link to this exact challenge">
+    <button className="btn-ghost trainer-share" onClick={shareChallenge} data-tooltip="Copy a link to this exact challenge">
       {copied ? 'Link copied' : 'Share'}
     </button>
   );
@@ -465,11 +465,11 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
         ) : twoRows ? (
           <div className="freq-grid-mixed">
             <div className="mixed-row">
-              <span className="mixed-row-label boost-label" title="Boost">▲</span>
+              <span className="mixed-row-label boost-label" data-tooltip="Boost row">▲</span>
               <FreqRow {...rowProps} sign={1} dirLabel="boost" />
             </div>
             <div className="mixed-row">
-              <span className="mixed-row-label cut-label" title="Cut">▼</span>
+              <span className="mixed-row-label cut-label" data-tooltip="Cut row">▼</span>
               <FreqRow {...rowProps} sign={-1} dirLabel="cut" />
             </div>
           </div>

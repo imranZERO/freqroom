@@ -3,7 +3,7 @@ import { load, save } from '../lib/storage.js';
 
 // Time constant for setTargetAtTime ramps; ~5 time constants to settle (≈25 ms)
 const RAMP_TC = 0.005;
-export const DEFAULT_VOLUME = 0.8;
+export const DEFAULT_VOLUME = 0.5;
 const FADE_STOP = 0.05;
 
 function rampTo(param, value, t) {

@@ -70,7 +70,7 @@ const FEATURES = [
   ['Everything else', [
     ['Keyboard shortcuts', '1–9/0 pick bands, ← → step, ↑ ↓ switch boost/cut in Mixed and Shelves, Space toggles EQ/Flat, Enter checks or advances.', null],
     ['Share links', 'Copy a link that recreates a challenge: mode, level, gain, Q, and noise source.', 'storage'],
-    ['Light and dark themes', 'Follows your system by default and remembers your choice.', null],
+    ['Light and dark themes', 'System (the default) follows your device; you can also pick Light or Dark, and your choice is remembered.', null],
     ['Installable and offline', 'Install it as an app and keep training without a connection.', 'storage'],
     ['Private', 'No account, no server: your audio and data never leave your browser.', 'storage'],
   ]],

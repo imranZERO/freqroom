@@ -1,15 +1,37 @@
+import { useState, useEffect } from 'react';
+
 const F_MIN = 20, F_MAX = 20000;
 const N = 300;
-const P = { t: 17, r: 14, b: 39.4, l: 32 }; // bottom holds the frequency labels and the accuracy strip; t/b balance the margins above the +dB label and below the strip
-const VW = 600, VH = 200.4; // panel height at full width; tuned against the source buttons
+// Horizontal layout is fixed so the band buttons (rowInset) always line up
+const P = { r: 14, l: 32 };
+const VW = 600;
 const IW = VW - P.l - P.r;
-const IH = VH - P.t - P.b;
+
+// Vertical layout. On wide screens the graph is shallow; on phones (where the
+// whole SVG is scaled down) it's taller and its text is scaled up by k so labels
+// stay readable. T = space above the plot, B = below it (frequency labels and
+// the accuracy strip). The wide values make the panel match the source buttons.
+const WIDE = { k: 1, T: 17, IH: 144, B: 39.4 };
+const COMPACT = { k: 1.7, T: 17 * 1.7, IH: 190, B: 39.4 * 1.7 };
+const layout = g => ({ ...g, VH: g.T + g.IH + g.B });
+const COMPACT_QUERY = '(max-width: 600px)';
+
+function useCompact() {
+  const [compact, setCompact] = useState(() => window.matchMedia(COMPACT_QUERY).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(COMPACT_QUERY);
+    const onChange = e => setCompact(e.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+  return compact;
+}
 
 const FREQ_TICKS = [20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000];
 
 const toX = f => P.l + (Math.log10(f / F_MIN) / Math.log10(F_MAX / F_MIN)) * IW;
 const fromX = x => F_MIN * Math.pow(F_MAX / F_MIN, (Math.max(P.l, Math.min(P.l + IW, x)) - P.l) / IW);
-const toY = (db, range) => P.t + ((range - db) / (2 * range)) * IH;
+const toY = (db, range, g) => g.T + ((range - db) / (2 * range)) * g.IH;
 const fmtFreq = f => f >= 1000 ? `${f / 1000}k` : `${f}`;
 
 // Readout format for arbitrary frequencies, e.g. "87 Hz", "1.24 kHz", "12.5 kHz"
@@ -20,20 +42,20 @@ export const fmtHz = f => f >= 10000 ? `${(f / 1000).toFixed(1)} kHz`
 const anchorAt = x => x < P.l + 40 ? 'start' : x > P.l + IW - 40 ? 'end' : 'middle';
 
 // Sweep mode: the listener's guess, and after answering, a bracket to the answer
-function SweepMarker({ marker, answerFreq }) {
+function SweepMarker({ marker, answerFreq, g }) {
   const mx = toX(marker);
   const ax = answerFreq ? toX(answerFreq) : null;
   const errOct = answerFreq ? Math.abs(Math.log2(marker / answerFreq)) : null;
-  const by = P.t + IH - 10;
+  const by = g.T + g.IH - 10 * g.k;
   return (
     <g className="graph-marker">
-      <line x1={mx} y1={P.t} x2={mx} y2={P.t + IH} className="marker-line" />
-      <text x={mx} y={P.t + 10} textAnchor={anchorAt(mx)} className="marker-label">{fmtHz(marker)}</text>
+      <line x1={mx} y1={g.T} x2={mx} y2={g.T + g.IH} className="marker-line" />
+      <text x={mx} y={g.T + 10 * g.k} textAnchor={anchorAt(mx)} className="marker-label">{fmtHz(marker)}</text>
       {ax !== null && (
         <g className="marker-error">
           <line x1={mx} y1={by} x2={ax} y2={by} />
-          <line x1={ax} y1={by - 4} x2={ax} y2={by + 4} />
-          <text x={(mx + ax) / 2} y={by - 5} textAnchor="middle" className="marker-label">
+          <line x1={ax} y1={by - 4 * g.k} x2={ax} y2={by + 4 * g.k} />
+          <text x={(mx + ax) / 2} y={by - 5 * g.k} textAnchor="middle" className="marker-label">
             {`${errOct.toFixed(2)} oct`}
           </text>
         </g>
@@ -83,12 +105,12 @@ export function magnitudeDb([b0, b1, b2, a1, a2], f, sr) {
   return 10 * Math.log10((nr * nr + ni * ni) / (dr * dr + di * di));
 }
 
-function computeCurve(filter, sr, range) {
+function computeCurve(filter, sr, range, g) {
   const coeffs = biquadCoeffs(filter, sr);
   return Array.from({ length: N + 1 }, (_, i) => {
     const f = F_MIN * Math.pow(F_MAX / F_MIN, i / N);
     const db = magnitudeDb(coeffs, f, sr);
-    return { x: toX(f), y: toY(Math.max(-range, Math.min(range, db)), range) };
+    return { x: toX(f), y: toY(Math.max(-range, Math.min(range, db)), range, g) };
   });
 }
 
@@ -106,8 +128,8 @@ function makeLine(pts) {
   return pts.map((p, i) => `${i ? 'L' : 'M'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join('');
 }
 
-function makeFill(pts, range) {
-  const y0 = toY(0, range);
+function makeFill(pts, range, g) {
+  const y0 = toY(0, range, g);
   const x0 = pts[0].x.toFixed(1), xN = pts[pts.length - 1].x.toFixed(1);
   return `${makeLine(pts)}L${xN},${y0.toFixed(1)}L${x0},${y0.toFixed(1)}Z`;
 }
@@ -118,12 +140,12 @@ const hzLabel = f => f >= 1000 ? `${f / 1000} kHz` : `${f} Hz`;
 // Weak-spot strip: your accuracy per octave, on its own line below the frequency
 // labels. Every octave has a faint placeholder segment; it takes a colour once it
 // has enough answers to rate (see MIN_ATTEMPTS in progress.js).
-function HeatStrip({ heat }) {
-  const y = P.t + IH + 20;
-  const h = 7;
+function HeatStrip({ heat, g }) {
+  const y = g.T + g.IH + 20 * g.k;
+  const h = 7 * g.k;
   return (
     <g className="graph-heat">
-      <text x={P.l - 5} y={y + h / 2} textAnchor="end" dominantBaseline="middle" className="graph-label graph-heat-label">
+      <text x={P.l - 4} y={y + h / 2} textAnchor="end" dominantBaseline="middle" className="graph-label graph-heat-label">
         acc
         <title>Your accuracy per octave (red under 50%, amber under 80%, green above)</title>
       </text>
@@ -142,16 +164,16 @@ function HeatStrip({ heat }) {
   );
 }
 
-// L-shaped marks just outside each plot corner
-const CORNERS = (() => {
-  const L = 7, o = 3, x0 = P.l + o, x1 = P.l + IW - o, y0 = P.t + o, y1 = P.t + IH - o;
+// L-shaped marks just inside each plot corner
+function corners(g) {
+  const L = 7 * g.k, o = 3 * g.k, x0 = P.l + o, x1 = P.l + IW - o, y0 = g.T + o, y1 = g.T + g.IH - o;
   return [
     `M${x0},${y0 + L}V${y0}H${x0 + L}`,
     `M${x1 - L},${y0}H${x1}V${y0 + L}`,
     `M${x0},${y1 - L}V${y1}H${x0 + L}`,
     `M${x1 - L},${y1}H${x1}V${y1 - L}`,
   ].join('');
-})();
+}
 
 const sameFilter = (a, b) => a.type === b.type && a.frequency === b.frequency && a.gain === b.gain;
 
@@ -163,6 +185,7 @@ const sameFilter = (a, b) => a.type === b.type && a.frequency === b.frequency &&
 // readout: short status line drawn in the top-right of the plot (filter, gain, Q)
 // idle: nothing loaded yet, so the display runs its scanning animation
 export function FreqGraph({ curves = [], answer = null, hover = null, selected = null, gainDb = 6, sampleRate = 48000, heat = [], marker = null, onPick = null, readout = '', idle = false }) {
+  const g = layout(useCompact() ? COMPACT : WIDE);
   const isBoost = answer ? (answer.gain ?? 0) > 0 : false;
   // ±12 dB by default; widens in 6 dB steps so high gains aren't clipped
   const range = Math.max(12, Math.ceil(Math.abs(gainDb) / 6) * 6);
@@ -184,8 +207,9 @@ export function FreqGraph({ curves = [], answer = null, hover = null, selected =
   return (
     <div className="freq-graph-wrap">
       <svg
-        viewBox={`0 0 ${VW} ${VH}`} width="100%"
+        viewBox={`0 0 ${VW} ${g.VH}`} width="100%"
         className={`freq-graph-svg${onPick ? ' graph-interactive' : ''}`}
+        style={{ '--gk': g.k }}
         {...pointerProps}
       >
         <defs>
@@ -198,9 +222,9 @@ export function FreqGraph({ curves = [], answer = null, hover = null, selected =
         {/* dB grid */}
         {dbTicks.map(db => (
           <g key={db}>
-            <line x1={P.l} y1={toY(db, range)} x2={P.l + IW} y2={toY(db, range)}
+            <line x1={P.l} y1={toY(db, range, g)} x2={P.l + IW} y2={toY(db, range, g)}
               className={`graph-hline ${db === 0 ? 'graph-zero' : 'graph-grid'}`} />
-            <text x={P.l - 5} y={toY(db, range)} textAnchor="end" dominantBaseline="middle" className="graph-label">
+            <text x={P.l - 4} y={toY(db, range, g)} textAnchor="end" dominantBaseline="middle" className="graph-label">
               {db > 0 ? `+${db}` : db}
             </text>
           </g>
@@ -209,8 +233,8 @@ export function FreqGraph({ curves = [], answer = null, hover = null, selected =
         {/* Frequency grid */}
         {FREQ_TICKS.map(f => (
           <g key={f}>
-            <line x1={toX(f)} y1={P.t} x2={toX(f)} y2={P.t + IH} className="graph-vline graph-grid" />
-            <text x={toX(f)} y={P.t + IH + 12} textAnchor="middle" className="graph-label">
+            <line x1={toX(f)} y1={g.T} x2={toX(f)} y2={g.T + g.IH} className="graph-vline graph-grid" />
+            <text x={toX(f)} y={g.T + g.IH + 12 * g.k} textAnchor={f === F_MAX ? 'end' : 'middle'} dx={f === F_MAX ? 6 : 0} className="graph-label">
               {fmtFreq(f)}
             </text>
           </g>
@@ -220,18 +244,18 @@ export function FreqGraph({ curves = [], answer = null, hover = null, selected =
         {curves.map(c => {
           if (answer && sameFilter(c, answer)) return null;
           return (
-            <path key={`${c.type}-${c.frequency}-${c.gain}`} d={makeLine(computeCurve(c, sampleRate, range))}
+            <path key={`${c.type}-${c.frequency}-${c.gain}`} d={makeLine(computeCurve(c, sampleRate, range, g))}
               className="graph-curve-gray" />
           );
         })}
 
         {/* Selected, then hovered candidate: amber for boosts, blue for cuts and pass filters */}
         {selected && (() => {
-          const pts = computeCurve(selected, sampleRate, range);
+          const pts = computeCurve(selected, sampleRate, range, g);
           const up = (selected.gain ?? 0) > 0;
           return (
             <g key={`sel-${selected.type}-${selected.frequency}-${selected.gain}`} className="graph-selected">
-              <path d={makeFill(pts, range)} className={up ? 'graph-fill-boost' : 'graph-fill-cut'} />
+              <path d={makeFill(pts, range, g)} className={up ? 'graph-fill-boost' : 'graph-fill-cut'} />
               <path d={makeLine(pts)} className={up ? 'graph-hl-boost' : 'graph-hl-cut'} />
             </g>
           );
@@ -241,7 +265,7 @@ export function FreqGraph({ curves = [], answer = null, hover = null, selected =
           return (
             <path
               key={`hover-${hover.type}-${hover.frequency}-${hover.gain}`}
-              d={makeLine(computeCurve(hover, sampleRate, range))}
+              d={makeLine(computeCurve(hover, sampleRate, range, g))}
               className={`graph-hover ${up ? 'graph-hl-boost' : 'graph-hl-cut'}`}
             />
           );
@@ -249,43 +273,43 @@ export function FreqGraph({ curves = [], answer = null, hover = null, selected =
 
         {/* Correct curve — revealed after answer */}
         {answer && (() => {
-          const pts = computeCurve(answer, sampleRate, range);
+          const pts = computeCurve(answer, sampleRate, range, g);
           return (
             <g className="graph-reveal">
-              <path d={makeFill(pts, range)} className={isBoost ? 'graph-fill-boost' : 'graph-fill-cut'} />
+              <path d={makeFill(pts, range, g)} className={isBoost ? 'graph-fill-boost' : 'graph-fill-cut'} />
               <path d={makeLine(pts)} pathLength="1" className={isBoost ? 'graph-curve-boost' : 'graph-curve-cut'} />
             </g>
           );
         })()}
 
-        {marker && <SweepMarker marker={marker} answerFreq={answer?.frequency ?? null} />}
+        {marker && <SweepMarker marker={marker} answerFreq={answer?.frequency ?? null} g={g} />}
 
         {/* Idle: a glowing dot sweeps along 0 dB, like a scanning display */}
         {idle && (
           <g className="graph-scan" aria-hidden="true">
-            <line x1={P.l - 36} y1={toY(0, range)} x2={P.l} y2={toY(0, range)} stroke="url(#graph-scan-trail)" />
-            <circle cx={P.l} cy={toY(0, range)} r={2.2} />
+            <line x1={P.l - 36} y1={toY(0, range, g)} x2={P.l} y2={toY(0, range, g)} stroke="url(#graph-scan-trail)" />
+            <circle cx={P.l} cy={toY(0, range, g)} r={2.2 * g.k} />
           </g>
         )}
 
         {/* Placeholder */}
         {curves.length === 0 && !answer && !marker && (
           // Sits just above the 0 dB line so no grid line runs through it
-          <text x={P.l + IW / 2} y={toY(0, range) - 10} textAnchor="middle" className="graph-placeholder">
+          <text x={P.l + IW / 2} y={toY(0, range, g) - 10 * g.k} textAnchor="middle" className="graph-placeholder">
             {onPick ? 'Click or drag where you hear the boost' : 'EQ curve appears here during a trial'}
           </text>
         )}
 
-        <HeatStrip heat={heat} />
+        <HeatStrip heat={heat} g={g} />
 
         {/* Border with crop marks at the corners */}
-        <rect x={P.l} y={P.t} width={IW} height={IH} className="graph-border" />
-        <path className="graph-corners" d={CORNERS} />
+        <rect x={P.l} y={g.T} width={IW} height={g.IH} className="graph-border" />
+        <path className="graph-corners" d={corners(g)} />
 
         {/* Readout */}
-        <text x={P.l + 13} y={P.t + 13} className="graph-readout graph-readout-title">RESPONSE</text>
+        <text x={P.l + 13 * g.k} y={g.T + 13 * g.k} className="graph-readout graph-readout-title">RESPONSE</text>
         {readout && (
-          <text x={P.l + IW - 13} y={P.t + 13} textAnchor="end" className="graph-readout">{readout}</text>
+          <text x={P.l + IW - 13 * g.k} y={g.T + 13 * g.k} textAnchor="end" className="graph-readout">{readout}</text>
         )}
       </svg>
     </div>

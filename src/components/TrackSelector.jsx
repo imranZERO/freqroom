@@ -198,7 +198,7 @@ export function TrackSelector({ engine, gainDb, setGainDb, q, setQ, focus, setFo
               className={`track-btn upload-btn ${isUpload ? 'active' : ''} ${isUpload && engine.isPlaying ? 'live' : ''}`}
               onClick={() => fileRef.current?.click()}
               disabled={engine.isLoading || uploading}
-              title={isUpload ? activeId.slice(7) : undefined}
+              data-tooltip={isUpload ? activeId.slice(7) : undefined}
               aria-pressed={isUpload}
             >
               <span className="track-tag">IN {GENERATED_TRACKS.length + 1}</span>
@@ -321,8 +321,8 @@ export function TrackSelector({ engine, gainDb, setGainDb, q, setQ, focus, setFo
 
             {isUpload && engine.duration > 0 && (
               <div className="loop-row">
-                <button className="btn-ghost" onClick={markA} title="Loop start at the current position">Set A</button>
-                <button className="btn-ghost" onClick={markB} title="Loop end at the current position">Set B</button>
+                <button className="btn-ghost" onClick={markA} data-tooltip="Loop start at the current position">Set A</button>
+                <button className="btn-ghost" onClick={markB} data-tooltip="Loop end at the current position">Set B</button>
                 <span className="loop-readout">
                   {engine.loop
                     ? `Loop ${formatTime(engine.loop.start)}–${formatTime(engine.loop.end)}`
@@ -336,12 +336,12 @@ export function TrackSelector({ engine, gainDb, setGainDb, q, setQ, focus, setFo
           </div>
 
           <div className="practice-row">
-            <label className="switch" title="Start playing the EQ as soon as each trial begins">
+            <label className="switch" data-tooltip="Start playing the EQ as soon as each trial begins">
               <input type="checkbox" checked={autoplay} onChange={e => setAutoplay(e.target.checked)} />
               <span className="switch-track" aria-hidden="true" />
               <span className="switch-label">Auto-play EQ</span>
             </label>
-            <label className="switch" title="Hide the EQ in octaves you miss more often">
+            <label className="switch" data-tooltip="Hide the EQ in octaves you miss more often">
               <input type="checkbox" checked={focus} onChange={e => setFocus(e.target.checked)} />
               <span className="switch-track" aria-hidden="true" />
               <span className="switch-label">Focus weak bands</span>

@@ -39,7 +39,7 @@
 
 [data-theme="light"] {
   --bg: #f6f3ed;
-  --card: #f8f5ee;
+  --card: #fdfcf9; /* a touch lighter than the page (#f6f3ed) so flat cards stand out */
   --card-2: #ece6da;
   --border: #d9d1c2;
   --border-hover: #bdb3a1;
@@ -134,9 +134,28 @@ body::before {
 }
 .rack .card { margin-bottom: 0; }
 
+/* Tooltips overflow their panel. Each panel (and the header) is its own
+   stacking context (the entrance animation creates one), so later panels
+   would paint over an earlier panel's tooltip. Lift whatever is hovered or
+   focused above its neighbours, and keep the header's downward tooltips
+   above the page. */
+.app-header { z-index: 3; }
+.rack-main { position: relative; }
+.rack-side:hover, .rack-side:focus-within,
+.rack-main:hover, .rack-main:focus-within { z-index: 2; }
+.rack-side > *:hover, .rack-side > *:focus-within,
+.rack-main > *:hover, .rack-main > *:focus-within { position: relative; z-index: 2; }
+
 @media (max-width: 860px) {
   .rack { display: flex; flex-direction: column; align-items: stretch; }
-  .rack-side { display: contents; }
+  .rack-side, .rack-main { display: contents; }
+  /* Order on narrow screens: Source, Trainer (and Quick Start), Controls,
+     Score, then the data buttons, so the trainer is near the top */
+  .rack-side > .panel-group:first-child { order: 1; }
+  .rack-main > .panel-group { order: 2; }
+  .rack-side > .panel-group:nth-child(2) { order: 3; }
+  .rack-main > .score-card { order: 4; }
+  .side-footer { order: 5; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -161,6 +180,9 @@ body::before {
     repeating-linear-gradient(to right, var(--border) 0 1px, transparent 1px 8px) bottom / 100% 4px no-repeat;
 }
 .header-top {
+  /* above the ruler rule (.app-header::after), so the buttons' tooltips aren't covered */
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -233,38 +255,57 @@ body::before {
   transform: translateY(-1px);
 }
 .icon-btn:active { transform: translateY(1px); border-bottom-width: 1px; }
-.icon-btn[data-tooltip] {
-  position: relative;
-}
-.icon-btn[data-tooltip]::after {
+/* Tooltips: any element with data-tooltip gets the same styled label.
+   Default: centred above the element. Header tooltips open downward and
+   align to the right edge, since the buttons sit at the top-right corner. */
+[data-tooltip] { position: relative; }
+[data-tooltip]::after {
   content: attr(data-tooltip);
   position: absolute;
   bottom: calc(100% + 8px);
-  right: 0;
+  left: 50%;
+  width: max-content;
+  max-width: 260px;
   background: var(--text);
   border-radius: 4px;
   padding: 4px 8px;
   font-family: var(--font-mono);
   font-size: 0.68rem;
   font-weight: 500;
+  letter-spacing: normal;
+  text-transform: none;
+  line-height: 1.4;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
   color: var(--bg);
-  white-space: nowrap;
   pointer-events: none;
   opacity: 0;
-  transform: translateY(4px);
+  transform: translate(-50%, 4px);
   transition: opacity 0.15s, transform 0.15s;
   z-index: 10;
 }
-.icon-btn[data-tooltip]:hover::after {
+[data-tooltip]:hover::after,
+[data-tooltip]:focus-visible::after {
   opacity: 1;
-  transform: translateY(0);
+  transform: translate(-50%, 0);
 }
-/* The header sits at the top of the page, so its tooltips open downward */
-.app-header .icon-btn[data-tooltip]::after {
+.app-header [data-tooltip]::after {
   bottom: auto;
   top: calc(100% + 8px);
+  left: auto;
+  right: 0;
   transform: translateY(-4px);
 }
+.app-header [data-tooltip]:hover::after,
+.app-header [data-tooltip]:focus-visible::after { transform: translateY(0); }
+/* Edge-aligned variants so tooltips near the page edges don't spill off it */
+.trainer-kb-hint[data-tooltip]::after { left: 0; transform: translateY(4px); }
+.trainer-share[data-tooltip]::after { left: auto; right: 0; transform: translateY(4px); }
+.trainer-kb-hint[data-tooltip]:hover::after,
+.trainer-kb-hint[data-tooltip]:focus-visible::after,
+.trainer-share[data-tooltip]:hover::after,
+.trainer-share[data-tooltip]:focus-visible::after { transform: translateY(0); }
 
 :focus-visible {
   outline: 2px solid var(--a);
@@ -366,7 +407,7 @@ body::before {
   background: color-mix(in srgb, var(--red) 7%, transparent);
 }
 @media (max-width: 860px) {
-  .side-footer { order: 1; margin-top: 0; }
+  .side-footer { margin-top: 0; }
 }
 @media (max-width: 860px) {
   .rack-side .track-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
@@ -1332,7 +1373,7 @@ body::before {
 .freq-graph-svg { display: block; -webkit-user-select: none; user-select: none; }
 
 .graph-label {
-  font-size: 8.5px;
+  font-size: calc(8.5px * var(--gk, 1)); /* --gk: text scale set by FreqGraph (larger on phones) */
   fill: var(--muted);
   font-family: var(--font-mono);
 }
@@ -1345,7 +1386,7 @@ body::before {
 /* Status readout in the plot's top corners */
 .graph-readout {
   font-family: var(--font-mono);
-  font-size: 7.5px;
+  font-size: calc(7.5px * var(--gk, 1));
   letter-spacing: 0.12em;
   fill: color-mix(in srgb, var(--a) 70%, var(--muted));
   stroke: var(--key-top);
@@ -1367,7 +1408,7 @@ body::before {
 
 /* Weak-spot strip under the plot: accuracy per octave */
 .graph-heat rect { transition: fill 0.3s; }
-.graph-heat-label { font-size: 7.5px; letter-spacing: 0.04em; }
+.graph-heat-label { font-size: calc(7.5px * var(--gk, 1)); letter-spacing: 0.04em; }
 .heat-none { fill: var(--border); opacity: 0.6; }
 .heat-low  { fill: var(--red); }
 .heat-mid  { fill: var(--a); }
@@ -1404,7 +1445,7 @@ body::before {
 .marker-error line { stroke: var(--text); stroke-width: 1; }
 .marker-label {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: calc(9px * var(--gk, 1));
   fill: var(--text);
   stroke: var(--key-top);
   stroke-width: 4;
@@ -1432,7 +1473,7 @@ body::before {
 .graph-hl-cut   { stroke: var(--cut); }
 
 .graph-placeholder {
-  font-size: 9px;
+  font-size: calc(9px * var(--gk, 1));
   letter-spacing: 0.16em;
   text-transform: uppercase;
   fill: color-mix(in srgb, var(--a) 45%, var(--muted));
@@ -1660,7 +1701,19 @@ body::before {
 @media (max-width: 600px) {
   .freq-btn { min-height: 68px; padding: 20px 2px 12px; }
   .app-header { padding-top: 22px; }
-  .header-top { align-items: flex-start; }
+  /* Phones: title and buttons on the first row, tagline on its own
+     full-width row below */
+  .header-top {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "title actions" "sub sub";
+    align-items: center;
+    row-gap: 12px;
+  }
+  .header-title { display: contents; }
+  .header-title h1 { grid-area: title; }
+  .header-title p { grid-area: sub; font-size: 0.84rem; line-height: 1.5; }
+  .header-actions { grid-area: actions; }
 }
 @media (max-width: 520px) {
   .transport .play-toggle { flex: 1 1 0; }
