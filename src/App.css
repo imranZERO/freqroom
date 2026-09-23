@@ -556,6 +556,38 @@ body::before {
   color: var(--muted);
 }
 
+/* Loop region for uploads: a steel-blue bracket just under the Position
+   track. The 7px insets follow the fader cap's half-width, since the cap
+   centre only travels between them. */
+.control-row { position: relative; }
+.loop-band {
+  grid-area: slider;
+  align-self: center;
+  height: 2px;
+  margin-left: calc(7px + (100% - 14px) * var(--a));
+  width: calc((100% - 14px) * (var(--b) - var(--a)));
+  min-width: 2px;
+  transform: translateY(9px);
+  background: var(--cut);
+  box-shadow: -1px -3px 0 -1px var(--cut), 1px -3px 0 -1px var(--cut);
+  pointer-events: none;
+}
+.loop-row {
+  display: flex;
+  align-items: center;
+  gap: 6px 8px;
+  flex-wrap: wrap;
+  margin-top: -4px;
+}
+.loop-row .btn-ghost { padding: 4px 9px; }
+.loop-readout {
+  flex-basis: 100%;
+  order: -1;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
 /* Practice options under the faders */
 .practice-row {
   display: flex;

@@ -41,6 +41,8 @@ export function TrackSelector({ engine, gainDb, setGainDb, q, setQ, focus, setFo
   const [uploading, setUploading] = useState(false);
   const [position, setPosition] = useState(0);
   const [fileInfo, setFileInfo] = useState(null);
+  // Loop points for uploads: A may be set before B; the engine loops once both exist
+  const [loopA, setLoopA] = useState(null);
   const isDraggingRef = useRef(false);
   const rafRef = useRef(null);
   const getOffsetRef = useRef(engine.getCurrentOffset);
@@ -81,6 +83,7 @@ export function TrackSelector({ engine, gainDb, setGainDb, q, setQ, focus, setFo
     setUploading(true);
     setActiveId(`upload:${file.name}`);
     setPosition(0);
+    setLoopA(null);
     setFileInfo(null);
     const [info] = await Promise.all([
       probeAudioFile(file).catch(() => null),
@@ -89,6 +92,23 @@ export function TrackSelector({ engine, gainDb, setGainDb, q, setQ, focus, setFo
     setFileInfo(info && { ...info, size: file.size });
     setUploading(false);
     e.target.value = '';
+  }
+
+  function markA() {
+    const b = engine.loop?.end;
+    setLoopA(position);
+    // Keep an existing B if it's still after the new A
+    engine.setLoop(b !== undefined && b > position ? position : null, b);
+  }
+
+  function markB() {
+    const a = loopA ?? engine.loop?.start ?? 0;
+    if (position > a) engine.setLoop(a, position);
+  }
+
+  function clearLoop() {
+    setLoopA(null);
+    engine.setLoop(null);
   }
 
   function handleSeekStart() {
@@ -220,6 +240,31 @@ export function TrackSelector({ engine, gainDb, setGainDb, q, setQ, focus, setFo
                 <span className="control-value control-value-time">
                   {formatTime(position)}<span className="control-duration">/{formatTime(engine.duration)}</span>
                 </span>
+                {(engine.loop || loopA !== null) && (
+                  <span
+                    className="loop-band"
+                    aria-hidden="true"
+                    style={{
+                      '--a': (engine.loop?.start ?? loopA) / engine.duration,
+                      '--b': (engine.loop?.end ?? loopA) / engine.duration,
+                    }}
+                  />
+                )}
+              </div>
+            )}
+
+            {isUpload && engine.duration > 0 && (
+              <div className="loop-row">
+                <button className="btn-ghost" onClick={markA} title="Loop start at the current position">Set A</button>
+                <button className="btn-ghost" onClick={markB} title="Loop end at the current position">Set B</button>
+                <span className="loop-readout">
+                  {engine.loop
+                    ? `Loop ${formatTime(engine.loop.start)}–${formatTime(engine.loop.end)}`
+                    : loopA !== null ? `A ${formatTime(loopA)} · set B` : 'Loop: whole track'}
+                </span>
+                {(engine.loop || loopA !== null) && (
+                  <button className="btn-ghost" onClick={clearLoop}>Clear</button>
+                )}
               </div>
             )}
           </div>

@@ -55,6 +55,8 @@ export function useAudioEngine() {
   const startOffsetRef = useRef(0);
   const volumeRef = useRef(load('volume', 0.8));
   const currentFiltersRef = useRef([]);
+  // Optional { start, end } region the source loops within (seconds)
+  const loopRef = useRef(null);
 
   const [isLoaded, setIsLoaded] = useState(false);
   const [sampleRate, setSampleRate] = useState(48000);
@@ -63,6 +65,7 @@ export function useAudioEngine() {
   const [loadError, setLoadError] = useState(null);
   const [volume, setVolumeState] = useState(volumeRef.current);
   const [duration, setDuration] = useState(0);
+  const [loop, setLoopState] = useState(null);
 
   function getCtx() {
     if (!ctxRef.current || ctxRef.current.state === 'closed') {
@@ -113,11 +116,22 @@ export function useAudioEngine() {
     graph.eqNodes = nodes;
   }
 
+  // Playback position. The source plays linearly from startOffset; with a loop
+  // region it wraps back to loop.start each time it reaches loop.end.
   const getCurrentOffset = useCallback(() => {
     if (!bufferRef.current || !ctxRef.current) return 0;
-    const elapsed = ctxRef.current.currentTime - startTimeRef.current;
-    return (startOffsetRef.current + elapsed) % bufferRef.current.duration;
+    if (!sourceRef.current) return startOffsetRef.current;
+    const pos = startOffsetRef.current + (ctxRef.current.currentTime - startTimeRef.current);
+    const region = loopRef.current;
+    if (region && pos >= region.end) return region.start + ((pos - region.start) % (region.end - region.start));
+    return pos % bufferRef.current.duration;
   }, []);
+
+  // Offsets outside the loop region snap to its start
+  const clampToLoop = (offset) => {
+    const region = loopRef.current;
+    return region && (offset < region.start || offset >= region.end) ? region.start : offset;
+  };
 
   // Fades the current source out and stops it; the graph is kept for reuse.
   const fadeOutSource = useCallback(() => {
@@ -141,6 +155,11 @@ export function useAudioEngine() {
     const source = ctx.createBufferSource();
     source.buffer = bufferRef.current;
     source.loop = true;
+    if (loopRef.current) {
+      source.loopStart = loopRef.current.start;
+      source.loopEnd = loopRef.current.end;
+      offset = clampToLoop(offset);
+    }
     source.connect(voice);
 
     startTimeRef.current = ctx.currentTime;
@@ -190,9 +209,30 @@ export function useAudioEngine() {
     if (sourceRef.current) {
       play(currentFiltersRef.current, offset);
     } else {
-      startOffsetRef.current = offset;
+      startOffsetRef.current = clampToLoop(offset);
     }
   }, [play]);
+
+  // Loop playback within [start, end] seconds; pass null to loop the whole buffer
+  const setLoop = useCallback((start, end) => {
+    const region = start !== null && end - start >= 0.1 ? { start, end } : null;
+    // Re-anchor position tracking at the current point before the loop changes
+    const source = sourceRef.current;
+    if (source) {
+      startOffsetRef.current = getCurrentOffset();
+      startTimeRef.current = source.context.currentTime;
+    }
+    loopRef.current = region;
+    setLoopState(region);
+    if (source) {
+      source.loopStart = region ? region.start : 0;
+      source.loopEnd = region ? region.end : 0;
+      const pos = startOffsetRef.current;
+      if (region && (pos < region.start || pos >= region.end)) play(currentFiltersRef.current, region.start);
+    } else {
+      startOffsetRef.current = clampToLoop(startOffsetRef.current);
+    }
+  }, [getCurrentOffset, play]);
 
   const loadBuffer = useCallback(async (source) => {
     setIsLoading(true);
@@ -201,6 +241,8 @@ export function useAudioEngine() {
     setDuration(0);
     fadeOutSource();
     startOffsetRef.current = 0;
+    loopRef.current = null;
+    setLoopState(null);
     setIsPlaying(false);
 
     try {
@@ -237,6 +279,7 @@ export function useAudioEngine() {
     play, stop, loadBuffer, getCtx,
     volume, setVolume,
     seek, getCurrentOffset,
+    loop, setLoop,
     duration, sampleRate,
   };
 }

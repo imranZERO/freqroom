@@ -51,7 +51,9 @@ export function HowItWorksModal({ isOpen, onClose }) {
               Pick <strong>Pink Noise</strong> to start — its equal energy per octave makes every
               frequency band equally audible, which is ideal for ear training. <strong>White Noise</strong>{' '}
               has a brighter, high-frequency bias. <strong>Upload your own audio</strong> (MP3, WAV, FLAC, OGG)
-              once you want to practice on real music — that's where the training counts.
+              once you want to practice on real music — that's where the training counts. With a file loaded,
+              use <strong>Set A</strong> and <strong>Set B</strong> under the Position fader to loop one
+              section, such as a dense chorus.
             </p>
           </div>
 
