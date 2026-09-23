@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect } from 'react';
 import { generatePinkNoise, generateWhiteNoise } from '../lib/noiseGen.js';
 import { probeAudioFile } from '../lib/audioInfo.js';
+import { ResetIcon } from './Icons.jsx';
 
 const GENERATED_TRACKS = [
   { id: 'pink', label: 'Pink Noise', description: 'Equal energy per octave — ideal for EQ training' },
@@ -35,7 +36,7 @@ function formatSpec(info, duration) {
   ].map(parts => parts.filter(Boolean).join(' · '));
 }
 
-export function TrackSelector({ engine, gainDb, setGainDb, q, setQ, focus, setFocus, autoplay, setAutoplay, hasProgress, onResetProgress, initialSource, onSourceChange }) {
+export function TrackSelector({ engine, gainDb, setGainDb, q, setQ, focus, setFocus, autoplay, setAutoplay, initialSource, onSourceChange, controlsChanged, onResetControls }) {
   const fileRef = useRef(null);
   const [activeId, setActiveId] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -180,7 +181,19 @@ export function TrackSelector({ engine, gainDb, setGainDb, q, setQ, focus, setFo
       </div>
 
       <div className="panel-group">
-        <h2 className="panel-label">Controls</h2>
+        <div className="panel-label-row">
+          <h2 className="panel-label">Controls</h2>
+          {controlsChanged && (
+            <button
+              className="icon-btn panel-reset"
+              onClick={onResetControls}
+              aria-label="Reset volume, gain, and Q to defaults"
+              data-tooltip="Reset to defaults"
+            >
+              <ResetIcon />
+            </button>
+          )}
+        </div>
         <section className="card controls-card">
           <div className="audio-controls">
             <div className="control-row">
@@ -287,9 +300,6 @@ export function TrackSelector({ engine, gainDb, setGainDb, q, setQ, focus, setFo
               <span className="switch-track" aria-hidden="true" />
               <span className="switch-label">Focus weak bands</span>
             </label>
-            {hasProgress && (
-              <button className="btn-ghost" onClick={onResetProgress}>Reset progress</button>
-            )}
           </div>
         </section>
       </div>

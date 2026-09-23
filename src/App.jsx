@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Router, Route, Switch } from 'wouter';
-import { useAudioEngine } from './hooks/useAudioEngine.js';
+import { useAudioEngine, DEFAULT_VOLUME } from './hooks/useAudioEngine.js';
 import { TrackSelector } from './components/TrackSelector.jsx';
 import { FrequencyTrainer, MODES } from './components/FrequencyTrainer.jsx';
 import { ScoreBoard } from './components/ScoreBoard.jsx';
@@ -11,6 +11,9 @@ import { usePersistentState, clearAll } from './lib/storage.js';
 import { EMPTY_PROGRESS, recordResult } from './lib/progress.js';
 import { parseChallenge } from './lib/challenge.js';
 
+const DEFAULT_GAIN_DB = 6;
+const DEFAULT_Q = 1.4;
+
 function MainApp() {
   const engine = useAudioEngine();
   const [scores, setScores] = useState({ total: 0, correct: 0 });
@@ -18,8 +21,15 @@ function MainApp() {
     'dark', () => window.matchMedia('(prefers-color-scheme: dark)').matches
   );
   const [showInfo, setShowInfo] = useState(false);
-  const [gainDb, setGainDb] = usePersistentState('gainDb', 6);
-  const [q, setQ] = usePersistentState('q', 1.4);
+  const [gainDb, setGainDb] = usePersistentState('gainDb', DEFAULT_GAIN_DB);
+  const [q, setQ] = usePersistentState('q', DEFAULT_Q);
+  const controlsChanged = engine.volume !== DEFAULT_VOLUME || gainDb !== DEFAULT_GAIN_DB || q !== DEFAULT_Q;
+
+  function resetControls() {
+    engine.setVolume(DEFAULT_VOLUME);
+    setGainDb(DEFAULT_GAIN_DB);
+    setQ(DEFAULT_Q);
+  }
   const [focus, setFocus] = usePersistentState('focus', false);
   const [autoplay, setAutoplay] = usePersistentState('autoplay', true);
   const [progress, setProgress] = usePersistentState('progress', EMPTY_PROGRESS);
@@ -94,8 +104,14 @@ function MainApp() {
             engine={engine} gainDb={gainDb} setGainDb={setGainDb} q={q} setQ={setQ}
             focus={focus} setFocus={setFocus} autoplay={autoplay} setAutoplay={setAutoplay}
             initialSource={challenge?.source} onSourceChange={setSourceId}
-            hasProgress={progress.lifetime.total > 0} onResetProgress={resetProgress}
+            controlsChanged={controlsChanged} onResetControls={resetControls}
           />
+          <div className="side-footer">
+            {progress.lifetime.total > 0 && (
+              <button className="footer-link-btn" onClick={resetProgress}>Reset progress</button>
+            )}
+            <button className="footer-link-btn" onClick={clearSavedData}>Clear saved data</button>
+          </div>
         </aside>
         <div className="rack-main">
           <FrequencyTrainer
@@ -121,8 +137,6 @@ function MainApp() {
         </p>
         <p>
           Inspired by <a href="https://harmanhowtolisten.blogspot.com" target="_blank" rel="noopener noreferrer">Harman's How to Listen</a>
-          <span className="footer-sep">·</span>
-          <button className="footer-link-btn" onClick={clearSavedData}>Clear saved data</button>
         </p>
       </footer>
     </div>

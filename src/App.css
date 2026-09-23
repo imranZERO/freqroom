@@ -272,6 +272,30 @@ body::before {
 }
 .rack-side .track-grid { grid-template-columns: minmax(0, 1fr); gap: 8px; }
 .panel-label { margin: 0 0 8px 2px; }
+/* Label with an action on the right (e.g. reset); fixed height so the
+   button appearing or disappearing doesn't shift the panel */
+.panel-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 17px;
+  margin-bottom: 8px;
+}
+.panel-label-row .panel-label { margin-bottom: 0; }
+.panel-reset { padding: 3px; margin-right: 1px; }
+
+/* Data actions at the bottom of the side column */
+.side-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  margin-top: -6px;
+  padding: 0 2px;
+  font-size: 0.78rem;
+}
+@media (max-width: 860px) {
+  .side-footer { order: 1; margin-top: 0; }
+}
 @media (max-width: 860px) {
   .rack-side .track-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
 }
@@ -592,18 +616,19 @@ body::before {
 .practice-row {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 12px;
-  margin-top: 18px;
-  padding-top: 16px;
+  gap: 14px;
+  margin-top: 20px;
+  padding-top: 18px;
   border-top: 1px dashed var(--border);
 }
 
 /* Toggle switch — a small hardware rocker with an amber lamp when on */
+/* Same layout as the fader rows: label on the left, control on the right */
 .switch {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: space-between;
+  gap: 12px;
   cursor: pointer;
   user-select: none;
 }
@@ -633,6 +658,7 @@ body::before {
 .switch input:checked + .switch-track::after { transform: translateX(14px); background: var(--a); }
 .switch input:focus-visible + .switch-track { outline: 2px solid var(--a); outline-offset: 2px; }
 .switch-label {
+  order: -1;
   font-family: var(--font-mono);
   font-size: 0.66rem;
   font-weight: 500;
@@ -678,7 +704,6 @@ body::before {
   align-items: center;
   gap: 6px;
 }
-.footer-sep { margin: 0 8px; color: var(--border-hover); }
 .footer-link-btn {
   background: none;
   border: none;
@@ -1073,7 +1098,7 @@ body::before {
   overflow: hidden;
   line-height: 0;
 }
-.freq-graph-svg { display: block; }
+.freq-graph-svg { display: block; -webkit-user-select: none; user-select: none; }
 
 .graph-label {
   font-size: 8.5px;

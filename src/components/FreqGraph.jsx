@@ -150,6 +150,7 @@ export function FreqGraph({ curves = [], answer = null, gainDb = 6, sampleRate =
   }
   const pointerProps = onPick ? {
     onPointerDown: e => {
+      e.preventDefault(); // don't start a text selection while dragging
       try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* capture is a nicety */ }
       pickAt(e);
     },

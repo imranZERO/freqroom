@@ -3,6 +3,7 @@ import { load, save } from '../lib/storage.js';
 
 // Time constant for setTargetAtTime ramps; ~5 time constants to settle (≈25 ms)
 const RAMP_TC = 0.005;
+export const DEFAULT_VOLUME = 0.8;
 const FADE_STOP = 0.05;
 
 function rampTo(param, value, t) {
@@ -53,7 +54,7 @@ export function useAudioEngine() {
   const voiceRef = useRef(null);
   const startTimeRef = useRef(0);
   const startOffsetRef = useRef(0);
-  const volumeRef = useRef(load('volume', 0.8));
+  const volumeRef = useRef(load('volume', DEFAULT_VOLUME));
   const currentFiltersRef = useRef([]);
   // Optional { start, end } region the source loops within (seconds)
   const loopRef = useRef(null);
