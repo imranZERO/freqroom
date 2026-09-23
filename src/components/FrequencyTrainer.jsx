@@ -93,7 +93,7 @@ function freqRegion(hz) {
   return 'Brilliance';
 }
 
-function FreqRow({ shownBands, range, sign, dirLabel, getBtnState, selectBand, answered }) {
+function FreqRow({ shownBands, range, sign, dirLabel, getBtnState, selectBand, answered, onHover }) {
   const inset = rowInset(...range);
   return (
     <div
@@ -105,6 +105,10 @@ function FreqRow({ shownBands, range, sign, dirLabel, getBtnState, selectBand, a
           key={freq}
           className={`freq-btn ${getBtnState(freq, sign)}`}
           onClick={() => selectBand(freq, sign)}
+          onMouseEnter={() => onHover({ freq, sign })}
+          onMouseLeave={() => onHover(null)}
+          onFocus={() => onHover({ freq, sign })}
+          onBlur={() => onHover(null)}
           disabled={answered}
           aria-label={`${FREQ_LABEL(freq)} ${FREQ_UNIT(freq)}${dirLabel ? ` ${dirLabel}` : ''}`}
         >
@@ -137,6 +141,8 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
   const [wrongStreak, setWrongStreak] = useState(0);
   const [trial, setTrial] = useState(null);
   const [playMode, setPlayMode] = useState(null);
+  // Band button under the pointer (or keyboard focus); its curve is highlighted on the graph
+  const [hovered, setHovered] = useState(null);
   const answeringRef = useRef(false);
 
   // The hidden filter for a trial at the current Gain/Q settings
@@ -239,6 +245,7 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
 
   function startTrial() {
     answeringRef.current = false;
+    setHovered(null);
     engine.stop();
     setPlayMode(null);
     // kind: 'peaking', 'shelf' (low/high chosen by the corner), 'highpass' or 'lowpass'
@@ -307,10 +314,19 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
     curves = trial.shownBands.flatMap(f => gains.map(g => makeFilter(typeAt(trial.kind, f), f, g, q)));
   }
 
+  // The hovered band's curve(s). Shelves light both directions so hovering
+  // doesn't reveal whether the hidden shelf is a boost or a cut.
+  let highlight = [];
+  if (trial && !trial.answered && hovered && trial.kind !== 'sweep') {
+    const gains = trial.kind === 'shelf' ? [gainDb, -gainDb] : [hovered.sign * gainDb];
+    highlight = gains.map(g => makeFilter(typeAt(trial.kind, hovered.freq), hovered.freq, g, q));
+  }
+
   // The graph is the instrument's "screen" and is shown in every state
   const screen = (
     <FreqGraph
       curves={curves}
+      highlight={highlight}
       answer={trial?.answered ? activeFilter(trial) : null}
       gainDb={gainDb}
       sampleRate={engine.sampleRate}
@@ -388,7 +404,7 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
       }
       return isSel ? 'f-selected' : '';
     };
-    const rowProps = { shownBands, range, getBtnState, selectBand, answered };
+    const rowProps = { shownBands, range, getBtnState, selectBand, answered, onHover: setHovered };
 
     const isWrongStreak = wrongStreak > 0;
     const streakCount = isWrongStreak ? wrongStreak : correctStreak;
@@ -510,14 +526,21 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
   }
 
   return (
-    <div className="panel-group">
-      <h2 className="panel-label">Trainer</h2>
-      <section className="card instrument">
-        {header && <div className="trainer-header">{header}</div>}
-        {screen}
-        {body}
-      </section>
-      {outside}
-    </div>
+    <>
+      <div className="panel-group">
+        <h2 className="panel-label">Trainer</h2>
+        <section className="card instrument">
+          {header && <div className="trainer-header">{header}</div>}
+          {screen}
+          {body}
+        </section>
+      </div>
+      {outside && (
+        <div className="panel-group">
+          <h2 className="panel-label">Quick Start</h2>
+          {outside}
+        </div>
+      )}
+    </>
   );
 }

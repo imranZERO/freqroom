@@ -27,6 +27,9 @@
   --cap-bottom: #5b3a1d;
   --cap-edge: #2b1a0b;
   --cap-shine: rgba(255, 214, 160, 0.35);
+  --key-top: #2b2824;
+  --key-bottom: #211e1a;
+  --key-edge: #0c0b09;
 
   /* System fonts only — nothing to download */
   --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -55,6 +58,9 @@
   --cap-bottom: #633f1f;
   --cap-edge: #3f2711;
   --cap-shine: rgba(255, 220, 170, 0.45);
+  --key-top: #fdfbf7;
+  --key-bottom: #ebe4d6;
+  --key-edge: #c9bfac;
 }
 
 html { color-scheme: dark; }
@@ -622,8 +628,9 @@ body::before {
   border-top: 1px dashed var(--border);
 }
 
-/* Toggle switch — a small hardware rocker with an amber lamp when on */
-/* Same layout as the fader rows: label on the left, control on the right */
+/* Toggle switch: a recessed slot with the same brown cap as the faders.
+   Track 38×20 with 3px inset all round; the 16×12 cap travels 16px, so it
+   sits evenly inside the track in both positions. */
 .switch {
   display: flex;
   align-items: center;
@@ -635,28 +642,43 @@ body::before {
 .switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .switch-track {
   position: relative;
-  width: 30px;
-  height: 16px;
+  box-sizing: border-box;
+  width: 38px;
+  height: 20px;
   flex-shrink: 0;
-  border-radius: 3px;
+  border-radius: 4px;
   background: var(--card-2);
   border: 1px solid var(--border-hover);
-  transition: background 0.15s, border-color 0.15s;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35);
+  transition: background 0.18s, border-color 0.18s, box-shadow 0.18s;
 }
 .switch-track::after {
   content: '';
   position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 12px;
-  height: 10px;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 12px;
+  box-sizing: border-box;
   border-radius: 2px;
-  background: var(--muted);
-  transition: transform 0.15s, background 0.15s;
+  border: 1px solid var(--cap-edge);
+  background-color: var(--cap-bottom);
+  background-image:
+    repeating-linear-gradient(to right, transparent 0 3px, rgba(0, 0, 0, 0.28) 3px 4px),
+    linear-gradient(to bottom, var(--cap-top), var(--cap-bottom));
+  box-shadow: inset 0 1px 0 var(--cap-shine), 0 1px 2px rgba(0, 0, 0, 0.35);
+  transition: transform 0.18s cubic-bezier(0.3, 0.7, 0.3, 1);
 }
-.switch input:checked + .switch-track { border-color: var(--a); background: color-mix(in srgb, var(--a) 18%, var(--card-2)); }
-.switch input:checked + .switch-track::after { transform: translateX(14px); background: var(--a); }
+.switch:hover .switch-track { border-color: color-mix(in srgb, var(--a) 45%, var(--border-hover)); }
+.switch input:checked + .switch-track {
+  border-color: var(--a);
+  background: color-mix(in srgb, var(--a) 28%, var(--card-2));
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3), 0 0 6px color-mix(in srgb, var(--a) 25%, transparent);
+}
+.switch input:checked + .switch-track::after { transform: translateX(16px); }
 .switch input:focus-visible + .switch-track { outline: 2px solid var(--a); outline-offset: 2px; }
+.switch:active .switch-track::after { transform: scaleX(1.1); }
+.switch:active input:checked + .switch-track::after { transform: translateX(16px) scaleX(1.1); }
 .switch-label {
   order: -1;
   font-family: var(--font-mono);
@@ -734,7 +756,7 @@ body::before {
   border-radius: var(--radius);
   box-shadow: inset 0 1px 0 var(--highlight), 0 12px 32px -16px rgba(0, 0, 0, 0.45);
   color: var(--text);
-  max-width: 540px;
+  max-width: 720px;
   width: calc(100vw - 32px);
   padding: 0;
   outline: none;
@@ -751,6 +773,43 @@ body::before {
 .info-modal[open] {
   animation: modal-in 0.18s ease;
 }
+/* Confirmation dialog (replaces window.confirm) */
+.confirm-modal { max-width: 420px; }
+.confirm-body { padding: 22px 22px 18px; }
+.confirm-body h2 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+.confirm-body p {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+.confirm-actions .btn-ghost { padding: 8px 14px; }
+.btn-danger {
+  background: var(--red);
+  border: 1px solid color-mix(in srgb, var(--red) 70%, #000);
+  border-radius: var(--radius);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  color: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 8px 16px;
+  transition: filter 0.15s;
+}
+.btn-danger:hover { filter: brightness(1.08); }
+
 .info-modal-header {
   display: flex;
   align-items: center;
@@ -786,6 +845,8 @@ body::before {
   gap: 20px;
   max-height: 70vh;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-hover) transparent;
 }
 .info-warning {
   background: color-mix(in srgb, var(--a) 10%, transparent);
@@ -882,7 +943,6 @@ body::before {
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
 }
-.panel-group > .quickstart { margin-top: 12px; }
 .quickstart li {
   counter-increment: step;
   background: var(--card);
@@ -1155,6 +1215,14 @@ body::before {
   paint-order: stroke;
 }
 
+/* Hovered band's curve: drawn over the grey candidates, lighter than the reveal */
+.graph-highlight { animation: graph-in 0.25s ease-out both; pointer-events: none; }
+.graph-highlight path:first-child { opacity: 0.7; }
+.graph-hl-boost,
+.graph-hl-cut { fill: none; stroke-width: 1.75; stroke-linejoin: round; }
+.graph-hl-boost { stroke: var(--a); }
+.graph-hl-cut   { stroke: var(--cut); }
+
 .graph-placeholder {
   font-size: 10px;
   letter-spacing: 0.08em;
@@ -1171,19 +1239,20 @@ body::before {
    by the plot's side margins (FreqGraph P.l = 32, P.r = 14 of VW = 600)
    puts every key directly under its curve peak.                           */
 .freq-grid {
+  container-type: inline-size;
   display: grid;
   grid-template-columns: repeat(var(--n, 1), minmax(0, 1fr));
   padding-left: calc(32 / 600 * 100%);
   padding-right: calc(14 / 600 * 100%);
   margin-top: -6px;
 }
-.freq-grid .freq-btn { margin: 0 3px; }
+.freq-grid .freq-btn { margin: 0 min(6px, calc(48px / var(--n, 1))); }
 
 /* Mixed mode: boost row above cut row, marked in the graph's dB gutter */
 .freq-grid-mixed {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;
   margin-top: -6px;
 }
 .freq-grid-mixed .freq-grid { margin-top: 0; }
@@ -1212,12 +1281,15 @@ body::before {
 .sweep-hint strong { color: var(--text); font-weight: 600; }
 .mixed-dir-reveal strong { color: var(--text); }
 
+/* Raised keycap: gradient face, firm border, and a thicker bottom edge that
+   compresses when pressed */
 .freq-btn {
   position: relative;
   min-width: 0;
-  background: var(--card-2);
-  border: 1px solid var(--border);
-  border-radius: 4px;
+  background: linear-gradient(to bottom, var(--key-top), var(--key-bottom));
+  border: 1px solid var(--border-hover);
+  border-bottom: 3px solid var(--key-edge);
+  border-radius: 5px;
   box-shadow: inset 0 1px 0 var(--highlight);
   color: var(--text);
   cursor: pointer;
@@ -1225,17 +1297,17 @@ body::before {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1px;
-  padding: 18px 2px 12px;
-  transition: background 0.13s, border-color 0.13s, color 0.13s, transform 0.1s;
-  min-height: 72px;
+  gap: 3px;
+  padding: 24px 4px 16px;
+  transition: background 0.13s, border-color 0.13s, color 0.13s, transform 0.08s, border-bottom-width 0.08s;
+  min-height: 84px;
   font-family: var(--font-mono);
 }
 /* Indicator lamp on each key */
 .freq-btn::before {
   content: '';
   position: absolute;
-  top: 7px;
+  top: 9px;
   left: 50%;
   width: 14px;
   height: 3px;
@@ -1244,42 +1316,63 @@ body::before {
   background: var(--border);
   transition: background 0.15s, box-shadow 0.15s;
 }
-.freq-btn:hover:not(:disabled) { border-color: var(--border-hover); background: var(--card-hover); }
-.freq-btn:active:not(:disabled) { transform: translateY(1px); }
+.freq-btn:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--a) 55%, var(--border-hover));
+  border-bottom-color: var(--key-edge);
+  background: linear-gradient(to bottom,
+    color-mix(in srgb, var(--a) 8%, var(--key-top)),
+    color-mix(in srgb, var(--a) 4%, var(--key-bottom)));
+  transform: translateY(-1px);
+}
+.freq-btn:hover:not(:disabled)::before {
+  background: color-mix(in srgb, var(--a) 55%, var(--border));
+}
+.freq-btn.f-selected:hover:not(:disabled) {
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--a) 20%, var(--key-top)), color-mix(in srgb, var(--a) 13%, var(--key-bottom)));
+}
+.freq-btn.f-selected:hover:not(:disabled)::before { background: var(--a); }
+.freq-btn:active:not(:disabled) { transform: translateY(2px); border-bottom-width: 1px; }
 .freq-btn:disabled { cursor: default; }
+.freq-btn:disabled:not(.f-selected):not(.f-hit):not(.f-missed):not(.f-wrong) { opacity: 0.7; }
 
 /* User selected (pre-answer) */
 .freq-btn.f-selected {
   border-color: var(--a);
+  border-bottom-color: color-mix(in srgb, var(--a) 55%, var(--key-edge));
   color: var(--a);
-  background: color-mix(in srgb, var(--a) 10%, var(--card-2));
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--a) 16%, var(--key-top)), color-mix(in srgb, var(--a) 10%, var(--key-bottom)));
 }
 .freq-btn.f-selected::before { background: var(--a); box-shadow: 0 0 3px color-mix(in srgb, var(--a) 60%, transparent); }
 
 /* Post-answer states */
 .freq-btn.f-hit {
   border-color: var(--green);
+  border-bottom-color: color-mix(in srgb, var(--green) 55%, var(--key-edge));
   color: var(--green);
-  background: color-mix(in srgb, var(--green) 12%, var(--card-2));
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--green) 16%, var(--key-top)), color-mix(in srgb, var(--green) 10%, var(--key-bottom)));
 }
 .freq-btn.f-hit::before { background: var(--green); box-shadow: 0 0 3px color-mix(in srgb, var(--green) 60%, transparent); }
 
 .freq-btn.f-missed {
   border-color: var(--green);
   border-style: dashed;
+  border-bottom-style: solid;
+  border-bottom-color: color-mix(in srgb, var(--green) 45%, var(--key-edge));
   color: var(--green);
 }
 .freq-btn.f-missed::before { background: var(--green); opacity: 0.6; }
 
 .freq-btn.f-wrong {
   border-color: var(--red);
+  border-bottom-color: color-mix(in srgb, var(--red) 55%, var(--key-edge));
   color: var(--red);
-  background: color-mix(in srgb, var(--red) 10%, var(--card-2));
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--red) 14%, var(--key-top)), color-mix(in srgb, var(--red) 9%, var(--key-bottom)));
 }
 .freq-btn.f-wrong::before { background: var(--red); box-shadow: 0 0 3px color-mix(in srgb, var(--red) 60%, transparent); }
 
 .freq-num {
-  font-size: clamp(0.62rem, 1.8vw, 0.98rem);
+  /* About a fifth of a key's width: row width (cqw) split over n keys */
+  font-size: clamp(0.58rem, calc(20cqw / var(--n, 1)), 1.1rem);
   font-weight: 600;
   letter-spacing: -0.03em;
   overflow: hidden;
@@ -1288,7 +1381,7 @@ body::before {
   max-width: 100%;
 }
 .freq-unit {
-  font-size: clamp(0.5rem, 1.2vw, 0.62rem);
+  font-size: clamp(0.5rem, 1.2vw, 0.64rem);
   letter-spacing: 0.04em;
   color: var(--muted);
 }
@@ -1359,7 +1452,7 @@ body::before {
 
 /* ── Responsive ─────────────────────────────────────────────────────────── */
 @media (max-width: 600px) {
-  .freq-btn { min-height: 62px; padding-top: 16px; }
+  .freq-btn { min-height: 68px; padding: 20px 2px 12px; }
   .app-header { padding-top: 32px; }
 }
 @media (max-width: 520px) {
@@ -1368,6 +1461,6 @@ body::before {
   .transport-action .btn-primary { flex: 1; }
 }
 @media (max-width: 400px) {
-  .freq-grid .freq-btn { margin: 0 2px; }
+  .freq-grid .freq-btn { margin: 0 min(3px, calc(24px / var(--n, 1))); }
   .freq-btn::before { width: 10px; margin-left: -5px; }
 }

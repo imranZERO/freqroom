@@ -1,7 +1,7 @@
 const F_MIN = 20, F_MAX = 20000;
 const N = 300;
 const P = { t: 14, r: 14, b: 28, l: 32 };
-const VW = 600, VH = 160;
+const VW = 600, VH = 186;
 const IW = VW - P.l - P.r;
 const IH = VH - P.t - P.b;
 
@@ -138,7 +138,8 @@ const sameFilter = (a, b) => a.type === b.type && a.frequency === b.frequency &&
 // curves: candidate filters drawn in gray; answer: the revealed filter (or null).
 // gainDb sets the dB range so the axis follows the Gain slider.
 // Sweep mode passes marker (the current guess) and onPick, which makes the plot an input
-export function FreqGraph({ curves = [], answer = null, gainDb = 6, sampleRate = 48000, heat = [], marker = null, onPick = null }) {
+// highlight: candidate filters to emphasise (the band button being hovered)
+export function FreqGraph({ curves = [], answer = null, highlight = [], gainDb = 6, sampleRate = 48000, heat = [], marker = null, onPick = null }) {
   const isBoost = answer ? (answer.gain ?? 0) > 0 : false;
   // ±12 dB by default; widens in 6 dB steps so high gains aren't clipped
   const range = Math.max(12, Math.ceil(Math.abs(gainDb) / 6) * 6);
@@ -192,6 +193,18 @@ export function FreqGraph({ curves = [], answer = null, gainDb = 6, sampleRate =
           return (
             <path key={`${c.type}-${c.frequency}-${c.gain}`} d={makeLine(computeCurve(c, sampleRate, range))}
               className="graph-curve-gray" />
+          );
+        })}
+
+        {/* Hovered candidate(s): amber for boosts, blue for cuts and pass filters */}
+        {highlight.map(h => {
+          const pts = computeCurve(h, sampleRate, range);
+          const up = (h.gain ?? 0) > 0;
+          return (
+            <g key={`hl-${h.type}-${h.frequency}-${h.gain}`} className="graph-highlight">
+              <path d={makeFill(pts, range)} className={up ? 'graph-fill-boost' : 'graph-fill-cut'} />
+              <path d={makeLine(pts)} className={up ? 'graph-hl-boost' : 'graph-hl-cut'} />
+            </g>
           );
         })}
 

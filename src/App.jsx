@@ -5,6 +5,7 @@ import { TrackSelector } from './components/TrackSelector.jsx';
 import { FrequencyTrainer, MODES } from './components/FrequencyTrainer.jsx';
 import { ScoreBoard } from './components/ScoreBoard.jsx';
 import { HowItWorksModal } from './components/HowItWorksModal.jsx';
+import { ConfirmDialog } from './components/ConfirmDialog.jsx';
 import { TechnicalDetails } from './components/TechnicalDetails.jsx';
 import { InfoIcon, SunIcon, MoonIcon, GitHubIcon } from './components/Icons.jsx';
 import { usePersistentState, clearAll } from './lib/storage.js';
@@ -21,6 +22,7 @@ function MainApp() {
     'dark', () => window.matchMedia('(prefers-color-scheme: dark)').matches
   );
   const [showInfo, setShowInfo] = useState(false);
+  const [confirmRequest, setConfirmRequest] = useState(null);
   const [gainDb, setGainDb] = usePersistentState('gainDb', DEFAULT_GAIN_DB);
   const [q, setQ] = usePersistentState('q', DEFAULT_Q);
   const controlsChanged = engine.volume !== DEFAULT_VOLUME || gainDb !== DEFAULT_GAIN_DB || q !== DEFAULT_Q;
@@ -60,15 +62,28 @@ function MainApp() {
   }
 
   function resetProgress() {
-    if (!confirm('Reset your levels, lifetime score, and weak-spot stats? Settings are kept.')) return;
-    setProgress(EMPTY_PROGRESS);
-    setScores({ total: 0, correct: 0 });
+    setConfirmRequest({
+      title: 'Reset progress?',
+      message: 'Your levels, lifetime score, and weak-spot stats will be cleared. Your settings are kept.',
+      confirmLabel: 'Reset progress',
+      onConfirm: () => {
+        setProgress(EMPTY_PROGRESS);
+        setScores({ total: 0, correct: 0 });
+        setConfirmRequest(null);
+      },
+    });
   }
 
   function clearSavedData() {
-    if (!confirm('Clear everything FreqRoom has saved in this browser — progress, settings, and theme?')) return;
-    clearAll();
-    location.reload();
+    setConfirmRequest({
+      title: 'Clear saved data?',
+      message: 'Everything FreqRoom has saved in this browser — progress, settings, and theme — will be removed, and the page will reload. This can\'t be undone.',
+      confirmLabel: 'Clear data',
+      onConfirm: () => {
+        clearAll();
+        location.reload();
+      },
+    });
   }
 
   return (
@@ -127,6 +142,7 @@ function MainApp() {
       </main>
 
       <HowItWorksModal isOpen={showInfo} onClose={() => setShowInfo(false)} />
+      <ConfirmDialog request={confirmRequest} onCancel={() => setConfirmRequest(null)} />
 
       <footer className="app-footer">
         <p className="footer-created">
