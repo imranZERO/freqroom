@@ -327,6 +327,11 @@ body::before {
 }
 .file-ext { flex-shrink: 0; }
 .track-desc { font-size: 0.78rem; color: var(--muted); }
+.track-spec {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.01em;
+}
 
 /* ── Audio controls ─────────────────────────────────────────────────────── */
 .audio-controls {

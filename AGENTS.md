@@ -42,6 +42,7 @@ App.jsx (Wouter Router)
 
 **`noiseGen.js`** — Paul Kellet's IIR filter method for pink noise; simple uniform random for white noise. Both return an `AudioBuffer` for direct use with `loadBuffer`.
 
+**`audioInfo.js`** — `probeAudioFile(file)` reads format, original sample rate, bit depth, and channels from WAV/FLAC/MP3/Ogg/Opus headers (M4A reports format only). `decodeAudioData` resamples to the context rate, so this is the only source of the file's real specs. `TrackSelector` shows them, plus average bitrate (file size ÷ duration), on the upload button.
 
 **Theme** — toggled via `data-theme="dark|light"` on `document.documentElement`; CSS variables in `App.css` handle the rest.
 

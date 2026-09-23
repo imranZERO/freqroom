@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import { generatePinkNoise, generateWhiteNoise } from '../lib/noiseGen.js';
+import { probeAudioFile } from '../lib/audioInfo.js';
 
 const GENERATED_TRACKS = [
   { id: 'pink', label: 'Pink Noise', description: 'Equal energy per octave — ideal for EQ training' },
@@ -24,11 +25,22 @@ function FileName({ name }) {
   );
 }
 
+// Two readout lines, e.g. "FLAC · 44.1 kHz · 24-bit · Stereo" / "1012 kbps avg · 3:42"
+function formatSpec(info, duration) {
+  const channels = info.channels === 1 ? 'Mono' : info.channels === 2 ? 'Stereo' : info.channels ? `${info.channels} ch` : null;
+  const kbps = duration ? Math.round((info.size * 8) / duration / 1000) : null;
+  return [
+    [info.format, info.sampleRate && `${+(info.sampleRate / 1000).toFixed(1)} kHz`, info.bitDepth, channels],
+    [kbps && `${kbps} kbps avg`, duration && formatTime(duration)],
+  ].map(parts => parts.filter(Boolean).join(' · '));
+}
+
 export function TrackSelector({ engine, gainDb, setGainDb, q, setQ }) {
   const fileRef = useRef(null);
   const [activeId, setActiveId] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [position, setPosition] = useState(0);
+  const [fileInfo, setFileInfo] = useState(null);
   const isDraggingRef = useRef(false);
   const rafRef = useRef(null);
   const getOffsetRef = useRef(engine.getCurrentOffset);
@@ -69,7 +81,12 @@ export function TrackSelector({ engine, gainDb, setGainDb, q, setQ }) {
     setUploading(true);
     setActiveId(`upload:${file.name}`);
     setPosition(0);
-    await engine.loadBuffer(file);
+    setFileInfo(null);
+    const [info] = await Promise.all([
+      probeAudioFile(file).catch(() => null),
+      engine.loadBuffer(file),
+    ]);
+    setFileInfo(info && { ...info, size: file.size });
     setUploading(false);
     e.target.value = '';
   }
@@ -115,7 +132,13 @@ export function TrackSelector({ engine, gainDb, setGainDb, q, setQ }) {
               <span className="track-name">
                 {uploading ? 'Loading…' : isUpload ? <FileName name={activeId.slice(7)} /> : 'Upload File'}
               </span>
-              <span className="track-desc">MP3, WAV, FLAC, OGG</span>
+              {isUpload && fileInfo && engine.isLoaded ? (
+                formatSpec(fileInfo, engine.duration).map((line, i) => (
+                  line && <span key={i} className="track-desc track-spec">{line}</span>
+                ))
+              ) : (
+                <span className="track-desc">MP3, WAV, FLAC, OGG</span>
+              )}
             </button>
             <input
               ref={fileRef}
