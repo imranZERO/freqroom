@@ -559,10 +559,9 @@ body::before {
 /* Practice options under the faders */
 .practice-row {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
   margin-top: 18px;
   padding-top: 16px;
   border-top: 1px dashed var(--border);

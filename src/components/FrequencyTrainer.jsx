@@ -84,7 +84,7 @@ function signForMode(mode) {
 // Stats family the current modes record under (shelf/pass/sweep modes add their own)
 const FAMILY = 'peak';
 
-export function FrequencyTrainer({ engine, gainDb, q, progress, focus, onResult }) {
+export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay, onResult }) {
   const [testMode, setTestMode] = useState(null);
   // Level is remembered per mode in saved progress
   const level = (testMode && progress.levels[testMode]) || MIN_LEVEL;
@@ -118,18 +118,32 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, onResult 
         return;
       }
 
-      if (!trial || trial.answered) return;
+      if (!trial) return;
 
+      // EQ/Flat stays available after answering so the reveal can be re-heard
       if (key === ' ') {
         e.preventDefault();
         handlePlayMode(playMode === 'eq' ? 'flat' : 'eq');
-      } else if ((key === 'ArrowLeft' || key === 'ArrowRight') && testMode !== 'both') {
+        return;
+      }
+      if (trial.answered || e.metaKey || e.ctrlKey || e.altKey) return;
+
+      const bands = trial.shownBands;
+      const sel = trial.userSelection;
+      // Mixed mode picks a row as well as a band; other modes have one fixed row
+      const sign = testMode === 'both' ? (sel?.sign ?? 1) : trial.activeSign;
+      const cur = sel ? bands.indexOf(sel.freq) : -1;
+
+      if (/^[0-9]$/.test(key)) {
+        const idx = key === '0' ? 9 : Number(key) - 1;
+        if (idx < bands.length) selectBand(bands[idx], sign);
+      } else if (key === 'ArrowLeft' || key === 'ArrowRight') {
         e.preventDefault();
-        const bands = trial.shownBands;
-        const cur = trial.userSelection ? bands.indexOf(trial.userSelection.freq) : -1;
-        if (key === 'ArrowLeft' && cur <= 0) return;
-        const next = key === 'ArrowLeft' ? cur - 1 : Math.min(bands.length - 1, cur + 1);
-        selectBand(bands[next === -1 ? 0 : next], trial.activeSign);
+        const next = key === 'ArrowLeft' ? Math.max(0, cur - 1) : Math.min(bands.length - 1, cur + 1);
+        selectBand(bands[next], sign);
+      } else if ((key === 'ArrowUp' || key === 'ArrowDown') && testMode === 'both') {
+        e.preventDefault();
+        selectBand(bands[Math.max(0, cur)], key === 'ArrowUp' ? 1 : -1);
       }
     }
 
@@ -157,6 +171,10 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, onResult 
       : shownBands[Math.floor(Math.random() * shownBands.length)];
     const activeSign = signForMode(testMode);
     setTrial({ shownBands, activeBand, activeSign, userSelection: null, answered: false, wasCorrect: null });
+    if (autoplay) {
+      engine.play(makeFilter(activeBand, activeSign * gainDb, q));
+      setPlayMode('eq');
+    }
   }
 
   function handlePlayMode(mode) {
@@ -345,7 +363,7 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, onResult 
             <button
               className="icon-btn trainer-kb-hint"
               aria-label="Keyboard shortcuts"
-              data-tooltip={isMixed ? 'Space EQ/Flat · Enter check/next' : 'Space EQ/Flat · ← → select · Enter check/next'}
+              data-tooltip={`1–9, 0 pick band · ← → move${isMixed ? ' · ↑ ↓ boost/cut' : ''} · Space EQ/Flat · Enter check/next`}
             >
               <InfoIcon />
             </button>

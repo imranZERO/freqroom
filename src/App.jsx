@@ -20,6 +20,7 @@ function MainApp() {
   const [gainDb, setGainDb] = usePersistentState('gainDb', 6);
   const [q, setQ] = usePersistentState('q', 1.4);
   const [focus, setFocus] = usePersistentState('focus', false);
+  const [autoplay, setAutoplay] = usePersistentState('autoplay', true);
   const [progress, setProgress] = usePersistentState('progress', EMPTY_PROGRESS);
 
   useEffect(() => {
@@ -76,14 +77,14 @@ function MainApp() {
         <aside className="rack-side">
           <TrackSelector
             engine={engine} gainDb={gainDb} setGainDb={setGainDb} q={q} setQ={setQ}
-            focus={focus} setFocus={setFocus}
+            focus={focus} setFocus={setFocus} autoplay={autoplay} setAutoplay={setAutoplay}
             hasProgress={progress.lifetime.total > 0} onResetProgress={resetProgress}
           />
         </aside>
         <div className="rack-main">
           <FrequencyTrainer
             engine={engine} gainDb={gainDb} q={q}
-            progress={progress} focus={focus} onResult={handleResult}
+            progress={progress} focus={focus} autoplay={autoplay} onResult={handleResult}
           />
           <ScoreBoard
             scores={scores} lifetime={progress.lifetime}

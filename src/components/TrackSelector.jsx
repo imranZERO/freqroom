@@ -35,7 +35,7 @@ function formatSpec(info, duration) {
   ].map(parts => parts.filter(Boolean).join(' · '));
 }
 
-export function TrackSelector({ engine, gainDb, setGainDb, q, setQ, focus, setFocus, hasProgress, onResetProgress }) {
+export function TrackSelector({ engine, gainDb, setGainDb, q, setQ, focus, setFocus, autoplay, setAutoplay, hasProgress, onResetProgress }) {
   const fileRef = useRef(null);
   const [activeId, setActiveId] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -225,6 +225,11 @@ export function TrackSelector({ engine, gainDb, setGainDb, q, setQ, focus, setFo
           </div>
 
           <div className="practice-row">
+            <label className="switch" title="Start playing the EQ as soon as each trial begins">
+              <input type="checkbox" checked={autoplay} onChange={e => setAutoplay(e.target.checked)} />
+              <span className="switch-track" aria-hidden="true" />
+              <span className="switch-label">Auto-play EQ</span>
+            </label>
             <label className="switch" title="Hide the EQ in octaves you miss more often">
               <input type="checkbox" checked={focus} onChange={e => setFocus(e.target.checked)} />
               <span className="switch-track" aria-hidden="true" />

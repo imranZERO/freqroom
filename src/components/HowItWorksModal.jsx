@@ -112,7 +112,18 @@ export function HowItWorksModal({ isOpen, onClose }) {
           </div>
 
           <div className="info-section">
-            <h3>6 · Tips</h3>
+            <h3>6 · Keyboard</h3>
+            <p>
+              <strong>1–9</strong> and <strong>0</strong> pick bands 1–10, <strong>← →</strong> step between
+              bands, and in Mixed mode <strong>↑ ↓</strong> switch between the boost and cut rows.{' '}
+              <strong>Space</strong> toggles EQ/Flat (even after answering, so you can re-listen to the
+              reveal) and <strong>Enter</strong> checks your answer or starts the next trial.
+              With <strong>Auto-play EQ</strong> on, each new trial starts playing straight away.
+            </p>
+          </div>
+
+          <div className="info-section">
+            <h3>7 · Tips</h3>
             <p>
               Use <strong>headphones or studio monitors</strong> — laptop speakers compress the frequency
               response and defeat the purpose. In Mixed mode, listen for the <em>hollow, recessed</em> character
