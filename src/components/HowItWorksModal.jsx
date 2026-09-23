@@ -76,6 +76,11 @@ export function HowItWorksModal({ isOpen, onClose }) {
                 <strong>Pass Filters</strong> — a high-pass or low-pass filter removes lows or highs;
                 find the cutoff. The Gain slider doesn't apply here.
               </div>
+              <div className="info-mode-item">
+                <strong>Sweep</strong> — no buttons: click or drag on the graph to where you hear the boost
+                (← → nudge by a semitone). You're scored on how many octaves off you are; the allowed error
+                shrinks from 1 octave at level 1 to ⅙ octave at level 5.
+              </div>
             </div>
           </div>
 

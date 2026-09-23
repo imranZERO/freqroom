@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { InfoIcon } from './Icons.jsx';
-import { FreqGraph, rowInset } from './FreqGraph.jsx';
+import { FreqGraph, rowInset, fmtHz } from './FreqGraph.jsx';
 import { heatFor, pickWeighted } from '../lib/progress.js';
 
 const FREQ_MIN = 20;
@@ -22,7 +22,16 @@ const MODES = [
   { id: 'both',  label: 'Mixed',        family: 'peak',  badge: g => `±${g}dB`, desc: 'Identify the frequency and whether it was a boost or a cut' },
   { id: 'shelf', label: 'Shelves',      family: 'shelf', badge: g => `±${g}dB`, desc: 'Find the corner of a low or high shelf', maxLevel: 8 },
   { id: 'pass',  label: 'Pass Filters', family: 'pass',  badge: () => 'HP / LP', desc: 'Find the cutoff of a high-pass or low-pass filter', maxLevel: 8 },
+  { id: 'sweep', label: 'Sweep',        family: 'sweep', badge: g => `+${g}dB`, desc: 'Drag on the graph to where you hear the boost', minLevel: 1, maxLevel: 5 },
 ];
+
+// Sweep mode: how close (in octaves) a guess must be to count, by level 1–5
+const SWEEP_TOLERANCE = [1, 2 / 3, 1 / 2, 1 / 3, 1 / 6];
+const SWEEP_TOL_LABEL = ['1', '⅔', '½', '⅓', '⅙'];
+const SWEEP_RANGE = [40, 16000];
+// Fine grid the hidden sweep frequency is drawn from (lets focus practice weight it)
+const SWEEP_GRID = generateBands(72, ...SWEEP_RANGE);
+const octaveError = (guess, actual) => Math.abs(Math.log2(guess / actual));
 
 // Frequency span the candidates are spread over for a trial
 function bandRange(family, kind) {
@@ -108,7 +117,7 @@ function FreqRow({ shownBands, range, sign, dirLabel, getBtnState, selectBand, a
 
 // Returns +1 or -1
 function signForMode(mode) {
-  if (mode === 'boost') return 1;
+  if (mode === 'boost' || mode === 'sweep') return 1;
   if (mode === 'cut' || mode === 'pass') return -1;
   return Math.random() < 0.5 ? 1 : -1;
 }
@@ -117,9 +126,11 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
   const [testMode, setTestMode] = useState(null);
   const currentMode = MODES.find(m => m.id === testMode);
   const family = currentMode?.family ?? 'peak';
+  const isSweep = family === 'sweep';
+  const minLevel = currentMode?.minLevel ?? MIN_LEVEL;
   const maxLevel = currentMode?.maxLevel ?? MAX_LEVEL;
   // Level is remembered per mode in saved progress
-  const level = Math.min(maxLevel, (testMode && progress.levels[testMode]) || MIN_LEVEL);
+  const level = Math.max(minLevel, Math.min(maxLevel, (testMode && progress.levels[testMode]) || minLevel));
   const [correctStreak, setCorrectStreak] = useState(0);
   const [wrongStreak, setWrongStreak] = useState(0);
   const [trial, setTrial] = useState(null);
@@ -127,7 +138,7 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
   const answeringRef = useRef(false);
 
   // The hidden filter for a trial at the current Gain/Q settings
-  const activeFilter = t => makeFilter(typeAt(t.kind, t.activeBand), t.activeBand, t.activeSign * gainDb, q);
+  const activeFilter = t => makeFilter(typeAt(t.kind === 'sweep' ? 'peaking' : t.kind, t.activeBand), t.activeBand, t.activeSign * gainDb, q);
 
   // Apply Gain/Q slider changes to the live EQ without restarting playback
   useEffect(() => {
@@ -160,6 +171,16 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
         return;
       }
       if (trial.answered || e.metaKey || e.ctrlKey || e.altKey) return;
+
+      if (trial.kind === 'sweep') {
+        if (key === 'ArrowLeft' || key === 'ArrowRight') {
+          e.preventDefault();
+          const from = trial.userSelection?.freq ?? 1000;
+          const to = from * Math.pow(2, (key === 'ArrowLeft' ? -1 : 1) / 12);
+          selectBand(Math.max(20, Math.min(20000, to)), 1);
+        }
+        return;
+      }
 
       const bands = trial.shownBands;
       const sel = trial.userSelection;
@@ -201,12 +222,15 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
     // kind: 'peaking', 'shelf' (low/high chosen by the corner), 'highpass' or 'lowpass'
     const kind = family === 'shelf' ? 'shelf'
       : family === 'pass' ? (Math.random() < 0.5 ? 'highpass' : 'lowpass')
+      : isSweep ? 'sweep'
       : 'peaking';
-    const range = bandRange(family, kind);
-    const shownBands = generateBands(level, ...range);
+    const range = isSweep ? SWEEP_RANGE : bandRange(family, kind);
+    // Sweep has no buttons: the hidden frequency comes from a fine grid instead
+    const shownBands = isSweep ? [] : generateBands(level, ...range);
+    const pool = isSweep ? SWEEP_GRID : shownBands;
     const activeBand = focus
-      ? pickWeighted(shownBands, progress, family)
-      : shownBands[Math.floor(Math.random() * shownBands.length)];
+      ? pickWeighted(pool, progress, family)
+      : pool[Math.floor(Math.random() * pool.length)];
     const activeSign = signForMode(testMode);
     const next = { kind, range, shownBands, activeBand, activeSign, userSelection: null, answered: false, wasCorrect: null };
     setTrial(next);
@@ -232,7 +256,9 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
     if (!trial || trial.userSelection === null || answeringRef.current) return;
     answeringRef.current = true;
     const { activeBand, activeSign, userSelection } = trial;
-    const correct = userSelection.freq === activeBand && userSelection.sign === activeSign;
+    const correct = trial.kind === 'sweep'
+      ? octaveError(userSelection.freq, activeBand) <= SWEEP_TOLERANCE[level - 1]
+      : userSelection.freq === activeBand && userSelection.sign === activeSign;
 
     engine.stop();
     setPlayMode(null);
@@ -242,7 +268,7 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
     let lv = level;
 
     if (cs >= CORRECT_TO_ADVANCE) { lv = Math.min(maxLevel, level + 1); cs = 0; }
-    else if (ws >= WRONG_TO_DECREASE) { lv = Math.max(MIN_LEVEL, level - 1); ws = 0; }
+    else if (ws >= WRONG_TO_DECREASE) { lv = Math.max(minLevel, level - 1); ws = 0; }
 
     setCorrectStreak(cs);
     setWrongStreak(ws);
@@ -254,7 +280,7 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
 
   // Candidates in gray: both directions where the direction is part of the puzzle
   let curves = [];
-  if (trial) {
+  if (trial && trial.kind !== 'sweep') {
     const gains = isMixed || trial.kind === 'shelf' ? [gainDb, -gainDb] : [trial.activeSign * gainDb];
     curves = trial.shownBands.flatMap(f => gains.map(g => makeFilter(typeAt(trial.kind, f), f, g, q)));
   }
@@ -267,6 +293,8 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
       gainDb={gainDb}
       sampleRate={engine.sampleRate}
       heat={heatFor(progress, family)}
+      marker={trial?.kind === 'sweep' ? trial.userSelection?.freq ?? null : null}
+      onPick={trial?.kind === 'sweep' && !trial.answered ? f => selectBand(f, 1) : null}
     />
   );
 
@@ -278,7 +306,7 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
     outside = (
       <ol className="quickstart">
         <li><strong>Load a source</strong> — pink noise is best for learning; your own music works too.</li>
-        <li><strong>Choose a mode</strong> — spot boosts and cuts, shelves, or filter cutoffs.</li>
+        <li><strong>Choose a mode</strong> — spot boosts and cuts, shelves, filter cutoffs, or sweep for the exact spot.</li>
         <li><strong>Compare EQ and Flat</strong>, then pick the band you hear changing.</li>
       </ol>
     );
@@ -307,7 +335,10 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
     );
     body = (
       <div className="trainer-start">
-        <p className="start-desc">{currentMode.desc} — pick from <strong>{level}</strong> {family === 'shelf' ? 'corners' : family === 'pass' ? 'cutoffs' : 'bands'}</p>
+        <p className="start-desc">{currentMode.desc} — {isSweep
+          ? <>within <strong>±{SWEEP_TOL_LABEL[level - 1]}</strong> octave counts</>
+          : <>pick from <strong>{level}</strong> {family === 'shelf' ? 'corners' : family === 'pass' ? 'cutoffs' : 'bands'}</>}
+        </p>
         <button className="btn-primary large" onClick={startTrial}>Start Trial</button>
       </div>
     );
@@ -315,9 +346,10 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
     // ── Active trial ──────────────────────────────────────────────────────
     const { kind, range, shownBands, activeBand, activeSign, userSelection, answered, wasCorrect } = trial;
     const dirLabel = activeSign > 0 ? 'boost' : 'cut';
-    const activeType = typeAt(kind, activeBand);
+    const activeType = typeAt(kind === 'sweep' ? 'peaking' : kind, activeBand);
+    const sweepError = kind === 'sweep' && userSelection ? octaveError(userSelection.freq, activeBand) : null;
     // What the answer was, spelled out after answering (e.g. "low shelf cut")
-    const answerLabel = kind === 'peaking' ? dirLabel
+    const answerLabel = kind === 'peaking' || kind === 'sweep' ? dirLabel
       : kind === 'shelf' ? `${TYPE_LABELS[activeType]} ${dirLabel}` : TYPE_LABELS[activeType];
     const hasSelection = userSelection !== null;
 
@@ -343,7 +375,8 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
         <div className="mode-badge">{currentMode.badge(gainDb)} · {currentMode.label}</div>
         {!answered ? (
           <span className="trainer-status">
-            {hasSelection ? 'Ready to check'
+            {hasSelection ? (kind === 'sweep' ? `Guess ${fmtHz(userSelection.freq)} — ready to check` : 'Ready to check')
+              : kind === 'sweep' ? 'Click or drag on the graph'
               : isMixed ? 'Pick the frequency and direction'
               : kind === 'shelf' ? 'Find the shelf corner'
               : kind !== 'peaking' ? `Find the ${TYPE_LABELS[kind]} cutoff`
@@ -353,7 +386,8 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
           <span className={`trainer-result ${wasCorrect ? 'result-correct' : 'result-incorrect'}`}>
             {wasCorrect ? '✓ Correct!' : '✗ Incorrect'}
             <span className="result-note">
-              {kind === 'peaking' ? freqToNote(activeBand) : answerLabel} · {freqRegion(activeBand)}
+              {kind === 'sweep' ? `${fmtHz(activeBand)} · ${sweepError.toFixed(2)} oct off`
+                : kind === 'peaking' ? freqToNote(activeBand) : answerLabel} · {freqRegion(activeBand)}
             </span>
           </span>
         )}
@@ -363,7 +397,11 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
     body = (
       <>
         {/* Band keys sit directly under their curve peaks; mixed mode adds a cut row */}
-        {isMixed ? (
+        {kind === 'sweep' ? (
+          <p className="sweep-hint">
+            Within <strong>±{SWEEP_TOL_LABEL[level - 1]} oct</strong> counts · ← → nudge by a semitone
+          </p>
+        ) : isMixed ? (
           <div className="freq-grid-mixed">
             <div className="mixed-row">
               <span className="mixed-row-label boost-label" title="Boost">▲</span>
@@ -378,7 +416,7 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
           <FreqRow {...rowProps} sign={activeSign} />
         )}
 
-        {answered && (
+        {answered && kind !== 'sweep' && (
           <div className="freq-legend">
             <span className="legend-item"><span className="legend-dot ld-hit" />Correct</span>
             {!wasCorrect && (
@@ -413,7 +451,9 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
             <button
               className="icon-btn trainer-kb-hint"
               aria-label="Keyboard shortcuts"
-              data-tooltip={`1–9, 0 pick band · ← → move${isMixed ? ' · ↑ ↓ boost/cut' : ''} · Space EQ/Flat · Enter check/next`}
+              data-tooltip={kind === 'sweep'
+                ? 'Click/drag the graph · ← → nudge · Space EQ/Flat · Enter check/next'
+                : `1–9, 0 pick band · ← → move${isMixed ? ' · ↑ ↓ boost/cut' : ''} · Space EQ/Flat · Enter check/next`}
             >
               <InfoIcon />
             </button>

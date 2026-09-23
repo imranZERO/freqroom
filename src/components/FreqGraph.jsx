@@ -8,8 +8,39 @@ const IH = VH - P.t - P.b;
 const FREQ_TICKS = [20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000];
 
 const toX = f => P.l + (Math.log10(f / F_MIN) / Math.log10(F_MAX / F_MIN)) * IW;
+const fromX = x => F_MIN * Math.pow(F_MAX / F_MIN, (Math.max(P.l, Math.min(P.l + IW, x)) - P.l) / IW);
 const toY = (db, range) => P.t + ((range - db) / (2 * range)) * IH;
 const fmtFreq = f => f >= 1000 ? `${f / 1000}k` : `${f}`;
+
+// Readout format for arbitrary frequencies, e.g. "87 Hz", "1.24 kHz", "12.5 kHz"
+export const fmtHz = f => f >= 10000 ? `${(f / 1000).toFixed(1)} kHz`
+  : f >= 1000 ? `${(f / 1000).toFixed(2)} kHz` : `${Math.round(f)} Hz`;
+
+// Text anchor that keeps a label inside the plot near its edges
+const anchorAt = x => x < P.l + 40 ? 'start' : x > P.l + IW - 40 ? 'end' : 'middle';
+
+// Sweep mode: the listener's guess, and after answering, a bracket to the answer
+function SweepMarker({ marker, answerFreq }) {
+  const mx = toX(marker);
+  const ax = answerFreq ? toX(answerFreq) : null;
+  const errOct = answerFreq ? Math.abs(Math.log2(marker / answerFreq)) : null;
+  const by = P.t + IH - 10;
+  return (
+    <g className="graph-marker">
+      <line x1={mx} y1={P.t} x2={mx} y2={P.t + IH} className="marker-line" />
+      <text x={mx} y={P.t + 10} textAnchor={anchorAt(mx)} className="marker-label">{fmtHz(marker)}</text>
+      {ax !== null && (
+        <g className="marker-error">
+          <line x1={mx} y1={by} x2={ax} y2={by} />
+          <line x1={ax} y1={by - 4} x2={ax} y2={by + 4} />
+          <text x={(mx + ax) / 2} y={by - 5} textAnchor="middle" className="marker-label">
+            {`${errOct.toFixed(2)} oct`}
+          </text>
+        </g>
+      )}
+    </g>
+  );
+}
 
 // Biquad coefficients per the Web Audio spec (RBJ cookbook), so the drawn curve
 // matches what BiquadFilterNode plays. Takes the same { type, frequency, Q, gain }
@@ -106,15 +137,32 @@ const sameFilter = (a, b) => a.type === b.type && a.frequency === b.frequency &&
 
 // curves: candidate filters drawn in gray; answer: the revealed filter (or null).
 // gainDb sets the dB range so the axis follows the Gain slider.
-export function FreqGraph({ curves = [], answer = null, gainDb = 6, sampleRate = 48000, heat = [] }) {
+// Sweep mode passes marker (the current guess) and onPick, which makes the plot an input
+export function FreqGraph({ curves = [], answer = null, gainDb = 6, sampleRate = 48000, heat = [], marker = null, onPick = null }) {
   const isBoost = answer ? (answer.gain ?? 0) > 0 : false;
   // ±12 dB by default; widens in 6 dB steps so high gains aren't clipped
   const range = Math.max(12, Math.ceil(Math.abs(gainDb) / 6) * 6);
   const dbTicks = Array.from({ length: range / 3 + 1 }, (_, i) => i * 6 - range);
 
+  function pickAt(e) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    onPick(fromX(((e.clientX - rect.left) / rect.width) * VW));
+  }
+  const pointerProps = onPick ? {
+    onPointerDown: e => {
+      try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* capture is a nicety */ }
+      pickAt(e);
+    },
+    onPointerMove: e => { if (e.buttons) pickAt(e); },
+  } : {};
+
   return (
     <div className="freq-graph-wrap">
-      <svg viewBox={`0 0 ${VW} ${VH}`} width="100%" className="freq-graph-svg">
+      <svg
+        viewBox={`0 0 ${VW} ${VH}`} width="100%"
+        className={`freq-graph-svg${onPick ? ' graph-interactive' : ''}`}
+        {...pointerProps}
+      >
 
         {/* dB grid */}
         {dbTicks.map(db => (
@@ -157,10 +205,12 @@ export function FreqGraph({ curves = [], answer = null, gainDb = 6, sampleRate =
           );
         })()}
 
+        {marker && <SweepMarker marker={marker} answerFreq={answer?.frequency ?? null} />}
+
         {/* Placeholder */}
-        {curves.length === 0 && !answer && (
+        {curves.length === 0 && !answer && !marker && (
           <text x={P.l + IW / 2} y={P.t + IH / 2} textAnchor="middle" dominantBaseline="middle" className="graph-placeholder">
-            EQ curve appears here during a trial
+            {onPick ? 'Click or drag where you hear the boost' : 'EQ curve appears here during a trial'}
           </text>
         )}
 

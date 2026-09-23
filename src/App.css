@@ -1085,6 +1085,19 @@ body::before {
 .graph-curve-boost { stroke: var(--a);   filter: drop-shadow(0 0 2px color-mix(in srgb, var(--a) 40%, transparent)); }
 .graph-curve-cut   { stroke: var(--cut); filter: drop-shadow(0 0 2px color-mix(in srgb, var(--cut) 40%, transparent)); }
 
+/* Sweep mode: the plot is an input */
+.graph-interactive { cursor: crosshair; touch-action: none; }
+.marker-line { stroke: var(--a); stroke-width: 1.5; }
+.marker-error line { stroke: var(--text); stroke-width: 1; }
+.marker-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  fill: var(--text);
+  stroke: var(--card-2);
+  stroke-width: 4;
+  paint-order: stroke;
+}
+
 .graph-placeholder {
   font-size: 10px;
   letter-spacing: 0.08em;
@@ -1131,6 +1144,15 @@ body::before {
 .cut-label   { color: var(--cut); }
 
 .mixed-dir-reveal { margin-left: auto; font-size: 0.78rem; }
+.sweep-hint {
+  margin-top: -6px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.sweep-hint strong { color: var(--text); font-weight: 600; }
 .mixed-dir-reveal strong { color: var(--text); }
 
 .freq-btn {
