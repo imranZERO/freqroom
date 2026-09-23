@@ -1,4 +1,4 @@
-// Voss-McCartney pink noise — equal energy per octave, ideal for EQ training
+// Paul Kellet's refined pink-noise filter — equal energy per octave, ideal for EQ training
 export function generatePinkNoise(audioCtx, durationSecs = 30) {
   const sr = audioCtx.sampleRate;
   const len = Math.floor(sr * durationSecs);

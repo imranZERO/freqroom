@@ -30,7 +30,7 @@ App.jsx (Wouter Router)
   └─ /technical-details → TechnicalDetails
 ```
 
-**`useAudioEngine` (`src/hooks/useAudioEngine.js`)** — the audio layer. Manages a single looping `AudioBufferSourceNode` with a hot-swappable biquad filter chain. Calling `play(filters)` tears down the old source and reconnects from the current offset so switching EQ/flat is seamless. `loadBuffer` accepts a `File`, a URL string, or a pre-built `AudioBuffer` (used by noise generators).
+**`useAudioEngine` (`src/hooks/useAudioEngine.js`)** — the audio layer. Builds a persistent graph once per `AudioContext`: the looping `AudioBufferSourceNode` feeds parallel flat and EQ (biquad chain) paths, then a master gain and a limiter (`DynamicsCompressorNode`). Calling `play(filters)` crossfades between the flat and EQ paths and ramps filter params in place when the filter layout is unchanged, so A/B switching and live Gain/Q changes are click-free without restarting the source. Seeks and stops fade the source's own voice gain in and out. `loadBuffer` accepts a `File`, a URL string, or a pre-built `AudioBuffer` (used by noise generators).
 
 **`FrequencyTrainer` (`src/components/FrequencyTrainer.jsx`)** — all game logic lives here. Adaptive difficulty: levels 2–15, advance after 3 correct in a row, drop after 2 wrong in a row. `generateBands(n)` places `n` frequencies logarithmically across 20Hz–20kHz using binary interval subdivision. `makeFilter` returns a peaking EQ filter descriptor consumed by `engine.play`. The `onEqChange` prop sends band data up to `App` so `FreqGraph` can display it.
 
@@ -38,7 +38,7 @@ App.jsx (Wouter Router)
 
 **`TechnicalDetails` (`src/components/TechnicalDetails.jsx`)** — static informational page at `/technical-details`. Has its own scoped stylesheet (`TechnicalDetails.css`) using a `td-` class prefix. Picks up the same CSS variables as the main app so the theme toggle carries over automatically.
 
-**`noiseGen.js`** — Voss-McCartney algorithm for pink noise; simple uniform random for white noise. Both return an `AudioBuffer` for direct use with `loadBuffer`.
+**`noiseGen.js`** — Paul Kellet's IIR filter method for pink noise; simple uniform random for white noise. Both return an `AudioBuffer` for direct use with `loadBuffer`.
 
 **Theme** — toggled via `data-theme="dark|light"` on `document.documentElement`; CSS variables in `App.css` handle the rest.
 

@@ -1,5 +1,4 @@
 const F_MIN = 20, F_MAX = 20000;
-const DB_MIN = -12, DB_MAX = 12;
 const N = 300;
 const P = { t: 14, r: 14, b: 28, l: 32 };
 const VW = 600, VH = 160;
@@ -7,13 +6,12 @@ const IW = VW - P.l - P.r;
 const IH = VH - P.t - P.b;
 
 const FREQ_TICKS = [20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000];
-const DB_TICKS = [-12, -6, 0, 6, 12];
 
 const toX = f => P.l + (Math.log10(f / F_MIN) / Math.log10(F_MAX / F_MIN)) * IW;
-const toY = db => P.t + ((DB_MAX - db) / (DB_MAX - DB_MIN)) * IH;
+const toY = (db, range) => P.t + ((range - db) / (2 * range)) * IH;
 const fmtFreq = f => f >= 1000 ? `${f / 1000}k` : `${f}`;
 
-function computeCurve(centerFreq, gainDb, Q, sr) {
+function computeCurve(centerFreq, gainDb, Q, sr, range) {
   const A = Math.pow(10, gainDb / 40);
   const w0 = 2 * Math.PI * centerFreq / sr;
   const alpha = Math.sin(w0) / (2 * Q);
@@ -31,7 +29,7 @@ function computeCurve(centerFreq, gainDb, Q, sr) {
     const dr = 1 + a1n * cw + a2n * c2;
     const di = -(a1n * sw + a2n * s2);
     const db = 20 * Math.log10(Math.sqrt((nr*nr + ni*ni) / (dr*dr + di*di)));
-    return { x: toX(f), y: toY(Math.max(DB_MIN, Math.min(DB_MAX, db))) };
+    return { x: toX(f), y: toY(Math.max(-range, Math.min(range, db)), range) };
   });
 }
 
@@ -39,8 +37,8 @@ function makeLine(pts) {
   return pts.map((p, i) => `${i ? 'L' : 'M'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join('');
 }
 
-function makeFill(pts) {
-  const y0 = toY(0);
+function makeFill(pts, range) {
+  const y0 = toY(0, range);
   const x0 = pts[0].x.toFixed(1), xN = pts[pts.length - 1].x.toFixed(1);
   return `${makeLine(pts)}L${xN},${y0.toFixed(1)}L${x0},${y0.toFixed(1)}Z`;
 }
@@ -48,17 +46,20 @@ function makeFill(pts) {
 export function FreqGraph({ bands = [], gains = [], gainDb = 6, centerFreq = null, Q = 1.4, sampleRate = 48000 }) {
   const revealed = centerFreq !== null;
   const isBoost = gainDb > 0;
+  // ±12 dB by default; widens in 6 dB steps so high gains aren't clipped
+  const range = Math.max(12, Math.ceil(Math.abs(gainDb) / 6) * 6);
+  const dbTicks = Array.from({ length: range / 3 + 1 }, (_, i) => i * 6 - range);
 
   return (
     <div className="freq-graph-wrap">
       <svg viewBox={`0 0 ${VW} ${VH}`} width="100%" className="freq-graph-svg">
 
         {/* dB grid */}
-        {DB_TICKS.map(db => (
+        {dbTicks.map(db => (
           <g key={db}>
-            <line x1={P.l} y1={toY(db)} x2={P.l + IW} y2={toY(db)}
+            <line x1={P.l} y1={toY(db, range)} x2={P.l + IW} y2={toY(db, range)}
               className={`graph-hline ${db === 0 ? 'graph-zero' : 'graph-grid'}`} />
-            <text x={P.l - 5} y={toY(db)} textAnchor="end" dominantBaseline="middle" className="graph-label">
+            <text x={P.l - 5} y={toY(db, range)} textAnchor="end" dominantBaseline="middle" className="graph-label">
               {db > 0 ? `+${db}` : db}
             </text>
           </g>
@@ -78,17 +79,17 @@ export function FreqGraph({ bands = [], gains = [], gainDb = 6, centerFreq = nul
         {bands.flatMap(f =>
           gains.map(g => {
             if (revealed && f === centerFreq && g === gainDb) return null;
-            const pts = computeCurve(f, g, Q, sampleRate);
+            const pts = computeCurve(f, g, Q, sampleRate, range);
             return <path key={`${f}-${g}`} d={makeLine(pts)} className="graph-curve-gray" />;
           })
         )}
 
         {/* Correct curve — revealed after answer */}
         {revealed && (() => {
-          const pts = computeCurve(centerFreq, gainDb, Q, sampleRate);
+          const pts = computeCurve(centerFreq, gainDb, Q, sampleRate, range);
           return (
             <g className="graph-reveal">
-              <path d={makeFill(pts)} className={isBoost ? 'graph-fill-boost' : 'graph-fill-cut'} />
+              <path d={makeFill(pts, range)} className={isBoost ? 'graph-fill-boost' : 'graph-fill-cut'} />
               <path d={makeLine(pts)} className={isBoost ? 'graph-curve-boost' : 'graph-curve-cut'} />
             </g>
           );

@@ -102,6 +102,18 @@ export function FrequencyTrainer({ engine, onScore, onEqChange, gainDb, q }) {
     }
   }, [trial, testMode, gainDb]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Apply Gain/Q slider changes to the live EQ without restarting playback
+  useEffect(() => {
+    if (trial && playMode === 'eq') {
+      engine.play(makeFilter(trial.activeBand, trial.activeSign * gainDb, q));
+    }
+  }, [gainDb, q]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Engine stopped elsewhere (e.g. source track changed) — clear the play toggle
+  useEffect(() => {
+    if (!engine.isPlaying && playMode !== null) setPlayMode(null);
+  }, [engine.isPlaying]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     function onKey(e) {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
