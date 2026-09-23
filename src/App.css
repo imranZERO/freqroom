@@ -29,7 +29,8 @@
   --cap-shine: rgba(255, 214, 160, 0.35);
   --key-top: #2b2824;
   --key-bottom: #211e1a;
-  --key-edge: #0c0b09;
+  --key-edge: #2e2a24; /* the key's lower side: between the face and the page so it reads in dark mode */
+  --key-drop: 0 1px 0 rgba(0, 0, 0, 0.55);
 
   /* System fonts only — nothing to download */
   --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -37,7 +38,7 @@
 }
 
 [data-theme="light"] {
-  --bg: #efeae0;
+  --bg: #f6f3ed;
   --card: #f8f5ee;
   --card-2: #ece6da;
   --border: #d9d1c2;
@@ -61,6 +62,7 @@
   --key-top: #fdfbf7;
   --key-bottom: #ebe4d6;
   --key-edge: #c9bfac;
+  --key-drop: 0 1px 0 rgba(60, 45, 20, 0.08);
 }
 
 html { color-scheme: dark; }
@@ -144,8 +146,8 @@ body::before {
 /* ── Header ─────────────────────────────────────────────────────────────── */
 .app-header {
   position: relative;
-  padding: 44px 0 26px;
-  margin-bottom: 24px;
+  padding: 28px 0 20px;
+  margin-bottom: 22px;
 }
 /* Ruler-style rule: fine ticks with a taller tick every 5th */
 .app-header::after {
@@ -160,14 +162,21 @@ body::before {
 }
 .header-top {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
+/* Title and subtitle share a line on wide screens and stack on narrow ones */
+.header-title {
+  display: flex;
+  align-items: center; /* the logo mark has no text baseline, so centre instead */
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  min-width: 0;
+}
 .header-actions {
   display: flex;
-  gap: 6px;
-  margin-top: 6px;
+  gap: 8px;
   flex-shrink: 0;
 }
 .app-header h1 {
@@ -176,33 +185,54 @@ body::before {
   letter-spacing: -0.045em;
   line-height: 1;
 }
+.title-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: inherit;
+  text-decoration: none;
+}
+/* Waveform mark, same shape as the favicon and footer mark */
+.header-mark { width: 30px; height: 30px; flex-shrink: 0; }
+.header-mark polyline {
+  fill: none;
+  stroke: var(--a);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
 .title-eq {
   color: var(--a);
 }
 .app-header p {
   color: var(--muted);
-  margin-top: 10px;
   font-size: 0.9rem;
 }
 
 .icon-btn {
-  background: var(--card);
-  border: 1px solid var(--border);
+  background: linear-gradient(to bottom, var(--key-top), var(--key-bottom));
+  border: 1px solid var(--border-hover);
+  border-bottom: 2px solid var(--key-edge);
   border-radius: var(--radius);
-  box-shadow: inset 0 1px 0 var(--highlight);
+  box-shadow: inset 0 1px 0 var(--highlight), var(--key-drop);
   color: var(--muted);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 8px;
-  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  transition: color 0.15s, border-color 0.15s, background 0.15s, transform 0.08s;
 }
 .icon-btn:hover {
-  color: var(--text);
-  border-color: var(--border-hover);
-  background: var(--card-hover);
+  color: var(--a);
+  border-color: color-mix(in srgb, var(--a) 70%, var(--border-hover));
+  border-bottom-color: color-mix(in srgb, var(--a) 40%, var(--key-edge));
+  background: linear-gradient(to bottom,
+    color-mix(in srgb, var(--a) 10%, var(--key-top)),
+    color-mix(in srgb, var(--a) 5%, var(--key-bottom)));
+  transform: translateY(-1px);
 }
+.icon-btn:active { transform: translateY(1px); border-bottom-width: 1px; }
 .icon-btn[data-tooltip] {
   position: relative;
 }
@@ -229,6 +259,12 @@ body::before {
   opacity: 1;
   transform: translateY(0);
 }
+/* The header sits at the top of the page, so its tooltips open downward */
+.app-header .icon-btn[data-tooltip]::after {
+  bottom: auto;
+  top: calc(100% + 8px);
+  transform: translateY(-4px);
+}
 
 :focus-visible {
   outline: 2px solid var(--a);
@@ -236,9 +272,10 @@ body::before {
 }
 
 /* ── Cards (panels) ─────────────────────────────────────────────────────── */
+/* Panels: the same gradient face as the buttons and graph, with a firmer edge */
 .card {
-  background: var(--card);
-  border: 1px solid var(--border);
+  background: linear-gradient(to bottom, var(--key-top), var(--key-bottom));
+  border: 1px solid color-mix(in srgb, var(--border-hover) 70%, var(--border));
   border-radius: var(--radius);
   box-shadow: inset 0 1px 0 var(--highlight), var(--shadow);
   padding: 20px;
@@ -294,10 +331,39 @@ body::before {
 .side-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-top: -6px;
-  padding: 0 2px;
-  font-size: 0.78rem;
+}
+
+/* Data actions: small engraved hardware buttons with an icon */
+.data-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--muted);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.data-btn svg { width: 12px; height: 12px; flex-shrink: 0; opacity: 0.85; }
+.data-btn:hover {
+  color: var(--a);
+  border-color: color-mix(in srgb, var(--a) 60%, var(--border));
+  background: color-mix(in srgb, var(--a) 7%, transparent);
+}
+.data-btn-danger:hover {
+  color: var(--red);
+  border-color: color-mix(in srgb, var(--red) 60%, var(--border));
+  background: color-mix(in srgb, var(--red) 7%, transparent);
 }
 @media (max-width: 860px) {
   .side-footer { order: 1; margin-top: 0; }
@@ -307,40 +373,105 @@ body::before {
 }
 .track-btn {
   position: relative;
-  background: var(--card-2);
-  border: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "tag glyph" "name glyph" "desc desc";
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 2px;
+  padding: 11px 14px 12px;
+  background: linear-gradient(to bottom, var(--key-top), var(--key-bottom));
+  border: 1px solid var(--border-hover);
+  border-bottom: 3px solid var(--key-edge);
   border-radius: var(--radius);
+  box-shadow: inset 0 1px 0 var(--highlight), var(--key-drop);
   color: var(--text);
   cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  padding: 12px 14px 12px 28px;
   text-align: left;
-  transition: border-color 0.15s, background 0.15s;
-  gap: 3px;
   font-family: inherit;
+  transition: border-color 0.15s, background 0.15s, transform 0.08s, border-bottom-width 0.08s;
 }
-/* Selection LED */
-.track-btn::before {
+.track-tag   { grid-area: tag; }
+.track-name  { grid-area: name; }
+.track-desc  { grid-area: desc; }
+.track-glyph { grid-area: glyph; align-self: start; margin-top: 2px; }
+
+/* Channel tag with its status lamp */
+.track-tag {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  color: var(--muted);
+}
+.track-tag::before {
   content: '';
-  position: absolute;
-  left: 12px;
-  top: 19px;
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: var(--border-hover);
   transition: background 0.2s, box-shadow 0.2s;
 }
+
+/* Spectrum sketch */
+.track-glyph { overflow: visible; }
+.track-glyph polyline {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.25;
+  stroke-linejoin: round;
+  opacity: 0.7;
+  transition: stroke 0.2s, opacity 0.2s;
+}
+.track-glyph rect { fill: var(--muted); opacity: 0.6; transition: fill 0.2s, opacity 0.2s; }
+
 @media (hover: hover) {
-  .track-btn:hover:not(:disabled) { border-color: var(--border-hover); background: var(--card-hover); }
+  .track-btn:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--a) 70%, var(--border-hover));
+    border-bottom-color: color-mix(in srgb, var(--a) 40%, var(--key-edge)); /* amber side so it stands out from the tinted face */
+    background: linear-gradient(to bottom,
+      color-mix(in srgb, var(--a) 10%, var(--key-top)),
+      color-mix(in srgb, var(--a) 5%, var(--key-bottom)));
+    transform: translateY(-1px);
+  }
+  .track-btn:hover:not(:disabled) .track-tag { color: var(--text); }
+  .track-btn:hover:not(:disabled) .track-tag::before { background: color-mix(in srgb, var(--a) 60%, var(--border-hover)); }
+  .track-btn:hover:not(:disabled) .track-glyph polyline { stroke: color-mix(in srgb, var(--a) 70%, var(--muted)); opacity: 1; }
+  .track-btn:hover:not(:disabled) .track-glyph rect { fill: color-mix(in srgb, var(--a) 70%, var(--muted)); opacity: 1; }
+  .track-btn.active:hover:not(:disabled) {
+    background: linear-gradient(to bottom,
+      color-mix(in srgb, var(--a) 18%, var(--key-top)),
+      color-mix(in srgb, var(--a) 11%, var(--key-bottom)));
+  }
 }
-.track-btn:active:not(:disabled) { border-color: var(--border-hover); background: var(--card-hover); }
-.track-btn.active { border-color: color-mix(in srgb, var(--a) 55%, var(--border)); }
-.track-btn.active::before {
+.track-btn:active:not(:disabled) { transform: translateY(2px); border-bottom-width: 1px; }
+
+/* Selected source: amber edge and face tint, lit lamp, amber sketch */
+.track-btn.active {
+  border-color: var(--a);
+  border-bottom-color: color-mix(in srgb, var(--a) 55%, var(--key-edge));
+  background: linear-gradient(to bottom,
+    color-mix(in srgb, var(--a) 12%, var(--key-top)),
+    color-mix(in srgb, var(--a) 7%, var(--key-bottom)));
+}
+.track-btn.active .track-tag { color: var(--a); }
+.track-btn.active .track-tag::before {
   background: var(--a);
-  box-shadow: 0 0 4px color-mix(in srgb, var(--a) 50%, transparent);
+  box-shadow: 0 0 5px color-mix(in srgb, var(--a) 60%, transparent);
 }
+.track-btn.active .track-glyph polyline { stroke: var(--a); opacity: 1; }
+.track-btn.active .track-glyph rect { fill: var(--a); opacity: 0.9; }
+
+/* While audio plays from this source, the lamp pulses and the sketch shimmers */
+@keyframes source-live {
+  50% { opacity: 0.45; }
+}
+.track-btn.live .track-tag::before { animation: source-live 1.4s ease-in-out infinite; }
+.track-btn.live .track-glyph { animation: source-live 2.8s ease-in-out infinite; }
+
 .track-btn:disabled { opacity: 0.5; cursor: default; }
 .track-btn { min-width: 0; }
 .track-name {
@@ -357,6 +488,7 @@ body::before {
 }
 .file-ext { flex-shrink: 0; }
 .track-desc { font-size: 0.78rem; color: var(--muted); }
+.track-spec { display: flex; flex-direction: column; gap: 1px; }
 .track-spec {
   font-family: var(--font-mono);
   font-size: 0.7rem;
@@ -429,6 +561,24 @@ body::before {
   cursor: pointer;
 }
 .control-slider:focus-visible { outline: 2px solid var(--a); outline-offset: 8px; }
+/* Hover: the row's label and value brighten, the unfilled track lightens, and
+   the cap gets an amber rim */
+.control-label, .control-value { transition: color 0.15s; }
+.control-row:hover .control-label { color: var(--text); }
+.control-row:hover .control-value { color: var(--a); }
+.control-slider:hover {
+  background: linear-gradient(to right, var(--a) var(--fill, 80%), color-mix(in srgb, var(--a) 25%, var(--border-hover)) var(--fill, 80%));
+}
+.control-slider:hover::-webkit-slider-thumb {
+  border-color: var(--a);
+  box-shadow: inset 0 1px 0 var(--cap-shine), 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 0 3px color-mix(in srgb, var(--a) 22%, transparent);
+  transform: scale(1.06);
+}
+.control-slider:hover::-moz-range-thumb {
+  border-color: var(--a);
+  box-shadow: inset 0 1px 0 var(--cap-shine), 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 0 3px color-mix(in srgb, var(--a) 22%, transparent);
+}
+.control-slider:hover::-moz-range-track { background: color-mix(in srgb, var(--a) 25%, var(--border-hover)); }
 .control-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 14px;
@@ -445,7 +595,7 @@ body::before {
   background-repeat: no-repeat;
   box-shadow: inset 0 1px 0 var(--cap-shine), 0 1px 2px rgba(0, 0, 0, 0.3);
   cursor: grab;
-  transition: transform 0.1s;
+  transition: transform 0.1s, border-color 0.15s, box-shadow 0.15s;
 }
 .control-slider:active::-webkit-slider-thumb { cursor: grabbing; transform: scale(1.06); }
 .control-slider::-moz-range-track {
@@ -699,55 +849,53 @@ body::before {
 .muted { color: var(--muted); }
 
 /* ── Footer ─────────────────────────────────────────────────────────────── */
+/* Mirrors the header's ruler rule (ticks hanging down); engraved mono links,
+   page link on the left, project links on the right */
 .app-footer {
-  border-top: 1px solid var(--border);
-  padding: 24px 0 28px;
+  position: relative;
   margin-top: 48px;
-  font-size: 0.8rem;
-  color: var(--muted);
+  padding: 26px 0 30px;
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 14px 24px;
   flex-wrap: wrap;
 }
-.app-footer a {
-  color: var(--text);
-  text-decoration: underline;
-  text-decoration-color: var(--border-hover);
-  text-underline-offset: 3px;
-  transition: text-decoration-color 0.15s, color 0.15s;
+.app-footer::before {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; top: 0;
+  height: 7px;
+  border-top: 1px solid var(--border);
+  background:
+    repeating-linear-gradient(to right, var(--border-hover) 0 1px, transparent 1px 40px) top / 100% 7px no-repeat,
+    repeating-linear-gradient(to right, var(--border) 0 1px, transparent 1px 8px) top / 100% 4px no-repeat;
 }
-.app-footer a:hover {
-  color: var(--a);
-  text-decoration-color: var(--a);
-}
-.footer-created {
+
+.footer-links {
   display: flex;
   align-items: center;
-  gap: 6px;
-}
-.footer-link-btn {
-  background: none;
-  border: none;
-  padding: 0;
-  font: inherit;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   color: var(--muted);
-  cursor: pointer;
-  text-decoration: underline;
-  text-decoration-color: var(--border-hover);
-  text-underline-offset: 3px;
 }
-.footer-link-btn:hover { color: var(--red); text-decoration-color: var(--red); }
-.app-footer .footer-gh-link {
-  color: var(--muted);
-  display: flex;
+.footer-links a {
+  display: inline-flex;
   align-items: center;
+  gap: 7px;
+  line-height: 1;
+  color: var(--muted);
   text-decoration: none;
   transition: color 0.15s;
 }
-.app-footer .footer-gh-link:hover {
-  color: var(--text);
-}
+.footer-links a:hover { color: var(--a); }
+/* block icons centre cleanly against the caps (no inline baseline gap) */
+.footer-links svg { display: block; width: 13px; height: 13px; flex-shrink: 0; }
+.footer-credit a { color: var(--text); }
 
 /* ── Info modal ─────────────────────────────────────────────────────────── */
 .info-modal {
@@ -935,6 +1083,20 @@ body::before {
   flex-direction: column;
   gap: 16px;
 }
+/* Experiment: no panel box around the source buttons either */
+.card.source-card {
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}
+/* No panel box around the trainer — the graph display stands on its own */
+.card.instrument {
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}
 /* Empty state: numbered quick-start steps */
 .quickstart {
   list-style: none;
@@ -945,9 +1107,9 @@ body::before {
 }
 .quickstart li {
   counter-increment: step;
-  background: var(--card);
+  background: linear-gradient(to bottom, var(--key-top), var(--key-bottom));
   box-shadow: inset 0 1px 0 var(--highlight);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-hover);
   border-radius: var(--radius);
   padding: 12px 14px;
   font-size: 0.82rem;
@@ -978,8 +1140,10 @@ body::before {
   .mode-grid { grid-template-columns: 1fr; }
 }
 .mode-card {
-  background: var(--card-2);
-  border: 1px solid var(--border);
+  background: linear-gradient(to bottom, var(--key-top), var(--key-bottom));
+  border: 1px solid var(--border-hover);
+  border-bottom: 3px solid var(--key-edge);
+  box-shadow: inset 0 1px 0 var(--highlight), var(--key-drop);
   border-radius: var(--radius);
   color: var(--text);
   cursor: pointer;
@@ -993,10 +1157,14 @@ body::before {
   font-family: inherit;
 }
 .mode-card:hover {
-  border-color: color-mix(in srgb, var(--a) 60%, var(--border));
-  background: var(--card-hover);
+  border-color: color-mix(in srgb, var(--a) 70%, var(--border-hover));
+  border-bottom-color: color-mix(in srgb, var(--a) 40%, var(--key-edge)); /* amber side so it stands out from the tinted face */
+  background: linear-gradient(to bottom,
+    color-mix(in srgb, var(--a) 10%, var(--key-top)),
+    color-mix(in srgb, var(--a) 5%, var(--key-bottom)));
   transform: translateY(-1px);
 }
+.mode-card:active { transform: translateY(2px); border-bottom-width: 1px; }
 .mode-label {
   font-size: 1.15rem;
   font-weight: 700;
@@ -1148,13 +1316,16 @@ body::before {
 .ptog-flat::after { background: var(--text); box-shadow: 0 0 4px color-mix(in srgb, var(--text) 40%, transparent); }
 
 /* ── Frequency response graph ───────────────────────────────────────────── */
+/* The graph panel uses the same raised keycap shading as the source buttons:
+   gradient face, highlight on top, and a thicker darker bottom edge */
 .freq-graph-wrap {
-  background:
-    radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--a) 5%, transparent), transparent 70%),
-    var(--card-2);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  box-shadow: var(--inset);
+  position: relative;
+  background: linear-gradient(to bottom, var(--key-top), var(--key-bottom));
+  border: 1px solid color-mix(in srgb, var(--a) 22%, var(--border-hover));
+  border-bottom: 3px solid var(--key-edge);
+  border-radius: var(--radius);
+  box-shadow: inset 0 1px 0 var(--highlight), var(--key-drop),
+    0 0 0 1px color-mix(in srgb, var(--border-hover) 50%, transparent);
   overflow: hidden;
   line-height: 0;
 }
@@ -1165,14 +1336,39 @@ body::before {
   fill: var(--muted);
   font-family: var(--font-mono);
 }
-.graph-grid   { stroke: var(--border); stroke-width: 1; stroke-dasharray: 1 3; }
+.graph-grid   { stroke: color-mix(in srgb, var(--a) 14%, var(--border)); stroke-width: 1; stroke-dasharray: 1 3; }
 .graph-zero   { stroke: var(--border-hover); stroke-width: 1; }
 .graph-curve-gray { fill: none; stroke: var(--muted); stroke-width: 1; opacity: 0.4; }
 .graph-border { fill: none; stroke: var(--border); stroke-width: 1; }
+.graph-corners { fill: none; stroke: color-mix(in srgb, var(--a) 55%, var(--muted)); stroke-width: 1.25; }
+
+/* Status readout in the plot's top corners */
+.graph-readout {
+  font-family: var(--font-mono);
+  font-size: 7.5px;
+  letter-spacing: 0.12em;
+  fill: color-mix(in srgb, var(--a) 70%, var(--muted));
+  stroke: var(--key-top);
+  stroke-width: 4;
+  paint-order: stroke;
+}
+.graph-readout-title { fill: var(--muted); }
+
+/* Idle scanning dot; 554px is the plot width (IW in FreqGraph.jsx) */
+@keyframes graph-scan {
+  from { transform: translateX(0); opacity: 0; }
+  8%   { opacity: 1; }
+  92%  { opacity: 1; }
+  to   { transform: translateX(554px); opacity: 0; }
+}
+.graph-scan { animation: graph-scan 4.5s linear infinite; }
+.graph-scan line { stroke-width: 1.5; }
+.graph-scan circle { fill: var(--a); filter: drop-shadow(0 0 2px var(--a)); }
 
 /* Weak-spot strip under the plot: accuracy per octave */
 .graph-heat rect { transition: fill 0.3s; }
-.heat-none { fill: var(--border); }
+.graph-heat-label { font-size: 7.5px; letter-spacing: 0.04em; }
+.heat-none { fill: var(--border); opacity: 0.6; }
 .heat-low  { fill: var(--red); }
 .heat-mid  { fill: var(--a); }
 .heat-high { fill: var(--green); }
@@ -1210,28 +1406,37 @@ body::before {
   font-family: var(--font-mono);
   font-size: 9px;
   fill: var(--text);
-  stroke: var(--card-2);
+  stroke: var(--key-top);
   stroke-width: 4;
   paint-order: stroke;
 }
 
-/* Hovered band's curve: drawn over the grey candidates, lighter than the reveal */
-.graph-highlight { animation: graph-in 0.25s ease-out both; pointer-events: none; }
-.graph-highlight path:first-child { opacity: 0.7; }
+/* Band curves before answering: the hovered one is a faint preview; the selected
+   one is drawn solid with a fill */
+@keyframes graph-hover-in {
+  from { opacity: 0; }
+  to   { opacity: 0.55; }
+}
+.graph-hover {
+  opacity: 0.55;
+  stroke-width: 1.25;
+  animation: graph-hover-in 0.2s ease-out both;
+  pointer-events: none;
+}
+.graph-selected { animation: graph-in 0.2s ease-out both; pointer-events: none; }
+.graph-selected .graph-hl-boost,
+.graph-selected .graph-hl-cut { stroke-width: 2; }
 .graph-hl-boost,
-.graph-hl-cut { fill: none; stroke-width: 1.75; stroke-linejoin: round; }
+.graph-hl-cut { fill: none; stroke-linejoin: round; }
 .graph-hl-boost { stroke: var(--a); }
 .graph-hl-cut   { stroke: var(--cut); }
 
 .graph-placeholder {
-  font-size: 10px;
-  letter-spacing: 0.08em;
+  font-size: 9px;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  fill: var(--muted);
+  fill: color-mix(in srgb, var(--a) 45%, var(--muted));
   font-family: var(--font-mono);
-  stroke: var(--card-2);
-  stroke-width: 8;
-  paint-order: stroke;
 }
 
 /* ── Frequency band buttons ─────────────────────────────────────────────────
@@ -1290,7 +1495,7 @@ body::before {
   border: 1px solid var(--border-hover);
   border-bottom: 3px solid var(--key-edge);
   border-radius: 5px;
-  box-shadow: inset 0 1px 0 var(--highlight);
+  box-shadow: inset 0 1px 0 var(--highlight), var(--key-drop);
   color: var(--text);
   cursor: pointer;
   display: flex;
@@ -1317,16 +1522,17 @@ body::before {
   transition: background 0.15s, box-shadow 0.15s;
 }
 .freq-btn:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--a) 55%, var(--border-hover));
-  border-bottom-color: var(--key-edge);
+  border-color: color-mix(in srgb, var(--a) 75%, var(--border-hover));
+  border-bottom-color: color-mix(in srgb, var(--a) 40%, var(--key-edge)); /* amber side so it stands out from the tinted face */
   background: linear-gradient(to bottom,
-    color-mix(in srgb, var(--a) 8%, var(--key-top)),
-    color-mix(in srgb, var(--a) 4%, var(--key-bottom)));
-  transform: translateY(-1px);
+    color-mix(in srgb, var(--a) 13%, var(--key-top)),
+    color-mix(in srgb, var(--a) 7%, var(--key-bottom)));
+  transform: translateY(-2px);
 }
 .freq-btn:hover:not(:disabled)::before {
-  background: color-mix(in srgb, var(--a) 55%, var(--border));
+  background: color-mix(in srgb, var(--a) 75%, var(--border));
 }
+.freq-btn:hover:not(:disabled) .freq-unit { color: var(--text); }
 .freq-btn.f-selected:hover:not(:disabled) {
   background: linear-gradient(to bottom, color-mix(in srgb, var(--a) 20%, var(--key-top)), color-mix(in srgb, var(--a) 13%, var(--key-bottom)));
 }
@@ -1453,7 +1659,8 @@ body::before {
 /* ── Responsive ─────────────────────────────────────────────────────────── */
 @media (max-width: 600px) {
   .freq-btn { min-height: 68px; padding: 20px 2px 12px; }
-  .app-header { padding-top: 32px; }
+  .app-header { padding-top: 22px; }
+  .header-top { align-items: flex-start; }
 }
 @media (max-width: 520px) {
   .transport .play-toggle { flex: 1 1 0; }

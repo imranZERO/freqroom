@@ -1,15 +1,18 @@
+// Shows this session's score once you've answered; before that, your saved
+// lifetime score (if any), so returning visitors see where they stand.
 export function ScoreBoard({ scores, lifetime, onReset }) {
-  const { total, correct } = scores;
-  if (total === 0) return null;
+  const inSession = scores.total > 0;
+  if (!inSession && lifetime.total === 0) return null;
 
+  const { total, correct } = inSession ? scores : lifetime;
   const pct = Math.round((correct / total) * 100);
   const fill = `${pct}%`;
 
   return (
     <section className="card score-card">
       <div className="score-header">
-        <h2>Score</h2>
-        <button className="btn-ghost" onClick={onReset}>Reset</button>
+        <h2>{inSession ? 'Score' : 'Lifetime Score'}</h2>
+        {inSession && <button className="btn-ghost" onClick={onReset}>Reset</button>}
       </div>
       <div className="score-body">
         <div className="score-number">
@@ -32,7 +35,7 @@ export function ScoreBoard({ scores, lifetime, onReset }) {
            pct >= 50 ? 'Keep training.' :
            'Chance level — try headphones or turn up the volume.'}
         </p>
-        {lifetime.total > total && (
+        {inSession && lifetime.total > total && (
           <p className="score-lifetime">
             Lifetime {lifetime.correct}/{lifetime.total} · {Math.round((lifetime.correct / lifetime.total) * 100)}%
           </p>

@@ -8,6 +8,46 @@ const GENERATED_TRACKS = [
   { id: 'white', label: 'White Noise', description: 'Flat spectrum, bright character' },
 ];
 
+// Small spectrum sketches for the source buttons, generated once with a fixed
+// seed so they look noisy but never change between renders
+function seeded(seed) {
+  return () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+}
+const GLYPH_W = 60, GLYPH_H = 28;
+function noisyLine(seed, slope) {
+  const rnd = seeded(seed);
+  const pts = [];
+  for (let i = 0; i <= 40; i++) {
+    const x = (i / 40) * GLYPH_W;
+    const base = 9 + slope * (i / 40) * 12; // pink falls to the right, white stays level
+    pts.push(`${x.toFixed(1)},${(base + (rnd() - 0.5) * 7).toFixed(1)}`);
+  }
+  return pts.join(' ');
+}
+const PINK_LINE = noisyLine(7, 1);
+const WHITE_LINE = noisyLine(11, 0);
+const WAVE_BARS = (() => {
+  const rnd = seeded(23);
+  return Array.from({ length: 15 }, (_, i) => {
+    const env = Math.sin((i + 0.5) / 15 * Math.PI);
+    return Math.max(2, (0.35 + 0.65 * rnd()) * env * (GLYPH_H - 4));
+  });
+})();
+
+function SourceGlyph({ kind }) {
+  return (
+    <svg className="track-glyph" viewBox={`0 0 ${GLYPH_W} ${GLYPH_H}`} width={GLYPH_W} height={GLYPH_H} aria-hidden="true">
+      {kind === 'upload' ? (
+        WAVE_BARS.map((h, i) => (
+          <rect key={i} x={i * 4 + 1} y={(GLYPH_H - h) / 2} width={2} height={h} rx={1} />
+        ))
+      ) : (
+        <polyline points={kind === 'pink' ? PINK_LINE : WHITE_LINE} />
+      )}
+    </svg>
+  );
+}
+
 function formatTime(s) {
   const m = Math.floor(s / 60);
   const sec = Math.floor(s % 60);
@@ -140,30 +180,36 @@ export function TrackSelector({ engine, gainDb, setGainDb, q, setQ, focus, setFo
         <h2 className="panel-label">Source</h2>
         <section className="card source-card">
           <div className="track-grid">
-            {GENERATED_TRACKS.map(t => (
+            {GENERATED_TRACKS.map((t, i) => (
               <button
                 key={t.id}
-                className={`track-btn ${activeId === t.id ? 'active' : ''}`}
+                className={`track-btn ${activeId === t.id ? 'active' : ''} ${activeId === t.id && engine.isPlaying ? 'live' : ''}`}
                 onClick={() => loadGenerated(t.id)}
                 disabled={engine.isLoading}
+                aria-pressed={activeId === t.id}
               >
+                <span className="track-tag">IN {i + 1}</span>
+                <SourceGlyph kind={t.id} />
                 <span className="track-name">{t.label}</span>
                 <span className="track-desc">{t.description}</span>
               </button>
             ))}
             <button
-              className={`track-btn upload-btn ${isUpload ? 'active' : ''}`}
+              className={`track-btn upload-btn ${isUpload ? 'active' : ''} ${isUpload && engine.isPlaying ? 'live' : ''}`}
               onClick={() => fileRef.current?.click()}
               disabled={engine.isLoading || uploading}
               title={isUpload ? activeId.slice(7) : undefined}
+              aria-pressed={isUpload}
             >
+              <span className="track-tag">IN {GENERATED_TRACKS.length + 1}</span>
+              <SourceGlyph kind="upload" />
               <span className="track-name">
                 {uploading ? 'Loading…' : isUpload ? <FileName name={activeId.slice(7)} /> : 'Upload File'}
               </span>
               {isUpload && fileInfo && engine.isLoaded ? (
-                formatSpec(fileInfo, engine.duration).map((line, i) => (
-                  line && <span key={i} className="track-desc track-spec">{line}</span>
-                ))
+                <span className="track-desc track-spec">
+                  {formatSpec(fileInfo, engine.duration).map((line, i) => line && <span key={i}>{line}</span>)}
+                </span>
               ) : (
                 <span className="track-desc">MP3, WAV, FLAC, OGG</span>
               )}

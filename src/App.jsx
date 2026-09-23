@@ -7,7 +7,8 @@ import { ScoreBoard } from './components/ScoreBoard.jsx';
 import { HowItWorksModal } from './components/HowItWorksModal.jsx';
 import { ConfirmDialog } from './components/ConfirmDialog.jsx';
 import { TechnicalDetails } from './components/TechnicalDetails.jsx';
-import { InfoIcon, SunIcon, MoonIcon, GitHubIcon } from './components/Icons.jsx';
+import { SiteHeader, SiteFooter } from './components/SiteChrome.jsx';
+import { ResetIcon, TrashIcon } from './components/Icons.jsx';
 import { usePersistentState, clearAll } from './lib/storage.js';
 import { EMPTY_PROGRESS, recordResult } from './lib/progress.js';
 import { parseChallenge } from './lib/challenge.js';
@@ -15,13 +16,9 @@ import { parseChallenge } from './lib/challenge.js';
 const DEFAULT_GAIN_DB = 6;
 const DEFAULT_Q = 1.4;
 
-function MainApp() {
+function MainApp({ chrome }) {
   const engine = useAudioEngine();
   const [scores, setScores] = useState({ total: 0, correct: 0 });
-  const [isDark, setIsDark] = usePersistentState(
-    'dark', () => window.matchMedia('(prefers-color-scheme: dark)').matches
-  );
-  const [showInfo, setShowInfo] = useState(false);
   const [confirmRequest, setConfirmRequest] = useState(null);
   const [gainDb, setGainDb] = usePersistentState('gainDb', DEFAULT_GAIN_DB);
   const [q, setQ] = usePersistentState('q', DEFAULT_Q);
@@ -49,10 +46,6 @@ function MainApp() {
       setProgress(p => ({ ...p, levels: { ...p.levels, [challenge.mode]: challenge.level } }));
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
-  }, [isDark]);
 
   // Called by the trainer for every answered trial
   function handleResult(result) {
@@ -88,30 +81,7 @@ function MainApp() {
 
   return (
     <div className="app">
-      <header className="app-header">
-        <div className="header-top">
-          <h1>Fr<span className="title-eq">eq</span>Room</h1>
-          <div className="header-actions">
-            <button
-              className="icon-btn"
-              onClick={() => setShowInfo(true)}
-              aria-label="How it works"
-              data-tooltip="How it works"
-            >
-              <InfoIcon />
-            </button>
-            <button
-              className="icon-btn"
-              onClick={() => setIsDark(d => !d)}
-              aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-              data-tooltip={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-            >
-              {isDark ? <SunIcon /> : <MoonIcon />}
-            </button>
-          </div>
-        </div>
-        <p>Interactive EQ ear training for producers, engineers, and audiophiles</p>
-      </header>
+      <SiteHeader {...chrome} subtitle="Interactive EQ ear training for producers, engineers, and audiophiles" />
 
       <main className="app-main rack">
         <aside className="rack-side">
@@ -123,9 +93,9 @@ function MainApp() {
           />
           <div className="side-footer">
             {progress.lifetime.total > 0 && (
-              <button className="footer-link-btn" onClick={resetProgress}>Reset progress</button>
+              <button className="data-btn" onClick={resetProgress}><ResetIcon />Reset progress</button>
             )}
-            <button className="footer-link-btn" onClick={clearSavedData}>Clear saved data</button>
+            <button className="data-btn data-btn-danger" onClick={clearSavedData}><TrashIcon />Clear saved data</button>
           </div>
         </aside>
         <div className="rack-main">
@@ -141,31 +111,37 @@ function MainApp() {
         </div>
       </main>
 
-      <HowItWorksModal isOpen={showInfo} onClose={() => setShowInfo(false)} />
       <ConfirmDialog request={confirmRequest} onCancel={() => setConfirmRequest(null)} />
 
-      <footer className="app-footer">
-        <p className="footer-created">
-          <a href="https://github.com/imranZERO/freqroom" target="_blank" rel="noopener noreferrer" className="footer-gh-link" aria-label="FreqRoom on GitHub">
-            <GitHubIcon />
-          </a>
-          Created by <a href="https://imranzero.pages.dev" target="_blank" rel="noopener noreferrer">imranZERO</a>
-        </p>
-        <p>
-          Inspired by <a href="https://harmanhowtolisten.blogspot.com" target="_blank" rel="noopener noreferrer">Harman's How to Listen</a>
-        </p>
-      </footer>
+      <SiteFooter page="trainer" />
     </div>
   );
 }
 
+// Theme and the How it works dialog are shared by every page
 export default function App() {
+  const [isDark, setIsDark] = usePersistentState(
+    'dark', () => window.matchMedia('(prefers-color-scheme: dark)').matches
+  );
+  const [showInfo, setShowInfo] = useState(false);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+  }, [isDark]);
+
+  const chrome = {
+    isDark,
+    onToggleTheme: () => setIsDark(d => !d),
+    onInfo: () => setShowInfo(true),
+  };
+
   return (
     <Router>
       <Switch>
-        <Route path="/technical-details" component={TechnicalDetails} />
-        <Route component={MainApp} />
+        <Route path="/technical-details"><TechnicalDetails chrome={chrome} /></Route>
+        <Route><MainApp chrome={chrome} /></Route>
       </Switch>
+      <HowItWorksModal isOpen={showInfo} onClose={() => setShowInfo(false)} />
     </Router>
   );
 }

@@ -21,7 +21,7 @@ export const MODES = [
   { id: 'boost', label: 'Boosts',       family: 'peak',  badge: g => `+${g}dB`, desc: 'Identify which band was boosted' },
   { id: 'cut',   label: 'Cuts',         family: 'peak',  badge: g => `−${g}dB`, desc: 'Identify which band was cut' },
   { id: 'both',  label: 'Mixed',        family: 'peak',  badge: g => `±${g}dB`, desc: 'Identify the frequency and whether it was a boost or a cut' },
-  { id: 'shelf', label: 'Shelves',      family: 'shelf', badge: g => `±${g}dB`, desc: 'Find the corner of a low or high shelf', maxLevel: 8 },
+  { id: 'shelf', label: 'Shelves',      family: 'shelf', badge: g => `±${g}dB`, desc: 'Find the corner of a low or high shelf and whether it boosts or cuts', maxLevel: 8 },
   { id: 'pass',  label: 'Pass Filters', family: 'pass',  badge: () => 'HP / LP', desc: 'Find the cutoff of a high-pass or low-pass filter', maxLevel: 8 },
   { id: 'sweep', label: 'Sweep',        family: 'sweep', badge: g => `+${g}dB`, desc: 'Drag on the graph to where you hear the boost', minLevel: 1, maxLevel: 5 },
 ];
@@ -120,6 +120,10 @@ function FreqRow({ shownBands, range, sign, dirLabel, getBtnState, selectBand, a
   );
 }
 
+// Modes where you answer the direction (boost or cut) as well as the frequency;
+// they show a boost row and a cut row of buttons
+const pickDirection = mode => mode === 'both' || mode === 'shelf';
+
 // Returns +1 or -1
 function signForMode(mode) {
   if (mode === 'boost' || mode === 'sweep') return 1;
@@ -194,7 +198,7 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
       const bands = trial.shownBands;
       const sel = trial.userSelection;
       // Mixed mode picks a row as well as a band; other modes have one fixed row
-      const sign = testMode === 'both' ? (sel?.sign ?? 1) : trial.activeSign;
+      const sign = pickDirection(testMode) ? (sel?.sign ?? 1) : trial.activeSign;
       const cur = sel ? bands.indexOf(sel.freq) : -1;
 
       if (/^[0-9]$/.test(key)) {
@@ -204,7 +208,7 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
         e.preventDefault();
         const next = key === 'ArrowLeft' ? Math.max(0, cur - 1) : Math.min(bands.length - 1, cur + 1);
         selectBand(bands[next], sign);
-      } else if ((key === 'ArrowUp' || key === 'ArrowDown') && testMode === 'both') {
+      } else if ((key === 'ArrowUp' || key === 'ArrowDown') && pickDirection(testMode)) {
         e.preventDefault();
         selectBand(bands[Math.max(0, cur)], key === 'ArrowUp' ? 1 : -1);
       }
@@ -307,33 +311,47 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
   }
 
   const isMixed = testMode === 'both';
+  const twoRows = pickDirection(testMode);
 
   // Candidates in gray: both directions where the direction is part of the puzzle
   let curves = [];
   if (trial && trial.kind !== 'sweep') {
-    const gains = isMixed || trial.kind === 'shelf' ? [gainDb, -gainDb] : [trial.activeSign * gainDb];
+    const gains = twoRows ? [gainDb, -gainDb] : [trial.activeSign * gainDb];
     curves = trial.shownBands.flatMap(f => gains.map(g => makeFilter(typeAt(trial.kind, f), f, g, q)));
   }
 
-  // The hovered band's curve(s). Shelves light both directions so hovering
-  // doesn't reveal whether the hidden shelf is a boost or a cut.
-  let highlight = [];
-  if (trial && !trial.answered && hovered && trial.kind !== 'sweep') {
-    const gains = trial.kind === 'shelf' ? [gainDb, -gainDb] : [hovered.sign * gainDb];
-    highlight = gains.map(g => makeFilter(typeAt(trial.kind, hovered.freq), hovered.freq, g, q));
+  // Before answering, the selected button's curve is emphasised on the graph and
+  // the hovered button's curve is previewed faintly (its row sets the direction)
+  const curveFor = ({ freq, sign }) => makeFilter(typeAt(trial.kind, freq), freq, sign * gainDb, q);
+  let selectedCurve = null, hoverCurve = null;
+  if (trial && !trial.answered && trial.kind !== 'sweep') {
+    const sel = trial.userSelection;
+    if (sel) selectedCurve = curveFor(sel);
+    if (hovered && !(sel && sel.freq === hovered.freq && sel.sign === hovered.sign)) hoverCurve = curveFor(hovered);
   }
+
+  // Status line on the graph: which filter is in play and its settings
+  const SIGN = { boost: '+', cut: '−', both: '±', shelf: '±', sweep: '+' };
+  const qText = `Q ${q.toFixed(1)}`;
+  const readout = !currentMode ? `±${gainDb} dB · ${qText}`
+    : family === 'pass' ? `${trial ? (trial.kind === 'highpass' ? 'HIGH-PASS' : 'LOW-PASS') : 'HP / LP'} · 12 dB/oct`
+    : family === 'shelf' ? `SHELF · ±${gainDb} dB`
+    : `PEAK · ${SIGN[testMode]}${gainDb} dB · ${qText}`;
 
   // The graph is the instrument's "screen" and is shown in every state
   const screen = (
     <FreqGraph
       curves={curves}
-      highlight={highlight}
+      hover={hoverCurve}
+      selected={selectedCurve}
       answer={trial?.answered ? activeFilter(trial) : null}
       gainDb={gainDb}
       sampleRate={engine.sampleRate}
       heat={heatFor(progress, family)}
       marker={trial?.kind === 'sweep' ? trial.userSelection?.freq ?? null : null}
       onPick={trial?.kind === 'sweep' && !trial.answered ? f => selectBand(f, 1) : null}
+      readout={readout}
+      idle={!engine.isLoaded}
     />
   );
 
@@ -420,7 +438,7 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
             {hasSelection ? (kind === 'sweep' ? `Guess ${fmtHz(userSelection.freq)} — ready to check` : 'Ready to check')
               : kind === 'sweep' ? 'Click or drag on the graph'
               : isMixed ? 'Pick the frequency and direction'
-              : kind === 'shelf' ? 'Find the shelf corner'
+              : kind === 'shelf' ? 'Pick the shelf corner and direction'
               : kind !== 'peaking' ? `Find the ${TYPE_LABELS[kind]} cutoff`
               : `Select the ${activeSign > 0 ? 'boosted' : 'cut'} band`}
           </span>
@@ -444,7 +462,7 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
           <p className="sweep-hint">
             Within <strong>±{SWEEP_TOL_LABEL[level - 1]} oct</strong> counts · ← → nudge by a semitone
           </p>
-        ) : isMixed ? (
+        ) : twoRows ? (
           <div className="freq-grid-mixed">
             <div className="mixed-row">
               <span className="mixed-row-label boost-label" title="Boost">▲</span>
@@ -496,7 +514,7 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
               aria-label="Keyboard shortcuts"
               data-tooltip={kind === 'sweep'
                 ? 'Click/drag the graph · ← → nudge · Space EQ/Flat · Enter check/next'
-                : `1–9, 0 pick band · ← → move${isMixed ? ' · ↑ ↓ boost/cut' : ''} · Space EQ/Flat · Enter check/next`}
+                : `1–9, 0 pick band · ← → move${twoRows ? ' · ↑ ↓ boost/cut' : ''} · Space EQ/Flat · Enter check/next`}
             >
               <InfoIcon />
             </button>

@@ -1,7 +1,7 @@
 const F_MIN = 20, F_MAX = 20000;
 const N = 300;
-const P = { t: 14, r: 14, b: 28, l: 32 };
-const VW = 600, VH = 186;
+const P = { t: 17, r: 14, b: 39.4, l: 32 }; // bottom holds the frequency labels and the accuracy strip; t/b balance the margins above the +dB label and below the strip
+const VW = 600, VH = 200.4; // panel height at full width; tuned against the source buttons
 const IW = VW - P.l - P.r;
 const IH = VH - P.t - P.b;
 
@@ -113,19 +113,28 @@ function makeFill(pts, range) {
 }
 
 const heatClass = acc => acc === null ? 'heat-none' : acc < 0.5 ? 'heat-low' : acc < 0.8 ? 'heat-mid' : 'heat-high';
+const hzLabel = f => f >= 1000 ? `${f / 1000} kHz` : `${f} Hz`;
 
-// Weak-spot strip: one segment per octave bucket, just under the plot area
+// Weak-spot strip: your accuracy per octave, on its own line below the frequency
+// labels. Every octave has a faint placeholder segment; it takes a colour once it
+// has enough answers to rate (see MIN_ATTEMPTS in progress.js).
 function HeatStrip({ heat }) {
-  if (!heat.some(b => b.n > 0)) return null;
-  const y = P.t + IH + 2;
+  const y = P.t + IH + 20;
+  const h = 7;
   return (
     <g className="graph-heat">
+      <text x={P.l - 5} y={y + h / 2} textAnchor="end" dominantBaseline="middle" className="graph-label graph-heat-label">
+        acc
+        <title>Your accuracy per octave (red under 50%, amber under 80%, green above)</title>
+      </text>
       {heat.map(({ center, n, hits, acc }) => {
         const x0 = toX(Math.max(F_MIN, center / Math.SQRT2));
         const x1 = toX(Math.min(F_MAX, center * Math.SQRT2));
         return (
-          <rect key={center} x={x0 + 0.5} y={y} width={Math.max(0, x1 - x0 - 1)} height={3} rx={1} className={heatClass(acc)}>
-            <title>{`${center >= 1000 ? `${center / 1000} kHz` : `${center} Hz`} octave: ${n ? `${hits}/${n} correct (${Math.round((hits / n) * 100)}%)` : 'no answers yet'}${acc === null && n ? ' — needs 3+ to rate' : ''}`}</title>
+          <rect key={center} x={x0 + 0.5} y={y} width={Math.max(0, x1 - x0 - 1)} height={h} rx={1.5} className={heatClass(acc)}>
+            <title>{`${hzLabel(center)} octave: ${acc === null
+              ? `not rated yet (${n} of 3 answers)`
+              : `${hits}/${n} correct (${Math.round(acc * 100)}%)`}`}</title>
           </rect>
         );
       })}
@@ -133,13 +142,27 @@ function HeatStrip({ heat }) {
   );
 }
 
+// L-shaped marks just outside each plot corner
+const CORNERS = (() => {
+  const L = 7, o = 3, x0 = P.l + o, x1 = P.l + IW - o, y0 = P.t + o, y1 = P.t + IH - o;
+  return [
+    `M${x0},${y0 + L}V${y0}H${x0 + L}`,
+    `M${x1 - L},${y0}H${x1}V${y0 + L}`,
+    `M${x0},${y1 - L}V${y1}H${x0 + L}`,
+    `M${x1 - L},${y1}H${x1}V${y1 - L}`,
+  ].join('');
+})();
+
 const sameFilter = (a, b) => a.type === b.type && a.frequency === b.frequency && a.gain === b.gain;
 
 // curves: candidate filters drawn in gray; answer: the revealed filter (or null).
 // gainDb sets the dB range so the axis follows the Gain slider.
 // Sweep mode passes marker (the current guess) and onPick, which makes the plot an input
-// highlight: candidate filters to emphasise (the band button being hovered)
-export function FreqGraph({ curves = [], answer = null, highlight = [], gainDb = 6, sampleRate = 48000, heat = [], marker = null, onPick = null }) {
+// hover: faint preview of the hovered band's curve; selected: the chosen band's
+// curve, drawn prominently until the answer is revealed
+// readout: short status line drawn in the top-right of the plot (filter, gain, Q)
+// idle: nothing loaded yet, so the display runs its scanning animation
+export function FreqGraph({ curves = [], answer = null, hover = null, selected = null, gainDb = 6, sampleRate = 48000, heat = [], marker = null, onPick = null, readout = '', idle = false }) {
   const isBoost = answer ? (answer.gain ?? 0) > 0 : false;
   // ±12 dB by default; widens in 6 dB steps so high gains aren't clipped
   const range = Math.max(12, Math.ceil(Math.abs(gainDb) / 6) * 6);
@@ -165,6 +188,12 @@ export function FreqGraph({ curves = [], answer = null, highlight = [], gainDb =
         className={`freq-graph-svg${onPick ? ' graph-interactive' : ''}`}
         {...pointerProps}
       >
+        <defs>
+          <linearGradient id="graph-scan-trail" x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0" stopColor="var(--a)" stopOpacity="0" />
+            <stop offset="1" stopColor="var(--a)" stopOpacity="0.9" />
+          </linearGradient>
+        </defs>
 
         {/* dB grid */}
         {dbTicks.map(db => (
@@ -196,17 +225,27 @@ export function FreqGraph({ curves = [], answer = null, highlight = [], gainDb =
           );
         })}
 
-        {/* Hovered candidate(s): amber for boosts, blue for cuts and pass filters */}
-        {highlight.map(h => {
-          const pts = computeCurve(h, sampleRate, range);
-          const up = (h.gain ?? 0) > 0;
+        {/* Selected, then hovered candidate: amber for boosts, blue for cuts and pass filters */}
+        {selected && (() => {
+          const pts = computeCurve(selected, sampleRate, range);
+          const up = (selected.gain ?? 0) > 0;
           return (
-            <g key={`hl-${h.type}-${h.frequency}-${h.gain}`} className="graph-highlight">
+            <g key={`sel-${selected.type}-${selected.frequency}-${selected.gain}`} className="graph-selected">
               <path d={makeFill(pts, range)} className={up ? 'graph-fill-boost' : 'graph-fill-cut'} />
               <path d={makeLine(pts)} className={up ? 'graph-hl-boost' : 'graph-hl-cut'} />
             </g>
           );
-        })}
+        })()}
+        {hover && (() => {
+          const up = (hover.gain ?? 0) > 0;
+          return (
+            <path
+              key={`hover-${hover.type}-${hover.frequency}-${hover.gain}`}
+              d={makeLine(computeCurve(hover, sampleRate, range))}
+              className={`graph-hover ${up ? 'graph-hl-boost' : 'graph-hl-cut'}`}
+            />
+          );
+        })()}
 
         {/* Correct curve — revealed after answer */}
         {answer && (() => {
@@ -221,17 +260,33 @@ export function FreqGraph({ curves = [], answer = null, highlight = [], gainDb =
 
         {marker && <SweepMarker marker={marker} answerFreq={answer?.frequency ?? null} />}
 
+        {/* Idle: a glowing dot sweeps along 0 dB, like a scanning display */}
+        {idle && (
+          <g className="graph-scan" aria-hidden="true">
+            <line x1={P.l - 36} y1={toY(0, range)} x2={P.l} y2={toY(0, range)} stroke="url(#graph-scan-trail)" />
+            <circle cx={P.l} cy={toY(0, range)} r={2.2} />
+          </g>
+        )}
+
         {/* Placeholder */}
         {curves.length === 0 && !answer && !marker && (
-          <text x={P.l + IW / 2} y={P.t + IH / 2} textAnchor="middle" dominantBaseline="middle" className="graph-placeholder">
+          // Sits just above the 0 dB line so no grid line runs through it
+          <text x={P.l + IW / 2} y={toY(0, range) - 10} textAnchor="middle" className="graph-placeholder">
             {onPick ? 'Click or drag where you hear the boost' : 'EQ curve appears here during a trial'}
           </text>
         )}
 
         <HeatStrip heat={heat} />
 
-        {/* Border */}
+        {/* Border with crop marks at the corners */}
         <rect x={P.l} y={P.t} width={IW} height={IH} className="graph-border" />
+        <path className="graph-corners" d={CORNERS} />
+
+        {/* Readout */}
+        <text x={P.l + 13} y={P.t + 13} className="graph-readout graph-readout-title">RESPONSE</text>
+        {readout && (
+          <text x={P.l + IW - 13} y={P.t + 13} textAnchor="end" className="graph-readout">{readout}</text>
+        )}
       </svg>
     </div>
   );

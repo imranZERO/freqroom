@@ -12,7 +12,7 @@ Difficulty adapts automatically: get 3 correct in a row and you advance to a har
 - **Boosts** — identify which band was boosted
 - **Cuts** — identify which band was cut
 - **Mixed** — identify the frequency *and* whether it was a boost or cut
-- **Shelves** — find the corner of a low or high shelf
+- **Shelves** — find the corner of a low or high shelf, and whether it's a boost or a cut
 - **Pass Filters** — find the cutoff of a high-pass or low-pass filter
 - **Sweep** — drag on the graph to where you hear the boost; scored by how many octaves off you are
 
@@ -24,7 +24,7 @@ Difficulty adapts automatically: get 3 correct in a row and you advance to a har
 **Practice tools:**
 - Progress is saved in your browser: level per mode, lifetime score, and a weak-spot strip on the graph showing your accuracy per octave
 - "Focus weak bands" drills the octaves you miss most
-- Keyboard: 1–9/0 pick bands, ← → step, ↑ ↓ switch boost/cut in Mixed, Space toggles EQ/Flat, Enter checks
+- Keyboard: 1–9/0 pick bands, ← → step, ↑ ↓ switch boost/cut in Mixed and Shelves, Space toggles EQ/Flat, Enter checks
 - Share links recreate a challenge (mode, level, gain, Q, noise source)
 - Installable and works offline
 

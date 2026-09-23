@@ -1,57 +1,8 @@
 /* Technical Details page — same studio-hardware tokens as the app (App.css) */
 
-.td-page {
-  max-width: 1100px; /* same as .app on the homepage */
-  margin: 0 auto;
-  padding: 0 16px 80px;
-}
-
-/* Header with the app's ruler rule underneath */
-.td-header {
-  position: relative;
-  padding: 44px 0 28px;
-  margin-bottom: 32px;
-}
-.td-header::after {
-  content: '';
-  position: absolute;
-  left: 0; right: 0; bottom: 0;
-  height: 7px;
-  border-bottom: 1px solid var(--border);
-  background:
-    repeating-linear-gradient(to right, var(--border-hover) 0 1px, transparent 1px 40px) bottom / 100% 7px no-repeat,
-    repeating-linear-gradient(to right, var(--border) 0 1px, transparent 1px 8px) bottom / 100% 4px no-repeat;
-}
-
-.td-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 20px;
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
-  text-decoration: none;
-  transition: color 0.15s;
-}
-.td-back:hover { color: var(--a); }
-
-.td-title {
-  font-size: 2.1rem;
-  font-weight: 800;
-  letter-spacing: -0.045em;
-  line-height: 1;
-  margin-bottom: 10px;
-  color: var(--text);
-}
-.td-title span { color: var(--a); }
-
-.td-subtitle {
-  color: var(--muted);
-  font-size: 0.95rem;
-}
+/* The page uses the app's shell (.app, SiteHeader, SiteFooter); this only
+   adds space before the footer */
+.td-page .app-main { padding-bottom: 24px; }
 
 /* Section number, e.g. "04", used in headings and the contents list */
 .td-num {
@@ -334,7 +285,6 @@
 }
 
 @media (max-width: 600px) {
-  .td-header { padding-top: 32px; }
   .td-h2 { font-size: 1.15rem; }
   .td-formula { font-size: 0.72rem; padding: 12px 14px; }
 }

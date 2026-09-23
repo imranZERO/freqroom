@@ -71,7 +71,8 @@ export function HowItWorksModal({ isOpen, onClose }) {
               </div>
               <div className="info-mode-item">
                 <strong>Shelves</strong> — a low or high shelf lifts or lowers everything past a corner
-                frequency; find the corner. Corners below 1 kHz are low shelves, above are high shelves.
+                frequency; find the corner <em>and</em> whether it boosts or cuts. Corners below 1 kHz are low
+                shelves, above are high shelves.
               </div>
               <div className="info-mode-item">
                 <strong>Pass Filters</strong> — a high-pass or low-pass filter removes lows or highs;
@@ -123,7 +124,7 @@ export function HowItWorksModal({ isOpen, onClose }) {
             <h3>6 · Keyboard</h3>
             <p>
               <strong>1–9</strong> and <strong>0</strong> pick bands 1–10, <strong>← →</strong> step between
-              bands, and in Mixed mode <strong>↑ ↓</strong> switch between the boost and cut rows.{' '}
+              bands, and in Mixed and Shelves <strong>↑ ↓</strong> switch between the boost and cut rows.{' '}
               <strong>Space</strong> toggles EQ/Flat (even after answering, so you can re-listen to the
               reveal) and <strong>Enter</strong> checks your answer or starts the next trial.
               With <strong>Auto-play EQ</strong> on, each new trial starts playing straight away.
