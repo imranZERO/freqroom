@@ -51,9 +51,8 @@ export function HowItWorksModal({ isOpen, onClose }) {
               Pick <strong>Pink Noise</strong> to start — its equal energy per octave makes every
               frequency band equally audible, which is ideal for ear training. <strong>White Noise</strong>{' '}
               has a brighter, high-frequency bias. <strong>Upload your own audio</strong> (MP3, WAV, FLAC, OGG)
-              once you want to practice on real music — that's where the training counts. With a file loaded,
-              use <strong>Set A</strong> and <strong>Set B</strong> under the Position fader to loop one
-              section, such as a dense chorus.
+              once you want to practice on real music — that's where the training counts. <strong>Set A</strong>{' '}
+              and <strong>Set B</strong> under the Position fader loop one section of a file.
             </p>
           </div>
 
@@ -89,32 +88,26 @@ export function HowItWorksModal({ isOpen, onClose }) {
           <div className="info-section">
             <h3>3 · Adjust the filter</h3>
             <p>
-              Use the <strong>Gain</strong> and <strong>Q</strong> sliders to control the shape of the peak filter
-              applied each trial. <strong>Gain</strong> sets the boost or cut amplitude (1–18 dB) —
-              start high (12+ dB) if you're new, then work down as your ears improve. <strong>Q</strong>{' '}
-              controls bandwidth: a low Q (0.5–1) creates a broad, gentle shelf-like curve that's easier to hear;
-              a high Q (4–8) creates a narrow notch that's much harder to identify. Both sliders take effect
-              immediately, even mid-trial.
+              <strong>Gain</strong> (1–18 dB) sets how far the filter boosts or cuts — start at 12 dB or more and
+              lower it as your ears improve. <strong>Q</strong> sets the bell's width in the peaking modes: low Q
+              is broad and easier, high Q is narrow and harder. Shelves ignore Q; Pass Filters ignore both.
             </p>
           </div>
 
           <div className="info-section">
             <h3>4 · Compare EQ vs. flat</h3>
             <p>
-              Each trial applies a peak filter at one hidden frequency using your current Gain and Q settings.
-              Toggle between <strong>EQ</strong> and <strong>Flat</strong> as many times
-              as you need — the gap between them is exactly what you're training your ears to hear.
-              There's no time limit.
+              Each trial hides one filter. Toggle between <strong>EQ</strong> and <strong>Flat</strong> as often
+              as you like — the difference is what you're training to hear. There's no time limit, and after you
+              answer the graph reveals the hidden curve.
             </p>
           </div>
 
           <div className="info-section">
-            <h3>5 · Adaptive difficulty (levels 2–15)</h3>
+            <h3>5 · Adaptive difficulty</h3>
             <p>
-              Your level is the number of candidate frequency bands shown per trial. At <strong>level 2</strong>{' '}
-              you're choosing between two widely-spaced frequencies. At <strong>level 15</strong> you're
-              distinguishing 15 bands spread logarithmically across 20Hz–20kHz — a serious challenge even
-              for experienced engineers.
+              Your level sets how many candidates you choose from (up to 15 bands, or 8 in Shelves and Pass
+              Filters); in Sweep it sets how close your guess must be. Each mode keeps its own level.
             </p>
             <div className="info-level-row">
               <div className="info-level-badge">
@@ -153,7 +146,7 @@ export function HowItWorksModal({ isOpen, onClose }) {
             <Link href="/technical-details">
               Technical Details →
             </Link>
-            <span>Filter math, pink noise, and signal chain explained</span>
+            <span>Full feature list, filter math, and signal chain explained</span>
           </div>
 
         </div>
