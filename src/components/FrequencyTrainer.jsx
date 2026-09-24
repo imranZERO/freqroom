@@ -169,6 +169,8 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
   );
 
   function selectMode(mode) {
+    // Leaving the challenge's mode ends the challenge's starting level
+    if (mode !== initialMode) challengeLevelRef.current = null;
     answeringRef.current = false;
     engine.stop();
     setTestMode(mode);

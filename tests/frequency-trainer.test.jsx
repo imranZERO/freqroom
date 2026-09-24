@@ -157,6 +157,19 @@ describe('FrequencyTrainer', () => {
     expect(onResult).toHaveBeenCalledWith(expect.objectContaining({ mode: 'sweep', correct: false }));
   });
 
+  it('uses a challenge link level only until you leave its mode', () => {
+    const progress = { ...EMPTY_PROGRESS, levels: { boost: 4 } };
+    renderTrainer({ props: { initialMode: 'boost', initialLevel: 9, progress } });
+    expect(screen.getByText('Level 9')).toBeInTheDocument();
+
+    // switch away and back: the saved level for Boosts is used, not the link's
+    fireEvent.click(screen.getByText('Change mode'));
+    fireEvent.click(screen.getByText('Cuts'));
+    fireEvent.click(screen.getByText('Change mode'));
+    fireEvent.click(screen.getByText('Boosts'));
+    expect(screen.getByText('Level 4')).toBeInTheDocument();
+  });
+
   it('advances the Level chip after three correct answers', async () => {
     const { onResult } = await startBoostTrial();
     expect(screen.getByText('Level 2')).toBeInTheDocument();

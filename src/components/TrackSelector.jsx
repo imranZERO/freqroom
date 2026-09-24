@@ -119,8 +119,12 @@ export function TrackSelector({ engine, gainDb, setGainDb, q, setQ, focus, setFo
     engine.setLoop(null);
   }
 
-  function handleSeekStart() {
+  // Pointer capture routes the release back to the slider even if it happens
+  // outside it, so a drag can't be left "in progress" (which would stop
+  // keyboard seeking below from reaching the audio).
+  function handleSeekStart(e) {
     isDraggingRef.current = true;
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* not supported */ }
   }
 
   function handleSeekChange(e) {
@@ -132,7 +136,8 @@ export function TrackSelector({ engine, gainDb, setGainDb, q, setQ, focus, setFo
   }
 
   function handleSeekEnd(e) {
-    const offset = parseFloat(e.target.value);
+    if (!isDraggingRef.current) return;
+    const offset = parseFloat(e.currentTarget.value);
     isDraggingRef.current = false;
     setPosition(offset);
     engine.seek(offset);
@@ -261,11 +266,11 @@ export function TrackSelector({ engine, gainDb, setGainDb, q, setQ, focus, setFo
                   step="0.1"
                   value={position}
                   style={{ '--fill': `${(position / engine.duration) * 100}%` }}
-                  onMouseDown={handleSeekStart}
-                  onTouchStart={handleSeekStart}
+                  onPointerDown={handleSeekStart}
                   onChange={handleSeekChange}
-                  onMouseUp={handleSeekEnd}
-                  onTouchEnd={handleSeekEnd}
+                  onPointerUp={handleSeekEnd}
+                  onPointerCancel={handleSeekEnd}
+                  onLostPointerCapture={handleSeekEnd}
                 />
                 <span className="control-value control-value-time">
                   {formatTime(position)}<span className="control-duration">/{formatTime(engine.duration)}</span>

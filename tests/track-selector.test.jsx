@@ -115,12 +115,27 @@ describe('TrackSelector', () => {
     fireEvent.change(slider, { target: { value: '5' } });
     expect(engine.seek).toHaveBeenCalledWith(5);
 
-    // drag: mousedown debounces until mouseup
-    fireEvent.mouseDown(slider);
+    // drag: pointerdown defers seeking until the pointer is released
+    fireEvent.pointerDown(slider);
     fireEvent.change(slider, { target: { value: '8' } });
     expect(engine.seek).not.toHaveBeenCalledWith(8);
-    fireEvent.mouseUp(slider);
+    fireEvent.pointerUp(slider);
     expect(engine.seek).toHaveBeenLastCalledWith(8);
+  });
+
+  it('ends a drag on pointercancel so keyboard seeking keeps working', async () => {
+    const { engine, container } = renderSelector();
+    const emptyWav = new File([new Uint8Array(44)], 'a.wav', { type: 'audio/wav' });
+    await uploadAndSettle(container, emptyWav);
+
+    const slider = container.querySelector('#ctrl-position');
+    fireEvent.pointerDown(slider);
+    fireEvent.change(slider, { target: { value: '7' } });
+    fireEvent.pointerCancel(slider);
+    expect(engine.seek).toHaveBeenLastCalledWith(7);
+    // the drag is over, so a keyboard change seeks immediately again
+    fireEvent.change(slider, { target: { value: '3' } });
+    expect(engine.seek).toHaveBeenLastCalledWith(3);
   });
 
   it('records loop A and B through the engine only when ordered correctly', async () => {

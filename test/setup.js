@@ -8,7 +8,11 @@
 // and matches the freqroom: prefix). The API methods are non-enumerable so they
 // don't show up in that iteration. jsdom provides its own, so only install
 // this when there is none.
-if (typeof globalThis.localStorage === 'undefined') {
+// Don't probe `typeof globalThis.localStorage` here: on Node 25+ merely
+// reading that global triggers an ExperimentalWarning.
+// Under jsdom a real document exists and jsdom's own storage is used.
+const hasDom = typeof globalThis.document !== 'undefined';
+if (!hasDom) {
   const storage = {
     get length() { return Object.keys(this).length; },
     getItem(key) { return Object.prototype.hasOwnProperty.call(this, key) ? this[key] : null; },
@@ -21,7 +25,7 @@ if (typeof globalThis.localStorage === 'undefined') {
   for (const m of ['getItem', 'setItem', 'removeItem', 'key', 'clear']) {
     Object.defineProperty(storage, m, { value: storage[m], enumerable: false });
   }
-  globalThis.localStorage = storage;
+  Object.defineProperty(globalThis, 'localStorage', { configurable: true, writable: true, value: storage });
 }
 
 // buildChallengeUrl reads location.origin (only defined in node)
