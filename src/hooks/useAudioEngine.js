@@ -149,6 +149,11 @@ export function useAudioEngine() {
 
   function startSource(graph, offset) {
     const { ctx, input } = graph;
+    const dur = bufferRef.current.duration;
+    // Starting at/after the very end schedules no samples and dead-ends playback
+    // (sourceRef stays set, isPlaying stays true, nothing plays). Pull the offset
+    // just inside so the last sample plays and the loop restarts from the top.
+    if (offset >= dur) offset = Math.max(0, dur - 1 / ctx.sampleRate);
     const voice = ctx.createGain();
     voice.gain.value = 0;
     voice.connect(input);
