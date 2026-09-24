@@ -331,7 +331,10 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
             </span>
           </span>
         )}
-        <span className="trainer-header-end">{shareButton}</span>
+        <span className="trainer-header-end">
+          <button className="btn-ghost trainer-back" onClick={() => selectMode(null)}>← Back</button>
+          {shareButton}
+        </span>
       </>
     );
 

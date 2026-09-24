@@ -267,4 +267,29 @@ describe('FrequencyTrainer', () => {
     expect(screen.getByText('Click or drag on the graph')).toBeInTheDocument();
     expect(document.querySelector('.sweep-hint').textContent).toContain('±1 oct');
   });
+
+  it('backs out of an active mode to the mode picker', async () => {
+    const { engine } = await startBoostTrial();
+    expect(screen.getByText('← Back')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('← Back'));
+    expect(screen.getByText('Choose Test Mode')).toBeInTheDocument();
+    expect(engine.stop).toHaveBeenCalled();
+
+    // a fresh mode starts a clean trial without reloading
+    fireEvent.click(screen.getByText('Cuts'));
+    expect(screen.getByText('Start Trial')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Start Trial'));
+    expect(screen.getByText('Check Answer')).toBeInTheDocument();
+  });
+
+  it('keeps the back button available after answering', async () => {
+    const { utils } = await startBoostTrial();
+    const first = utils.container.querySelectorAll('.freq-btn')[0];
+    fireEvent.click(first);
+    fireEvent.click(screen.getByText('Check Answer'));
+    expect(screen.getByText('✓ Correct!')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('← Back'));
+    expect(screen.getByText('Choose Test Mode')).toBeInTheDocument();
+  });
 });
