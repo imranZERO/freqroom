@@ -72,6 +72,12 @@ export function useAudioEngine() {
   function getCtx() {
     if (!ctxRef.current || ctxRef.current.state === 'closed') {
       ctxRef.current = new AudioContext();
+      // The closed context's graph, source and voice are gone; the next play
+      // must build a fresh graph and start a new source instead of resuming a
+      // dead voice.
+      graphRef.current = null;
+      sourceRef.current = null;
+      voiceRef.current = null;
     }
     return ctxRef.current;
   }

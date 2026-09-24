@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from 'vitest';
+import { useState } from 'preact/hooks';
 import { render, fireEvent, screen, cleanup } from '@testing-library/preact';
 import { FrequencyTrainer, MODES } from '../src/components/FrequencyTrainer.jsx';
-import { EMPTY_PROGRESS } from '../src/lib/progress.js';
+import { EMPTY_PROGRESS, recordResult } from '../src/lib/progress.js';
 
 afterEach(() => {
   cleanup();
@@ -189,5 +190,81 @@ describe('FrequencyTrainer', () => {
     fireEvent.click(screen.getByText('Share'));
     await vi.waitFor(() => expect(screen.getByText('Link copied')).toBeInTheDocument());
     expect(writeText).toHaveBeenCalledWith(expect.stringContaining('?mode=boost'));
+  });
+
+  it('starts EQ playback on a new trial when autoplay is on', () => {
+    const { engine } = renderTrainer({ random: 0, props: { autoplay: true } });
+    fireEvent.click(screen.getByText('Boosts'));
+    fireEvent.click(screen.getByText('Start Trial'));
+    expect(engine.play).toHaveBeenCalledWith([expect.objectContaining({ type: 'peaking' })]);
+    expect(screen.getByText('◼ EQ')).toBeInTheDocument();
+  });
+
+  // Mirrors App: folds each result back into the progress prop, so the level
+  // chip and band count reflect the 3-up / 2-down rules end to end.
+  function TrainerHarness({ engine, onResult }) {
+    const [progress, setProgress] = useState(EMPTY_PROGRESS);
+    return (
+      <FrequencyTrainer
+        engine={engine}
+        gainDb={6}
+        q={1.4}
+        progress={progress}
+        focus={false}
+        autoplay={false}
+        onResult={r => { onResult(r); setProgress(p => recordResult(p, r)); }}
+        sourceId="pink"
+      />
+    );
+  }
+
+  it('drops a level after two wrong answers in a row', () => {
+    const engine = makeEngine();
+    const onResult = vi.fn();
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    render(<TrainerHarness engine={engine} onResult={onResult} />);
+    fireEvent.click(screen.getByText('Boosts'));
+    fireEvent.click(screen.getByText('Start Trial'));
+    expect(screen.getByText('Level 2')).toBeInTheDocument();
+
+    const band = i => document.querySelectorAll('.freq-btn')[i];
+    // three correct in a row → Level 3, and the next trial shows three bands
+    for (let i = 0; i < 3; i++) {
+      fireEvent.click(band(0));
+      fireEvent.click(screen.getByText('Check Answer'));
+      fireEvent.click(screen.getByText('Next Trial →'));
+    }
+    expect(onResult).toHaveBeenLastCalledWith(expect.objectContaining({ correct: true, level: 3 }));
+    expect(screen.getByText('Level 3')).toBeInTheDocument();
+    expect(screen.getByText('0/3 correct → level up')).toBeInTheDocument();
+    expect(band(2)).toBeInTheDocument();
+
+    // first wrong: the streak starts, the level holds
+    fireEvent.click(band(1));
+    fireEvent.click(screen.getByText('Check Answer'));
+    expect(onResult).toHaveBeenLastCalledWith(expect.objectContaining({ correct: false, level: 3 }));
+    expect(screen.getByText('Level 3')).toBeInTheDocument();
+    expect(screen.getByText('1/2 wrong → level down')).toBeInTheDocument();
+    expect(document.querySelectorAll('.pip-wrong')).toHaveLength(1);
+
+    // second wrong: down to Level 2
+    fireEvent.click(screen.getByText('Next Trial →'));
+    fireEvent.click(band(1));
+    fireEvent.click(screen.getByText('Check Answer'));
+    expect(onResult).toHaveBeenLastCalledWith(expect.objectContaining({ correct: false, level: 2 }));
+    expect(screen.getByText('Level 2')).toBeInTheDocument();
+    expect(screen.getByText('0/3 correct → level up')).toBeInTheDocument();
+  });
+
+  it('advances from an answered sweep to a fresh sweep trial', () => {
+    const { onResult } = renderTrainer({ random: 0, props: { initialMode: 'sweep', initialLevel: 1 } });
+    fireEvent.click(screen.getByText('Start Trial'));
+    fireEvent.keyDown(window, { key: 'ArrowRight' });
+    fireEvent.keyDown(window, { key: 'Enter' });
+    expect(onResult).toHaveBeenCalledWith(expect.objectContaining({ mode: 'sweep', correct: false }));
+
+    fireEvent.click(screen.getByText('Next Trial →'));
+    expect(screen.getByText('Click or drag on the graph')).toBeInTheDocument();
+    expect(document.querySelector('.sweep-hint').textContent).toContain('±1 oct');
   });
 });
