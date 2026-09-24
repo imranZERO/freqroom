@@ -1,38 +1,13 @@
 import { useRef, useState, useEffect } from 'react';
 import { generatePinkNoise, generateWhiteNoise } from '../lib/noiseGen.js';
 import { probeAudioFile } from '../lib/audioInfo.js';
+import { formatTime, formatSpec, PINK_LINE, WHITE_LINE, WAVE_BARS, GLYPH_W, GLYPH_H } from '../lib/trackFormat.js';
 import { ResetIcon } from './Icons.jsx';
 
 const GENERATED_TRACKS = [
   { id: 'pink', label: 'Pink Noise', description: 'Equal energy per octave — ideal for EQ training' },
   { id: 'white', label: 'White Noise', description: 'Flat spectrum, bright character' },
 ];
-
-// Small spectrum sketches for the source buttons, generated once with a fixed
-// seed so they look noisy but never change between renders
-function seeded(seed) {
-  return () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
-}
-const GLYPH_W = 60, GLYPH_H = 28;
-function noisyLine(seed, slope) {
-  const rnd = seeded(seed);
-  const pts = [];
-  for (let i = 0; i <= 40; i++) {
-    const x = (i / 40) * GLYPH_W;
-    const base = 9 + slope * (i / 40) * 12; // pink falls to the right, white stays level
-    pts.push(`${x.toFixed(1)},${(base + (rnd() - 0.5) * 7).toFixed(1)}`);
-  }
-  return pts.join(' ');
-}
-const PINK_LINE = noisyLine(7, 1);
-const WHITE_LINE = noisyLine(11, 0);
-const WAVE_BARS = (() => {
-  const rnd = seeded(23);
-  return Array.from({ length: 15 }, (_, i) => {
-    const env = Math.sin((i + 0.5) / 15 * Math.PI);
-    return Math.max(2, (0.35 + 0.65 * rnd()) * env * (GLYPH_H - 4));
-  });
-})();
 
 function SourceGlyph({ kind }) {
   return (
@@ -48,12 +23,6 @@ function SourceGlyph({ kind }) {
   );
 }
 
-function formatTime(s) {
-  const m = Math.floor(s / 60);
-  const sec = Math.floor(s % 60);
-  return `${m}:${sec.toString().padStart(2, '0')}`;
-}
-
 // Keeps the extension visible while the base name truncates with an ellipsis
 function FileName({ name }) {
   const dot = name.lastIndexOf('.');
@@ -64,16 +33,6 @@ function FileName({ name }) {
       <span className="file-ext">{name.slice(dot)}</span>
     </>
   );
-}
-
-// Two readout lines, e.g. "FLAC · 44.1 kHz · 24-bit · Stereo" / "1012 kbps avg · 3:42"
-function formatSpec(info, duration) {
-  const channels = info.channels === 1 ? 'Mono' : info.channels === 2 ? 'Stereo' : info.channels ? `${info.channels} ch` : null;
-  const kbps = duration ? Math.round((info.size * 8) / duration / 1000) : null;
-  return [
-    [info.format, info.sampleRate && `${+(info.sampleRate / 1000).toFixed(1)} kHz`, info.bitDepth, channels],
-    [kbps && `${kbps} kbps avg`, duration && formatTime(duration)],
-  ].map(parts => parts.filter(Boolean).join(' · '));
 }
 
 export function TrackSelector({ engine, gainDb, setGainDb, q, setQ, focus, setFocus, autoplay, setAutoplay, initialSource, onSourceChange, controlsChanged, onResetControls }) {

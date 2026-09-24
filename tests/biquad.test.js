@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { biquadCoeffs, magnitudeDb, rowInset } from '../src/components/FreqGraph.jsx';
+import { biquadCoeffs, magnitudeDb, rowInset, fmtHz } from '../src/components/FreqGraph.jsx';
 
 const SR = 48000;
 const db = (filter, f) => magnitudeDb(biquadCoeffs(filter, SR), f, SR);
@@ -79,5 +79,18 @@ describe('rowInset', () => {
     expect(parseFloat(half.left)).toBeGreaterThan(parseFloat(full.left));
     // narrower [lo, hi] pushes both edges inward, so right grows too
     expect(parseFloat(half.right)).toBeGreaterThan(parseFloat(full.right));
+  });
+});
+
+describe('fmtHz', () => {
+  it('shows hertz below 1 kHz and kHz above with appropriate precision', () => {
+    expect(fmtHz(87)).toBe('87 Hz');
+    expect(fmtHz(999)).toBe('999 Hz');
+    expect(fmtHz(1000)).toBe('1.00 kHz');
+    expect(fmtHz(1240)).toBe('1.24 kHz');
+    expect(fmtHz(9998)).toBe('10.00 kHz');
+    expect(fmtHz(10000)).toBe('10.0 kHz');
+    expect(fmtHz(12500)).toBe('12.5 kHz');
+    expect(fmtHz(19999)).toBe('20.0 kHz');
   });
 });

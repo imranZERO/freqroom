@@ -4,14 +4,11 @@ import { FreqGraph, rowInset, fmtHz } from './FreqGraph.jsx';
 import { heatFor, pickWeighted } from '../lib/progress.js';
 import { buildChallengeUrl, copyText } from '../lib/challenge.js';
 import { applyAnswer, CORRECT_TO_ADVANCE, WRONG_TO_DECREASE, MIN_LEVEL, MAX_LEVEL } from '../lib/progression.js';
-
-const FREQ_MIN = 20;
-const FREQ_MAX = 20000;
-
-// Web Audio reads lowpass/highpass Q in dB; −3.01 dB gives a Butterworth (Q ≈ 0.707) response
-const BUTTERWORTH_Q_DB = -3.01;
-// Shelf corners below this are low shelves, above are high shelves
-const SHELF_SPLIT = 1000;
+import {
+  generateBands, octaveError, withinSweepTolerance, bandRange, typeAt, makeFilter,
+  signForMode, pickDirection, freqToNote, freqRegion, FREQ_LABEL, FREQ_UNIT,
+  SWEEP_RANGE, SWEEP_GRID,
+} from '../lib/trainer.js';
 
 // family: which stats bucket set a mode records under; maxLevel caps the band count
 export const MODES = [
@@ -23,72 +20,13 @@ export const MODES = [
   { id: 'sweep', label: 'Sweep',        family: 'sweep', badge: g => `+${g}dB`, desc: 'Drag on the graph to where you hear the boost', minLevel: 1, maxLevel: 5 },
 ];
 
-// Sweep mode: how close (in octaves) a guess must be to count, by level 1–5
-const SWEEP_TOLERANCE = [1, 2 / 3, 1 / 2, 1 / 3, 1 / 6];
+// Sweep mode: the per-level tolerance labels ("within ±1 octave counts")
 const SWEEP_TOL_LABEL = ['1', '⅔', '½', '⅓', '⅙'];
-const SWEEP_RANGE = [40, 16000];
-// Fine grid the hidden sweep frequency is drawn from (lets focus practice weight it)
-const SWEEP_GRID = generateBands(72, ...SWEEP_RANGE);
-const octaveError = (guess, actual) => Math.abs(Math.log2(guess / actual));
 
-// Frequency span the candidates are spread over for a trial
-function bandRange(family, kind) {
-  if (family === 'shelf') return [60, 10000];
-  if (family === 'pass') return kind === 'highpass' ? [40, 1000] : [1000, 16000];
-  return [FREQ_MIN, FREQ_MAX];
-}
-
-function generateBands(n, lo = FREQ_MIN, hi = FREQ_MAX) {
-  if (n === 0) return [];
-  return Array.from({ length: n }, (_, i) =>
-    Math.round(lo * Math.pow(hi / lo, (i + 0.5) / n))
-  );
-}
-
-// Filter type at a band: fixed per trial, except shelves, which follow the corner
-function typeAt(kind, freq) {
-  if (kind === 'shelf') return freq < SHELF_SPLIT ? 'lowshelf' : 'highshelf';
-  return kind;
-}
-
-// One descriptor shape feeds both the audio engine and the graph
-function makeFilter(type, frequency, gain, q) {
-  if (type === 'lowpass' || type === 'highpass') return { type, frequency, Q: BUTTERWORTH_Q_DB };
-  if (type === 'peaking') return { type, frequency, Q: q, gain };
-  return { type, frequency, gain }; // shelves: slope fixed at S = 1
-}
-
+// Filter type names used in the answer reveal ("low shelf cut", "low-pass")
 const TYPE_LABELS = {
   lowshelf: 'low shelf', highshelf: 'high shelf', lowpass: 'low-pass', highpass: 'high-pass',
 };
-
-const FREQ_LABEL = (hz) => {
-  if (hz >= 1000) {
-    const k = hz / 1000;
-    return Number.isInteger(k) ? `${k}` : k.toFixed(1);
-  }
-  return `${hz}`;
-};
-const FREQ_UNIT = (hz) => hz >= 1000 ? 'kHz' : 'Hz';
-
-const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-
-function freqToNote(hz) {
-  const midi = Math.round(69 + 12 * Math.log2(hz / 440));
-  const name = NOTE_NAMES[((midi % 12) + 12) % 12];
-  const octave = Math.floor(midi / 12) - 1;
-  return `~${name}${octave}`;
-}
-
-function freqRegion(hz) {
-  if (hz < 80)   return 'Sub Bass';
-  if (hz < 250)  return 'Bass';
-  if (hz < 500)  return 'Low Mid';
-  if (hz < 2000) return 'Midrange';
-  if (hz < 4000) return 'Upper Mid';
-  if (hz < 8000) return 'Presence';
-  return 'Brilliance';
-}
 
 function FreqRow({ shownBands, range, sign, dirLabel, getBtnState, selectBand, answered, onHover }) {
   const inset = rowInset(...range);
@@ -115,17 +53,6 @@ function FreqRow({ shownBands, range, sign, dirLabel, getBtnState, selectBand, a
       ))}
     </div>
   );
-}
-
-// Modes where you answer the direction (boost or cut) as well as the frequency;
-// they show a boost row and a cut row of buttons
-const pickDirection = mode => mode === 'both' || mode === 'shelf';
-
-// Returns +1 or -1
-function signForMode(mode) {
-  if (mode === 'boost' || mode === 'sweep') return 1;
-  if (mode === 'cut' || mode === 'pass') return -1;
-  return Math.random() < 0.5 ? 1 : -1;
 }
 
 export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay, onResult, initialMode, initialLevel, sourceId }) {
@@ -294,7 +221,7 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
     answeringRef.current = true;
     const { activeBand, activeSign, userSelection } = trial;
     const correct = trial.kind === 'sweep'
-      ? octaveError(userSelection.freq, activeBand) <= SWEEP_TOLERANCE[level - 1]
+      ? withinSweepTolerance(octaveError(userSelection.freq, activeBand), level)
       : userSelection.freq === activeBand && userSelection.sign === activeSign;
 
     engine.stop();
