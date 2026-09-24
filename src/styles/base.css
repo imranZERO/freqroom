@@ -38,7 +38,7 @@
 }
 
 [data-theme="light"] {
-  --bg: #f6f3ed;
+  --bg: #f8f7f3; /* lighter and a touch less warm than #f6f3ed so the page doesn't read darkish */
   --card: #fdfcf9; /* a touch lighter than the page (#f6f3ed) so flat cards stand out */
   --card-2: #ece6da;
   --border: #d9d1c2;
