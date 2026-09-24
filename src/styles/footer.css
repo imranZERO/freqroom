@@ -1,0 +1,48 @@
+/* ── Footer ─────────────────────────────────────────────────────────────── */
+/* Mirrors the header's ruler rule (ticks hanging down); engraved mono links,
+   page link on the left, project links on the right */
+.app-footer {
+  position: relative;
+  margin-top: 48px;
+  padding: 26px 0 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px 24px;
+  flex-wrap: wrap;
+}
+.app-footer::before {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; top: 0;
+  height: 7px;
+  border-top: 1px solid var(--border);
+  background:
+    repeating-linear-gradient(to right, var(--border-hover) 0 1px, transparent 1px 40px) top / 100% 7px no-repeat,
+    repeating-linear-gradient(to right, var(--border) 0 1px, transparent 1px 8px) top / 100% 4px no-repeat;
+}
+
+.footer-links {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.footer-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  line-height: 1;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.footer-links a:hover { color: var(--a); }
+/* block icons centre cleanly against the caps (no inline baseline gap) */
+.footer-links svg { display: block; width: 13px; height: 13px; flex-shrink: 0; }
+.footer-credit a { color: var(--text); }

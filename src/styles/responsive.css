@@ -1,0 +1,27 @@
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .freq-btn { min-height: 68px; padding: 20px 2px 12px; }
+  .app-header { padding-top: 22px; }
+  /* Phones: title and buttons on the first row, tagline on its own
+     full-width row below */
+  .header-top {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "title actions" "sub sub";
+    align-items: center;
+    row-gap: 12px;
+  }
+  .header-title { display: contents; }
+  .header-title h1 { grid-area: title; }
+  .header-title p { grid-area: sub; font-size: 0.84rem; line-height: 1.5; }
+  .header-actions { grid-area: actions; }
+}
+@media (max-width: 520px) {
+  .transport .play-toggle { flex: 1 1 0; }
+  .transport-action { margin-left: 0; width: 100%; }
+  .transport-action .btn-primary { flex: 1; }
+}
+@media (max-width: 400px) {
+  .freq-grid .freq-btn { margin: 0 min(3px, calc(24px / var(--n, 1))); }
+  .freq-btn::before { width: 10px; margin-left: -5px; }
+}

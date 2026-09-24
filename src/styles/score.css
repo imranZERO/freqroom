@@ -1,0 +1,70 @@
+/* ── Scoreboard ─────────────────────────────────────────────────────────── */
+.score-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.score-header h2 { margin: 0; }
+
+/* Compact strip: big number on the left, meter + note beside it */
+.score-body {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: "num bar" "num note";
+  align-items: center;
+  gap: 6px 28px;
+}
+.score-number   { grid-area: num; }
+.score-bar-wrap { grid-area: bar; }
+.score-note     { grid-area: note; }
+
+.score-number {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.score-big { font-size: 2.6rem; font-weight: 600; letter-spacing: -0.05em; line-height: 1; }
+.score-sep { font-size: 1.4rem; color: var(--border-hover); }
+.score-total { font-size: 1.4rem; color: var(--muted); }
+
+.score-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+/* Segmented meter: the fill is masked into LED-like segments */
+.score-bar {
+  flex: 1;
+  height: 10px;
+  background: var(--card-2);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+  padding: 1px;
+}
+.score-fill {
+  height: 100%;
+  border-radius: 1px;
+  transition: width 0.4s ease;
+  -webkit-mask: repeating-linear-gradient(to right, #000 0 6px, transparent 6px 8px);
+  mask: repeating-linear-gradient(to right, #000 0 6px, transparent 6px 8px);
+}
+.score-pct {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text);
+  min-width: 40px;
+  text-align: right;
+}
+.score-note { font-size: 0.82rem; color: var(--muted); }
+.score-lifetime {
+  grid-column: 2;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}

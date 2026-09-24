@@ -1,0 +1,114 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── Theme ──────────────────────────────────────────────────────────────────
+   Studio-hardware palette: warm graphite panels, amber "lamp" accent for
+   boosts/EQ, steel blue for cuts, engraved mono labels.                    */
+
+:root {
+  --bg: #121110;
+  --card: #1a1917;
+  --card-2: #211f1c;
+  --border: #2e2b27;
+  --border-hover: #45403a;
+  --card-hover: #28251f;
+  --text: #ede6d8;
+  --muted: #8b8375;
+  --a: #eba542;
+  --a-ink: #1a1206;
+  --cut: #6fb0cf;
+  --green: #8cc77a;
+  --red: #e86450;
+  --radius: 6px;
+  --highlight: rgba(255, 244, 222, 0.035);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  --grain-opacity: 0.05;
+  --inset: inset 0 1px 3px rgba(0, 0, 0, 0.18);
+  --cap-top: #8a5a31;
+  --cap-bottom: #5b3a1d;
+  --cap-edge: #2b1a0b;
+  --cap-shine: rgba(255, 214, 160, 0.35);
+  --key-top: #2b2824;
+  --key-bottom: #211e1a;
+  --key-edge: #2e2a24; /* the key's lower side: between the face and the page so it reads in dark mode */
+  --key-drop: 0 1px 0 rgba(0, 0, 0, 0.55);
+
+  /* System fonts only — nothing to download */
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+}
+
+[data-theme="light"] {
+  --bg: #f6f3ed;
+  --card: #fdfcf9; /* a touch lighter than the page (#f6f3ed) so flat cards stand out */
+  --card-2: #ece6da;
+  --border: #d9d1c2;
+  --border-hover: #bdb3a1;
+  --card-hover: #e4ddcf;
+  --text: #1e1b16;
+  --muted: #7a7264;
+  --a: #b86f12;
+  --a-ink: #fff8ec;
+  --cut: #2c7ca3;
+  --green: #3f8a35;
+  --red: #c4422e;
+  --highlight: rgba(255, 255, 255, 0.7);
+  --shadow: 0 1px 2px rgba(60, 45, 20, 0.06);
+  --grain-opacity: 0.07;
+  --inset: inset 0 1px 2px rgba(60, 45, 20, 0.06);
+  --cap-top: #8f5e33;
+  --cap-bottom: #633f1f;
+  --cap-edge: #3f2711;
+  --cap-shine: rgba(255, 220, 170, 0.45);
+  --key-top: #fdfbf7;
+  --key-bottom: #ebe4d6;
+  --key-edge: #c9bfac;
+  --key-drop: 0 1px 0 rgba(60, 45, 20, 0.08);
+}
+
+html { color-scheme: dark; }
+[data-theme="light"] { color-scheme: light; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.5;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Film grain over everything; pointer-events off so it never interferes */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+  opacity: var(--grain-opacity);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.app {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 16px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+.app-main { flex: 1; }
+
+/* Staggered power-on */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+.app-header, .rack-side > *, .rack-main > *, .app-footer {
+  animation: rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.rack-side > :nth-child(1) { animation-delay: 60ms; }
+.rack-side > :nth-child(2) { animation-delay: 120ms; }
+.rack-main > * { animation-delay: 100ms; }
+.app-footer { animation-delay: 240ms; }

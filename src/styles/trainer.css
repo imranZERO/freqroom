@@ -1,0 +1,238 @@
+/* ── Frequency Trainer (instrument panel) ───────────────────────────────── */
+
+.instrument {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+/* Experiment: no panel box around the source buttons either */
+.card.source-card {
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}
+/* No panel box around the trainer — the graph display stands on its own */
+.card.instrument {
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}
+/* Empty state: numbered quick-start steps */
+.quickstart {
+  list-style: none;
+  counter-reset: step;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.quickstart li {
+  counter-increment: step;
+  background: linear-gradient(to bottom, var(--key-top), var(--key-bottom));
+  box-shadow: inset 0 1px 0 var(--highlight);
+  border: 1px solid var(--border-hover);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.quickstart li::before {
+  content: counter(step, decimal-leading-zero);
+  display: block;
+  margin-bottom: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  color: var(--a);
+}
+.quickstart li strong { color: var(--text); font-weight: 600; }
+@media (max-width: 520px) {
+  .quickstart { grid-template-columns: 1fr; }
+}
+
+/* Mode picker */
+.mode-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+@media (max-width: 520px) {
+  .mode-grid { grid-template-columns: 1fr; }
+}
+.mode-card {
+  background: linear-gradient(to bottom, var(--key-top), var(--key-bottom));
+  border: 1px solid var(--border-hover);
+  border-bottom: 3px solid var(--key-edge);
+  box-shadow: inset 0 1px 0 var(--highlight), var(--key-drop);
+  border-radius: var(--radius);
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 16px;
+  transition: border-color 0.15s, background 0.15s, transform 0.15s;
+  text-align: left;
+  font-family: inherit;
+}
+.mode-card:hover {
+  border-color: color-mix(in srgb, var(--a) 70%, var(--border-hover));
+  border-bottom-color: color-mix(in srgb, var(--a) 40%, var(--key-edge)); /* amber side so it stands out from the tinted face */
+  background: linear-gradient(to bottom,
+    color-mix(in srgb, var(--a) 10%, var(--key-top)),
+    color-mix(in srgb, var(--a) 5%, var(--key-bottom)));
+  transform: translateY(-1px);
+}
+.mode-card:active { transform: translateY(2px); border-bottom-width: 1px; }
+.mode-label {
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.mode-sign {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--a);
+  order: -1;
+}
+.mode-desc {
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+/* Mode badge / level chip — stamped hardware labels */
+.mode-badge,
+.level-chip {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 3px;
+}
+.mode-badge {
+  border: 1px solid var(--border-hover);
+  color: var(--muted);
+}
+.level-chip {
+  background: var(--a);
+  color: var(--a-ink);
+  font-weight: 600;
+}
+
+/* Start screen */
+.trainer-start {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 6px 0 4px;
+  text-align: center;
+}
+.start-desc { color: var(--muted); font-size: 0.9rem; }
+.start-desc strong { color: var(--text); font-family: var(--font-mono); }
+
+.trainer-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-height: 28px;
+}
+.trainer-header h2 { margin: 0; color: var(--text); }
+/* Inner step title — the panel's lamp lives on the outer .panel-label */
+.trainer-header h2::before { display: none; }
+.trainer-header-end { margin-left: auto; display: flex; gap: 8px; }
+.trainer-status {
+  color: var(--muted);
+  font-size: 0.86rem;
+  margin-left: 4px;
+}
+.trainer-result {
+  font-weight: 700;
+  font-size: 1rem;
+  margin-left: 4px;
+}
+.result-correct { color: var(--green); }
+.result-incorrect { color: var(--red); }
+.result-note {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  font-weight: 400;
+  color: var(--muted);
+  margin-left: 10px;
+}
+
+/* Transport — EQ (amber) vs Flat (neutral) toggles, then the answer action */
+.transport {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.transport .play-toggle { flex: 0 1 150px; }
+.transport-action {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+.play-toggle {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: var(--card-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: inset 0 1px 0 var(--highlight);
+  color: var(--text);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.92rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  padding: 13px 22px;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.1s;
+}
+.play-toggle::after {
+  content: '';
+  position: absolute;
+  top: 9px;
+  right: 10px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--border-hover);
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.play-toggle:hover { border-color: var(--border-hover); background: var(--card-hover); }
+.play-toggle:active { transform: translateY(1px); }
+
+.play-toggle-eq { color: var(--a); }
+.play-toggle-eq.ptog-eq {
+  background: color-mix(in srgb, var(--a) 14%, var(--card-2));
+  border-color: var(--a);
+}
+.play-toggle-flat.ptog-flat {
+  background: color-mix(in srgb, var(--text) 8%, var(--card-2));
+  border-color: var(--text);
+}
+@keyframes lamp {
+  50% { opacity: 0.55; }
+}
+.ptog-eq::after,
+.ptog-flat::after {
+  animation: lamp 1.6s ease-in-out infinite;
+}
+.ptog-eq::after   { background: var(--a);    box-shadow: 0 0 4px color-mix(in srgb, var(--a) 60%, transparent); }
+.ptog-flat::after { background: var(--text); box-shadow: 0 0 4px color-mix(in srgb, var(--text) 40%, transparent); }

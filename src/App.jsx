@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Router, Route, Switch } from 'wouter';
 import { useAudioEngine, DEFAULT_VOLUME } from './hooks/useAudioEngine.js';
+import { useMediaQuery } from './hooks/useMediaQuery.js';
 import { TrackSelector } from './components/TrackSelector.jsx';
 import { FrequencyTrainer, MODES } from './components/FrequencyTrainer.jsx';
 import { ScoreBoard } from './components/ScoreBoard.jsx';
@@ -124,20 +125,12 @@ function MainApp({ chrome }) {
 // Theme and the How it works dialog are shared by every page
 // The theme button cycles System → Light → Dark
 const THEME_ORDER = ['system', 'light', 'dark'];
-const systemDark = () => window.matchMedia('(prefers-color-scheme: dark)').matches;
 
 export default function App() {
   const [theme, setTheme] = usePersistentState('theme', 'system');
-  const [osDark, setOsDark] = useState(systemDark);
+  // Followed live while the theme is "system"
+  const osDark = useMediaQuery('(prefers-color-scheme: dark)');
   const [showInfo, setShowInfo] = useState(false);
-
-  // Follow the OS setting live while the theme is "system"
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const onChange = e => setOsDark(e.matches);
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
-  }, []);
 
   const isDark = theme === 'dark' || (theme === 'system' && osDark);
   useEffect(() => {

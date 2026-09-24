@@ -1,0 +1,103 @@
+/* Loop region for uploads: a steel-blue bracket just under the Position
+   track. The 7px insets follow the fader cap's half-width, since the cap
+   centre only travels between them. */
+.control-row { position: relative; }
+.loop-band {
+  grid-area: slider;
+  align-self: center;
+  height: 2px;
+  margin-left: calc(7px + (100% - 14px) * var(--a));
+  width: calc((100% - 14px) * (var(--b) - var(--a)));
+  min-width: 2px;
+  transform: translateY(9px);
+  background: var(--cut);
+  box-shadow: -1px -3px 0 -1px var(--cut), 1px -3px 0 -1px var(--cut);
+  pointer-events: none;
+}
+.loop-row {
+  display: flex;
+  align-items: center;
+  gap: 6px 8px;
+  flex-wrap: wrap;
+  margin-top: -4px;
+}
+.loop-row .btn-ghost { padding: 4px 9px; }
+.loop-readout {
+  flex-basis: 100%;
+  order: -1;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+/* Practice options under the faders */
+.practice-row {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px dashed var(--border);
+}
+
+/* Toggle switch: a recessed slot with the same brown cap as the faders.
+   Track 38×20 with 3px inset all round; the 16×12 cap travels 16px, so it
+   sits evenly inside the track in both positions. */
+.switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
+}
+.switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.switch-track {
+  position: relative;
+  box-sizing: border-box;
+  width: 38px;
+  height: 20px;
+  flex-shrink: 0;
+  border-radius: 4px;
+  background: var(--card-2);
+  border: 1px solid var(--border-hover);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35);
+  transition: background 0.18s, border-color 0.18s, box-shadow 0.18s;
+}
+.switch-track::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 12px;
+  box-sizing: border-box;
+  border-radius: 2px;
+  border: 1px solid var(--cap-edge);
+  background-color: var(--cap-bottom);
+  background-image:
+    repeating-linear-gradient(to right, transparent 0 3px, rgba(0, 0, 0, 0.28) 3px 4px),
+    linear-gradient(to bottom, var(--cap-top), var(--cap-bottom));
+  box-shadow: inset 0 1px 0 var(--cap-shine), 0 1px 2px rgba(0, 0, 0, 0.35);
+  transition: transform 0.18s cubic-bezier(0.3, 0.7, 0.3, 1);
+}
+.switch:hover .switch-track { border-color: color-mix(in srgb, var(--a) 45%, var(--border-hover)); }
+.switch input:checked + .switch-track {
+  border-color: var(--a);
+  background: color-mix(in srgb, var(--a) 28%, var(--card-2));
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3), 0 0 6px color-mix(in srgb, var(--a) 25%, transparent);
+}
+.switch input:checked + .switch-track::after { transform: translateX(16px); }
+.switch input:focus-visible + .switch-track { outline: 2px solid var(--a); outline-offset: 2px; }
+.switch:active .switch-track::after { transform: scaleX(1.1); }
+.switch:active input:checked + .switch-track::after { transform: translateX(16px) scaleX(1.1); }
+.switch-label {
+  order: -1;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.switch input:checked ~ .switch-label { color: var(--text); }

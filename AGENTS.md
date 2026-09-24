@@ -75,7 +75,11 @@ App.jsx (Wouter Router)
 
 **Challenge links (`src/lib/challenge.js`)** — `?mode=&gain=&q=&source=&level=` (source: `pink`/`white` only). `App` parses once on load with `parseChallenge` (invalid values are dropped, numbers clamped), applies gain/q/level, passes `initialSource` to `TrackSelector` and `initialMode` to `FrequencyTrainer`, then strips the query with `history.replaceState`. The trainer's Share button builds the link with `buildChallengeUrl`, including only the settings the mode uses, and copies it via `copyText` (clipboard, or a prompt fallback).
 
-**Theme** — `App` resolves `theme` (default `system`, which follows `prefers-color-scheme` live) to `data-theme="dark|light"` on `document.documentElement`; CSS variables in `App.css` handle the rest. The header button cycles System → Light → Dark. The choice is saved (see Persistence), and `index.html` applies it before first paint.
+**Styles** — `src/App.css` only `@import`s the files in `src/styles/`, one per area (base tokens, layout, header, panels, source, controls, buttons, score, loop-and-switches, misc, footer, dialogs, trainer, graph, keys, responsive). The import order is the cascade order, so keep it; `responsive.css` must stay last.
+
+**Trainer parts (`src/components/TrainerParts.jsx`)** — stateless pieces of the trainer panel (`QuickStart`, `ModePicker`, `BandRows`, `AnswerLegend`, `Transport`, `StreakMeter`); `FrequencyTrainer` keeps the state and passes props in. `useMediaQuery` (`src/hooks/useMediaQuery.js`) backs both the System theme and FreqGraph's compact phone layout.
+
+**Theme** — `App` resolves `theme` (default `system`, which follows `prefers-color-scheme` live) to `data-theme="dark|light"` on `document.documentElement`; the CSS variables in `src/styles/base.css` handle the rest. The header button cycles System → Light → Dark. The choice is saved (see Persistence), and `index.html` applies it before first paint.
 
 **Offline / install (`public/sw.js`, `public/manifest.webmanifest`)** — the service worker is registered from `main.jsx` in production builds only. Page navigations are network-first with the cached `/` shell as the offline fallback; other same-origin GETs are cache-first and refreshed in the background (asset names are content-hashed). Bump `CACHE` in `sw.js` when changing the caching strategy. Icons: `icon-192/512.png` (rounded), `icon-maskable-512.png` (full-bleed), and `apple-touch-icon.png`, all rendered from `favicon.svg`.
 

@@ -1,0 +1,188 @@
+/* ── Track Selector ─────────────────────────────────────────────────────── */
+.track-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  min-width: 0;
+  gap: 10px;
+}
+.rack-side .track-grid { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.panel-label { margin: 0 0 8px 2px; }
+/* Label with an action on the right (e.g. reset); fixed height so the
+   button appearing or disappearing doesn't shift the panel */
+.panel-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 17px;
+  margin-bottom: 8px;
+}
+.panel-label-row .panel-label { margin-bottom: 0; }
+.panel-reset { padding: 3px; margin-right: 1px; }
+
+/* Data actions at the bottom of the side column */
+.side-footer {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: -6px;
+}
+
+/* Data actions: small engraved hardware buttons with an icon */
+.data-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--muted);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.data-btn svg { width: 12px; height: 12px; flex-shrink: 0; opacity: 0.85; }
+.data-btn:hover {
+  color: var(--a);
+  border-color: color-mix(in srgb, var(--a) 60%, var(--border));
+  background: color-mix(in srgb, var(--a) 7%, transparent);
+}
+.data-btn-danger:hover {
+  color: var(--red);
+  border-color: color-mix(in srgb, var(--red) 60%, var(--border));
+  background: color-mix(in srgb, var(--red) 7%, transparent);
+}
+@media (max-width: 860px) {
+  .side-footer { margin-top: 0; }
+}
+@media (max-width: 860px) {
+  .rack-side .track-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+}
+.track-btn {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "tag glyph" "name glyph" "desc desc";
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 2px;
+  padding: 11px 14px 12px;
+  background: linear-gradient(to bottom, var(--key-top), var(--key-bottom));
+  border: 1px solid var(--border-hover);
+  border-bottom: 3px solid var(--key-edge);
+  border-radius: var(--radius);
+  box-shadow: inset 0 1px 0 var(--highlight), var(--key-drop);
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: border-color 0.15s, background 0.15s, transform 0.08s, border-bottom-width 0.08s;
+}
+.track-tag   { grid-area: tag; }
+.track-name  { grid-area: name; }
+.track-desc  { grid-area: desc; }
+.track-glyph { grid-area: glyph; align-self: start; margin-top: 2px; }
+
+/* Channel tag with its status lamp */
+.track-tag {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  color: var(--muted);
+}
+.track-tag::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--border-hover);
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+/* Spectrum sketch */
+.track-glyph { overflow: visible; }
+.track-glyph polyline {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.25;
+  stroke-linejoin: round;
+  opacity: 0.7;
+  transition: stroke 0.2s, opacity 0.2s;
+}
+.track-glyph rect { fill: var(--muted); opacity: 0.6; transition: fill 0.2s, opacity 0.2s; }
+
+@media (hover: hover) {
+  .track-btn:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--a) 70%, var(--border-hover));
+    border-bottom-color: color-mix(in srgb, var(--a) 40%, var(--key-edge)); /* amber side so it stands out from the tinted face */
+    background: linear-gradient(to bottom,
+      color-mix(in srgb, var(--a) 10%, var(--key-top)),
+      color-mix(in srgb, var(--a) 5%, var(--key-bottom)));
+    transform: translateY(-1px);
+  }
+  .track-btn:hover:not(:disabled) .track-tag { color: var(--text); }
+  .track-btn:hover:not(:disabled) .track-tag::before { background: color-mix(in srgb, var(--a) 60%, var(--border-hover)); }
+  .track-btn:hover:not(:disabled) .track-glyph polyline { stroke: color-mix(in srgb, var(--a) 70%, var(--muted)); opacity: 1; }
+  .track-btn:hover:not(:disabled) .track-glyph rect { fill: color-mix(in srgb, var(--a) 70%, var(--muted)); opacity: 1; }
+  .track-btn.active:hover:not(:disabled) {
+    background: linear-gradient(to bottom,
+      color-mix(in srgb, var(--a) 18%, var(--key-top)),
+      color-mix(in srgb, var(--a) 11%, var(--key-bottom)));
+  }
+}
+.track-btn:active:not(:disabled) { transform: translateY(2px); border-bottom-width: 1px; }
+
+/* Selected source: amber edge and face tint, lit lamp, amber sketch */
+.track-btn.active {
+  border-color: var(--a);
+  border-bottom-color: color-mix(in srgb, var(--a) 55%, var(--key-edge));
+  background: linear-gradient(to bottom,
+    color-mix(in srgb, var(--a) 12%, var(--key-top)),
+    color-mix(in srgb, var(--a) 7%, var(--key-bottom)));
+}
+.track-btn.active .track-tag { color: var(--a); }
+.track-btn.active .track-tag::before {
+  background: var(--a);
+  box-shadow: 0 0 5px color-mix(in srgb, var(--a) 60%, transparent);
+}
+.track-btn.active .track-glyph polyline { stroke: var(--a); opacity: 1; }
+.track-btn.active .track-glyph rect { fill: var(--a); opacity: 0.9; }
+
+/* While audio plays from this source, the lamp pulses and the sketch shimmers */
+@keyframes source-live {
+  50% { opacity: 0.45; }
+}
+.track-btn.live .track-tag::before { animation: source-live 1.4s ease-in-out infinite; }
+.track-btn.live .track-glyph { animation: source-live 2.8s ease-in-out infinite; }
+
+.track-btn:disabled { opacity: 0.5; cursor: default; }
+.track-btn { min-width: 0; }
+.track-name {
+  display: flex;
+  min-width: 0;
+  font-weight: 600;
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+.file-base {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.file-ext { flex-shrink: 0; }
+.track-desc { font-size: 0.78rem; color: var(--muted); }
+.track-spec { display: flex; flex-direction: column; gap: 1px; }
+.track-spec {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.01em;
+}

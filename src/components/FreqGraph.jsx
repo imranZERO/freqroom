@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useMediaQuery } from '../hooks/useMediaQuery.js';
 
 const F_MIN = 20, F_MAX = 20000;
 const N = 300;
@@ -15,17 +15,6 @@ const WIDE = { k: 1, T: 17, IH: 144, B: 39.4 };
 const COMPACT = { k: 1.7, T: 17 * 1.7, IH: 190, B: 39.4 * 1.7 };
 const layout = g => ({ ...g, VH: g.T + g.IH + g.B });
 const COMPACT_QUERY = '(max-width: 600px)';
-
-function useCompact() {
-  const [compact, setCompact] = useState(() => window.matchMedia(COMPACT_QUERY).matches);
-  useEffect(() => {
-    const mq = window.matchMedia(COMPACT_QUERY);
-    const onChange = e => setCompact(e.matches);
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
-  }, []);
-  return compact;
-}
 
 const FREQ_TICKS = [20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000];
 
@@ -185,7 +174,7 @@ const sameFilter = (a, b) => a.type === b.type && a.frequency === b.frequency &&
 // readout: short status line drawn in the top-right of the plot (filter, gain, Q)
 // idle: nothing loaded yet, so the display runs its scanning animation
 export function FreqGraph({ curves = [], answer = null, hover = null, selected = null, gainDb = 6, sampleRate = 48000, heat = [], marker = null, onPick = null, readout = '', idle = false }) {
-  const g = layout(useCompact() ? COMPACT : WIDE);
+  const g = layout(useMediaQuery(COMPACT_QUERY) ? COMPACT : WIDE);
   const isBoost = answer ? (answer.gain ?? 0) > 0 : false;
   // ±12 dB by default; widens in 6 dB steps so high gains aren't clipped
   const range = Math.max(12, Math.ceil(Math.abs(gainDb) / 6) * 6);

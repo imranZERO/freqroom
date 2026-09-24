@@ -1,0 +1,216 @@
+/* ── Frequency band buttons ─────────────────────────────────────────────────
+   Bands are evenly spaced on the graph's log axis, so an n-column grid inset
+   by the plot's side margins (FreqGraph P.l = 32, P.r = 14 of VW = 600)
+   puts every key directly under its curve peak.                           */
+.freq-grid {
+  container-type: inline-size;
+  display: grid;
+  grid-template-columns: repeat(var(--n, 1), minmax(0, 1fr));
+  padding-left: calc(32 / 600 * 100%);
+  padding-right: calc(14 / 600 * 100%);
+  margin-top: -6px;
+}
+.freq-grid .freq-btn { margin: 0 min(6px, calc(48px / var(--n, 1))); }
+
+/* Mixed mode: boost row above cut row, marked in the graph's dB gutter */
+.freq-grid-mixed {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: -6px;
+}
+.freq-grid-mixed .freq-grid { margin-top: 0; }
+.mixed-row { position: relative; }
+.mixed-row-label {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: calc(32 / 600 * 100%);
+  transform: translateY(-50%);
+  text-align: center;
+  font-size: 0.7rem;
+}
+.boost-label { color: var(--a); }
+.cut-label   { color: var(--cut); }
+
+.mixed-dir-reveal { margin-left: auto; font-size: 0.78rem; }
+.sweep-hint {
+  margin-top: -6px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.sweep-hint strong { color: var(--text); font-weight: 600; }
+.mixed-dir-reveal strong { color: var(--text); }
+
+/* Raised keycap: gradient face, firm border, and a thicker bottom edge that
+   compresses when pressed */
+.freq-btn {
+  position: relative;
+  min-width: 0;
+  background: linear-gradient(to bottom, var(--key-top), var(--key-bottom));
+  border: 1px solid var(--border-hover);
+  border-bottom: 3px solid var(--key-edge);
+  border-radius: 5px;
+  box-shadow: inset 0 1px 0 var(--highlight), var(--key-drop);
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 24px 4px 16px;
+  transition: background 0.13s, border-color 0.13s, color 0.13s, transform 0.08s, border-bottom-width 0.08s;
+  min-height: 84px;
+  font-family: var(--font-mono);
+}
+/* Indicator lamp on each key */
+.freq-btn::before {
+  content: '';
+  position: absolute;
+  top: 9px;
+  left: 50%;
+  width: 14px;
+  height: 3px;
+  margin-left: -7px;
+  border-radius: 2px;
+  background: var(--border);
+  transition: background 0.15s, box-shadow 0.15s;
+}
+.freq-btn:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--a) 75%, var(--border-hover));
+  border-bottom-color: color-mix(in srgb, var(--a) 40%, var(--key-edge)); /* amber side so it stands out from the tinted face */
+  background: linear-gradient(to bottom,
+    color-mix(in srgb, var(--a) 13%, var(--key-top)),
+    color-mix(in srgb, var(--a) 7%, var(--key-bottom)));
+  transform: translateY(-2px);
+}
+.freq-btn:hover:not(:disabled)::before {
+  background: color-mix(in srgb, var(--a) 75%, var(--border));
+}
+.freq-btn:hover:not(:disabled) .freq-unit { color: var(--text); }
+.freq-btn.f-selected:hover:not(:disabled) {
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--a) 20%, var(--key-top)), color-mix(in srgb, var(--a) 13%, var(--key-bottom)));
+}
+.freq-btn.f-selected:hover:not(:disabled)::before { background: var(--a); }
+.freq-btn:active:not(:disabled) { transform: translateY(2px); border-bottom-width: 1px; }
+.freq-btn:disabled { cursor: default; }
+.freq-btn:disabled:not(.f-selected):not(.f-hit):not(.f-missed):not(.f-wrong) { opacity: 0.7; }
+
+/* User selected (pre-answer) */
+.freq-btn.f-selected {
+  border-color: var(--a);
+  border-bottom-color: color-mix(in srgb, var(--a) 55%, var(--key-edge));
+  color: var(--a);
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--a) 16%, var(--key-top)), color-mix(in srgb, var(--a) 10%, var(--key-bottom)));
+}
+.freq-btn.f-selected::before { background: var(--a); box-shadow: 0 0 3px color-mix(in srgb, var(--a) 60%, transparent); }
+
+/* Post-answer states */
+.freq-btn.f-hit {
+  border-color: var(--green);
+  border-bottom-color: color-mix(in srgb, var(--green) 55%, var(--key-edge));
+  color: var(--green);
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--green) 16%, var(--key-top)), color-mix(in srgb, var(--green) 10%, var(--key-bottom)));
+}
+.freq-btn.f-hit::before { background: var(--green); box-shadow: 0 0 3px color-mix(in srgb, var(--green) 60%, transparent); }
+
+.freq-btn.f-missed {
+  border-color: var(--green);
+  border-style: dashed;
+  border-bottom-style: solid;
+  border-bottom-color: color-mix(in srgb, var(--green) 45%, var(--key-edge));
+  color: var(--green);
+}
+.freq-btn.f-missed::before { background: var(--green); opacity: 0.6; }
+
+.freq-btn.f-wrong {
+  border-color: var(--red);
+  border-bottom-color: color-mix(in srgb, var(--red) 55%, var(--key-edge));
+  color: var(--red);
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--red) 14%, var(--key-top)), color-mix(in srgb, var(--red) 9%, var(--key-bottom)));
+}
+.freq-btn.f-wrong::before { background: var(--red); box-shadow: 0 0 3px color-mix(in srgb, var(--red) 60%, transparent); }
+
+.freq-num {
+  /* About a fifth of a key's width: row width (cqw) split over n keys */
+  font-size: clamp(0.58rem, calc(20cqw / var(--n, 1)), 1.1rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.freq-unit {
+  font-size: clamp(0.5rem, 1.2vw, 0.64rem);
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.f-selected .freq-unit, .f-hit .freq-unit, .f-missed .freq-unit, .f-wrong .freq-unit {
+  color: inherit;
+  opacity: 0.75;
+}
+
+/* Legend */
+.freq-legend {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.legend-dot {
+  width: 12px;
+  height: 4px;
+  border-radius: 2px;
+  display: inline-block;
+}
+.ld-hit    { background: var(--green); }
+.ld-missed { background: transparent; border: 1px dashed var(--green); height: 6px; }
+.ld-wrong  { background: var(--red); }
+
+/* Streak — a small LED ladder */
+.streak-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-top: 1px dashed var(--border);
+  padding-top: 14px;
+}
+.streak-label {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  flex: 1;
+}
+.wrong-label { color: var(--red); }
+
+.streak-pips {
+  display: flex;
+  gap: 4px;
+}
+.pip {
+  width: 16px;
+  height: 6px;
+  border-radius: 1px;
+  background: var(--card-2);
+  border: 1px solid var(--border);
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+.pip-correct { background: var(--green); border-color: var(--green); box-shadow: 0 0 3px color-mix(in srgb, var(--green) 40%, transparent); }
+.pip-wrong   { background: var(--red);   border-color: var(--red);   box-shadow: 0 0 3px color-mix(in srgb, var(--red) 40%, transparent); }
+
+.trainer-kb-hint { display: none; }
+@media (hover: hover) {
+  .trainer-kb-hint { display: flex; }
+}

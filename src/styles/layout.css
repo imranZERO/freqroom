@@ -1,0 +1,48 @@
+/* ── Rack layout ────────────────────────────────────────────────────────────
+   Desktop: sticky side column (source, controls) + main column (instrument,
+   then score once there is one). Narrow: everything stacks in that order. */
+.rack {
+  display: grid;
+  grid-template-columns: 312px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.rack-side,
+.rack-main {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.rack-side {
+  position: sticky;
+  top: 16px;
+}
+.rack .card { margin-bottom: 0; }
+
+/* Tooltips overflow their panel. Each panel (and the header) is its own
+   stacking context (the entrance animation creates one), so later panels
+   would paint over an earlier panel's tooltip. Lift whatever is hovered or
+   focused above its neighbours, and keep the header's downward tooltips
+   above the page. */
+.app-header { z-index: 3; }
+.rack-main { position: relative; }
+.rack-side:hover, .rack-side:focus-within,
+.rack-main:hover, .rack-main:focus-within { z-index: 2; }
+.rack-side > *:hover, .rack-side > *:focus-within,
+.rack-main > *:hover, .rack-main > *:focus-within { position: relative; z-index: 2; }
+
+@media (max-width: 860px) {
+  .rack { display: flex; flex-direction: column; align-items: stretch; }
+  .rack-side, .rack-main { display: contents; }
+  /* Order on narrow screens: Source, Trainer (and Quick Start), Controls,
+     Score, then the data buttons, so the trainer is near the top */
+  .rack-side > .panel-group:first-child { order: 1; }
+  .rack-main > .panel-group { order: 2; }
+  .rack-side > .panel-group:nth-child(2) { order: 3; }
+  .rack-main > .score-card { order: 4; }
+  .side-footer { order: 5; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { InfoIcon } from './Icons.jsx';
-import { FreqGraph, rowInset, fmtHz } from './FreqGraph.jsx';
+import { FreqGraph, fmtHz } from './FreqGraph.jsx';
+import { QuickStart, ModePicker, BandRows, AnswerLegend, Transport, StreakMeter } from './TrainerParts.jsx';
 import { heatFor, pickWeighted } from '../lib/progress.js';
 import { buildChallengeUrl, copyText } from '../lib/challenge.js';
 import { applyAnswer, CORRECT_TO_ADVANCE, WRONG_TO_DECREASE, MIN_LEVEL, MAX_LEVEL } from '../lib/progression.js';
 import {
   generateBands, octaveError, withinSweepTolerance, bandRange, typeAt, makeFilter,
-  signForMode, pickDirection, freqToNote, freqRegion, FREQ_LABEL, FREQ_UNIT,
+  signForMode, pickDirection, freqToNote, freqRegion,
   SWEEP_RANGE, SWEEP_GRID,
 } from '../lib/trainer.js';
 
@@ -27,33 +27,6 @@ const SWEEP_TOL_LABEL = ['1', '⅔', '½', '⅓', '⅙'];
 const TYPE_LABELS = {
   lowshelf: 'low shelf', highshelf: 'high shelf', lowpass: 'low-pass', highpass: 'high-pass',
 };
-
-function FreqRow({ shownBands, range, sign, dirLabel, getBtnState, selectBand, answered, onHover }) {
-  const inset = rowInset(...range);
-  return (
-    <div
-      className="freq-grid"
-      style={{ '--n': shownBands.length, paddingLeft: inset.left, paddingRight: inset.right }}
-    >
-      {shownBands.map(freq => (
-        <button
-          key={freq}
-          className={`freq-btn ${getBtnState(freq, sign)}`}
-          onClick={() => selectBand(freq, sign)}
-          onMouseEnter={() => onHover({ freq, sign })}
-          onMouseLeave={() => onHover(null)}
-          onFocus={() => onHover({ freq, sign })}
-          onBlur={() => onHover(null)}
-          disabled={answered}
-          aria-label={`${FREQ_LABEL(freq)} ${FREQ_UNIT(freq)}${dirLabel ? ` ${dirLabel}` : ''}`}
-        >
-          <span className="freq-num">{FREQ_LABEL(freq)}</span>
-          <span className="freq-unit">{FREQ_UNIT(freq)}</span>
-        </button>
-      ))}
-    </div>
-  );
-}
 
 export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay, onResult, initialMode, initialLevel, sourceId }) {
   const [testMode, setTestMode] = useState(initialMode ?? null);
@@ -288,27 +261,11 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
 
   if (!engine.isLoaded) {
     // ── Empty state ───────────────────────────────────────────────────────
-    outside = (
-      <ol className="quickstart">
-        <li><strong>Load a source</strong> — pink noise is best for learning; your own music works too.</li>
-        <li><strong>Choose a mode</strong> — spot boosts and cuts, shelves, filter cutoffs, or sweep for the exact spot.</li>
-        <li><strong>Compare EQ and Flat</strong>, then pick the band you hear changing.</li>
-      </ol>
-    );
+    outside = <QuickStart />;
   } else if (!testMode) {
     // ── Mode picker ───────────────────────────────────────────────────────
     header = <h2>Choose Test Mode</h2>;
-    body = (
-      <div className="mode-grid">
-        {MODES.map(m => (
-          <button key={m.id} className="mode-card" onClick={() => selectMode(m.id)}>
-            <span className="mode-label">{m.label}</span>
-            <span className="mode-sign">{m.badge(gainDb)}</span>
-            <span className="mode-desc">{m.desc}</span>
-          </button>
-        ))}
-      </div>
-    );
+    body = <ModePicker modes={MODES} gainDb={gainDb} onSelect={selectMode} />;
   } else if (!trial) {
     // ── Start state ───────────────────────────────────────────────────────
     header = (
@@ -351,11 +308,6 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
       }
       return isSel ? 'f-selected' : '';
     };
-    const rowProps = { shownBands, range, getBtnState, selectBand, answered, onHover: setHovered };
-
-    const isWrongStreak = wrongStreak > 0;
-    const streakCount = isWrongStreak ? wrongStreak : correctStreak;
-    const streakMax = isWrongStreak ? WRONG_TO_DECREASE : CORRECT_TO_ADVANCE;
 
     header = (
       <>
@@ -383,91 +335,40 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
       </>
     );
 
+    const shortcuts = kind === 'sweep'
+      ? 'Click/drag the graph · ← → nudge · Space EQ/Flat · Enter check/next'
+      : `1–9, 0 pick band · ← → move${twoRows ? ' · ↑ ↓ boost/cut' : ''} · Space EQ/Flat · Enter check/next`;
+
     body = (
       <>
-        {/* Band keys sit directly under their curve peaks; mixed mode adds a cut row */}
         {kind === 'sweep' ? (
           <p className="sweep-hint">
             Within <strong>±{SWEEP_TOL_LABEL[level - 1]} oct</strong> counts · ← → nudge by a semitone
           </p>
-        ) : twoRows ? (
-          <div className="freq-grid-mixed">
-            <div className="mixed-row">
-              <span className="mixed-row-label boost-label" data-tooltip="Boost row">▲</span>
-              <FreqRow {...rowProps} sign={1} dirLabel="boost" />
-            </div>
-            <div className="mixed-row">
-              <span className="mixed-row-label cut-label" data-tooltip="Cut row">▼</span>
-              <FreqRow {...rowProps} sign={-1} dirLabel="cut" />
-            </div>
-          </div>
         ) : (
-          <FreqRow {...rowProps} sign={activeSign} />
+          <BandRows
+            twoRows={twoRows} sign={activeSign}
+            shownBands={shownBands} range={range} getBtnState={getBtnState}
+            selectBand={selectBand} answered={answered} onHover={setHovered}
+          />
         )}
 
         {answered && kind !== 'sweep' && (
-          <div className="freq-legend">
-            <span className="legend-item"><span className="legend-dot ld-hit" />Correct</span>
-            {!wasCorrect && (
-              <span className="legend-item"><span className="legend-dot ld-missed" />Was the answer</span>
-            )}
-            {hasSelection && !wasCorrect && (
-              <span className="legend-item"><span className="legend-dot ld-wrong" />Your pick</span>
-            )}
-            {(isMixed || kind === 'shelf') && (
-              <span className="legend-item muted mixed-dir-reveal">
-                Answer was a <strong>{answerLabel}</strong>
-              </span>
-            )}
-          </div>
+          <AnswerLegend
+            wasCorrect={wasCorrect} hasSelection={hasSelection}
+            directionLabel={twoRows ? answerLabel : null}
+          />
         )}
 
-        {/* Transport: compare EQ vs flat, then check */}
-        <div className="transport">
-          <button
-            className={`play-toggle play-toggle-eq ${playMode === 'eq' ? 'ptog-eq' : ''}`}
-            onClick={() => handlePlayMode('eq')}
-          >
-            {playMode === 'eq' ? '◼' : '▶'} EQ
-          </button>
-          <button
-            className={`play-toggle play-toggle-flat ${playMode === 'flat' ? 'ptog-flat' : ''}`}
-            onClick={() => handlePlayMode('flat')}
-          >
-            {playMode === 'flat' ? '◼' : '▶'} Flat
-          </button>
-          <div className="transport-action">
-            <span
-              className="icon-btn trainer-kb-hint"
-              aria-hidden="true"
-              data-tooltip={kind === 'sweep'
-                ? 'Click/drag the graph · ← → nudge · Space EQ/Flat · Enter check/next'
-                : `1–9, 0 pick band · ← → move${twoRows ? ' · ↑ ↓ boost/cut' : ''} · Space EQ/Flat · Enter check/next`}
-            >
-              <InfoIcon />
-            </span>
-            {!answered ? (
-              <button className="btn-primary" onClick={checkAnswer} disabled={!hasSelection}>
-                Check Answer
-              </button>
-            ) : (
-              <button className="btn-primary" onClick={startTrial}>Next Trial →</button>
-            )}
-          </div>
-        </div>
+        <Transport
+          playMode={playMode} onPlay={handlePlayMode} shortcuts={shortcuts}
+          answered={answered} canCheck={hasSelection} onCheck={checkAnswer} onNext={startTrial}
+        />
 
-        <div className="streak-row">
-          <span className={`streak-label ${isWrongStreak ? 'wrong-label' : ''}`}>
-            {isWrongStreak
-              ? `${streakCount}/${streakMax} wrong → level down`
-              : `${streakCount}/${streakMax} correct → level up`}
-          </span>
-          <div className="streak-pips">
-            {Array.from({ length: streakMax }, (_, i) => (
-              <span key={i} className={`pip ${i < streakCount ? (isWrongStreak ? 'pip-wrong' : 'pip-correct') : ''}`} />
-            ))}
-          </div>
-        </div>
+        <StreakMeter
+          correctStreak={correctStreak} wrongStreak={wrongStreak}
+          correctToAdvance={CORRECT_TO_ADVANCE} wrongToDecrease={WRONG_TO_DECREASE}
+        />
       </>
     );
   }

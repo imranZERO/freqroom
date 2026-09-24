@@ -1,0 +1,149 @@
+/* ── Header ─────────────────────────────────────────────────────────────── */
+.app-header {
+  position: relative;
+  padding: 28px 0 20px;
+  margin-bottom: 22px;
+}
+/* Ruler-style rule: fine ticks with a taller tick every 5th */
+.app-header::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 7px;
+  border-bottom: 1px solid var(--border);
+  background:
+    repeating-linear-gradient(to right, var(--border-hover) 0 1px, transparent 1px 40px) bottom / 100% 7px no-repeat,
+    repeating-linear-gradient(to right, var(--border) 0 1px, transparent 1px 8px) bottom / 100% 4px no-repeat;
+}
+.header-top {
+  /* above the ruler rule (.app-header::after), so the buttons' tooltips aren't covered */
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+/* Title and subtitle share a line on wide screens and stack on narrow ones */
+.header-title {
+  display: flex;
+  align-items: center; /* the logo mark has no text baseline, so centre instead */
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  min-width: 0;
+}
+.header-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.app-header h1 {
+  font-size: 2.1rem;
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  line-height: 1;
+}
+.title-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: inherit;
+  text-decoration: none;
+}
+/* Waveform mark, same shape as the favicon and footer mark */
+.header-mark { width: 30px; height: 30px; flex-shrink: 0; }
+.header-mark polyline {
+  fill: none;
+  stroke: var(--a);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.title-eq {
+  color: var(--a);
+}
+.app-header p {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.icon-btn {
+  background: linear-gradient(to bottom, var(--key-top), var(--key-bottom));
+  border: 1px solid var(--border-hover);
+  border-bottom: 2px solid var(--key-edge);
+  border-radius: var(--radius);
+  box-shadow: inset 0 1px 0 var(--highlight), var(--key-drop);
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  transition: color 0.15s, border-color 0.15s, background 0.15s, transform 0.08s;
+}
+.icon-btn:hover {
+  color: var(--a);
+  border-color: color-mix(in srgb, var(--a) 70%, var(--border-hover));
+  border-bottom-color: color-mix(in srgb, var(--a) 40%, var(--key-edge));
+  background: linear-gradient(to bottom,
+    color-mix(in srgb, var(--a) 10%, var(--key-top)),
+    color-mix(in srgb, var(--a) 5%, var(--key-bottom)));
+  transform: translateY(-1px);
+}
+.icon-btn:active { transform: translateY(1px); border-bottom-width: 1px; }
+/* Tooltips: any element with data-tooltip gets the same styled label.
+   Default: centred above the element. Header tooltips open downward and
+   align to the right edge, since the buttons sit at the top-right corner. */
+[data-tooltip] { position: relative; }
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  width: max-content;
+  max-width: 260px;
+  background: var(--text);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: normal;
+  text-transform: none;
+  line-height: 1.4;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  color: var(--bg);
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, 4px);
+  transition: opacity 0.15s, transform 0.15s;
+  z-index: 10;
+}
+[data-tooltip]:hover::after,
+[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+.app-header [data-tooltip]::after {
+  bottom: auto;
+  top: calc(100% + 8px);
+  left: auto;
+  right: 0;
+  transform: translateY(-4px);
+}
+.app-header [data-tooltip]:hover::after,
+.app-header [data-tooltip]:focus-visible::after { transform: translateY(0); }
+/* Edge-aligned variants so tooltips near the page edges don't spill off it */
+.trainer-kb-hint[data-tooltip]::after { left: 0; transform: translateY(4px); }
+.trainer-share[data-tooltip]::after { left: auto; right: 0; transform: translateY(4px); }
+.trainer-kb-hint[data-tooltip]:hover::after,
+.trainer-kb-hint[data-tooltip]:focus-visible::after,
+.trainer-share[data-tooltip]:hover::after,
+.trainer-share[data-tooltip]:focus-visible::after { transform: translateY(0); }
+
+:focus-visible {
+  outline: 2px solid var(--a);
+  outline-offset: 2px;
+}

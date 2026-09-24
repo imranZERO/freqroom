@@ -1,0 +1,131 @@
+/* ── Audio controls ─────────────────────────────────────────────────────── */
+.audio-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.control-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: "label value" "slider slider";
+  align-items: center;
+  gap: 0 12px;
+}
+.control-row .control-label  { grid-area: label; }
+.control-row .control-value  { grid-area: value; }
+.control-row .control-slider { grid-area: slider; }
+.control-row-pair {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+@media (max-width: 860px) and (min-width: 481px) {
+  .control-row-pair { grid-template-columns: 1fr 1fr; gap: 16px 24px; }
+}
+.control-label {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  min-width: 58px;
+  flex-shrink: 0;
+}
+.control-value {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  color: var(--text);
+  min-width: 44px;
+  text-align: right;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+.control-value-time {
+  min-width: max-content;
+}
+.control-duration {
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+/* Fader: slot with a solid brown cap — gradient body, fine grip grooves,
+   and an amber index line across the middle. Every layer is opaque. */
+.control-slider {
+  flex: 1;
+  min-width: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  margin: 10px 0;
+  border-radius: 2px;
+  background: linear-gradient(to right, var(--a) var(--fill, 80%), var(--border-hover) var(--fill, 80%));
+  outline: none;
+  cursor: pointer;
+}
+.control-slider:focus-visible { outline: 2px solid var(--a); outline-offset: 8px; }
+/* Hover: the row's label and value brighten, the unfilled track lightens, and
+   the cap gets an amber rim */
+.control-label, .control-value { transition: color 0.15s; }
+.control-row:hover .control-label { color: var(--text); }
+.control-row:hover .control-value { color: var(--a); }
+.control-slider:hover {
+  background: linear-gradient(to right, var(--a) var(--fill, 80%), color-mix(in srgb, var(--a) 25%, var(--border-hover)) var(--fill, 80%));
+}
+.control-slider:hover::-webkit-slider-thumb {
+  border-color: var(--a);
+  box-shadow: inset 0 1px 0 var(--cap-shine), 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 0 3px color-mix(in srgb, var(--a) 22%, transparent);
+  transform: scale(1.06);
+}
+.control-slider:hover::-moz-range-thumb {
+  border-color: var(--a);
+  box-shadow: inset 0 1px 0 var(--cap-shine), 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 0 3px color-mix(in srgb, var(--a) 22%, transparent);
+}
+.control-slider:hover::-moz-range-track { background: color-mix(in srgb, var(--a) 25%, var(--border-hover)); }
+.control-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 24px;
+  border-radius: 3px;
+  border: 1px solid var(--cap-edge);
+  background-color: var(--cap-bottom);
+  background-image:
+    linear-gradient(var(--a), var(--a)),
+    repeating-linear-gradient(to bottom, transparent 0 3px, rgba(0, 0, 0, 0.28) 3px 4px),
+    linear-gradient(to bottom, var(--cap-top), var(--cap-bottom));
+  background-size: 100% 2px, 100% 100%, 100% 100%;
+  background-position: center, center, center;
+  background-repeat: no-repeat;
+  box-shadow: inset 0 1px 0 var(--cap-shine), 0 1px 2px rgba(0, 0, 0, 0.3);
+  cursor: grab;
+  transition: transform 0.1s, border-color 0.15s, box-shadow 0.15s;
+}
+.control-slider:active::-webkit-slider-thumb { cursor: grabbing; transform: scale(1.06); }
+.control-slider::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-hover);
+}
+.control-slider::-moz-range-progress {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--a);
+}
+.control-slider::-moz-range-thumb {
+  box-sizing: border-box;
+  width: 14px;
+  height: 24px;
+  border-radius: 3px;
+  border: 1px solid var(--cap-edge);
+  background-color: var(--cap-bottom);
+  background-image:
+    linear-gradient(var(--a), var(--a)),
+    repeating-linear-gradient(to bottom, transparent 0 3px, rgba(0, 0, 0, 0.28) 3px 4px),
+    linear-gradient(to bottom, var(--cap-top), var(--cap-bottom));
+  background-size: 100% 2px, 100% 100%, 100% 100%;
+  background-position: center, center, center;
+  background-repeat: no-repeat;
+  box-shadow: inset 0 1px 0 var(--cap-shine), 0 1px 2px rgba(0, 0, 0, 0.3);
+  cursor: grab;
+}
+.control-slider:active::-moz-range-thumb { cursor: grabbing; }

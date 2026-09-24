@@ -1,0 +1,7 @@
+/* ── Misc ───────────────────────────────────────────────────────────────── */
+.error {
+  color: var(--red);
+  font-size: 0.82rem;
+  margin-top: 10px;
+}
+.muted { color: var(--muted); }
