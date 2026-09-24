@@ -138,6 +138,22 @@ describe('TrackSelector', () => {
     expect(engine.seek).toHaveBeenLastCalledWith(3);
   });
 
+  it('seeks exactly once when a drag ends by pointerup then loses capture', async () => {
+    const { engine, container } = renderSelector();
+    const emptyWav = new File([new Uint8Array(44)], 'a.wav', { type: 'audio/wav' });
+    await uploadAndSettle(container, emptyWav);
+
+    const slider = container.querySelector('#ctrl-position');
+    fireEvent.pointerDown(slider);
+    fireEvent.change(slider, { target: { value: '8' } });
+    // pointerup handles the seek, then the implicit released capture fires and
+    // hits the same drag-end guard — it must not seek a second time
+    fireEvent.pointerUp(slider);
+    fireEvent.pointerCancel(slider);
+    expect(engine.seek).toHaveBeenCalledTimes(1);
+    expect(engine.seek).toHaveBeenLastCalledWith(8);
+  });
+
   it('records loop A and B through the engine only when ordered correctly', async () => {
     const { engine, container } = renderSelector();
     const emptyWav = new File([new Uint8Array(44)], 'a.wav', { type: 'audio/wav' });
