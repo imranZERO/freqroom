@@ -11,6 +11,6 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    setupFiles: ['./test/setup.js'],
+    setupFiles: ['./test/setup.js', './test/setup-dom.js'],
   },
 });

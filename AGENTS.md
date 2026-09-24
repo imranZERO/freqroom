@@ -8,7 +8,7 @@ This file provides guidance to AI coding agents (Claude Code, Codex, Cursor, etc
 npm run dev      # dev server at http://localhost:5173
 npm run build    # production build → dist/
 npm run preview  # serve the production build
-npm test         # run the vitest suite once (node environment, no DOM)
+npm test         # run the vitest suite once
 npm run test:watch  # watch mode
 ```
 
@@ -16,18 +16,27 @@ No linter is configured.
 
 ## Testing
 
-Vitest runs under Vite's own config (aliases like `react → preact/compat` apply) in a **node** environment — `test/setup.js` provides bare-bones `localStorage`/`location`/`navigator.clipboard`/`window.prompt` stubs. There are no Web Audio, AudioContext, or React component tests yet: the suite covers **pure logic only**:
+Vitest runs under Vite's own config (aliases like `react → preact/compat` apply). The default environment is **node** (`test/setup.js` provides bare-bones `localStorage`/`location`/`navigator.clipboard`/`window.prompt` stubs, guarded so jsdom globals pass through). Test files that need a DOM add `// @vitest-environment jsdom` to the top and get `matchMedia`/`requestAnimationFrame` stubs plus `@testing-library/jest-dom` from `test/setup-dom.js`.
+
+**Pure logic** (node environment):
 
 - `tests/progress.test.js` — octave bucketing, `recordResult`, `heatFor`, `pickWeighted`
 - `tests/progression.test.js` — `applyAnswer` (3-up / 2-down / clamp rules from `src/lib/progression.js`)
 - `tests/challenge.test.js` — `parseChallenge` / `buildChallengeUrl` / clipboard fallback
 - `tests/storage.test.js` — `load`/`save`/`clearAll` incl. storage-unavailable fallbacks
-- `tests/biquad.test.js` — `biquadCoeffs` / `magnitudeDb` / `rowInset` from `FreqGraph.jsx` (pure math, no DOM at import; ground truths: peaking hits exactly gain at centre, Butterworth cutoffs are −3.01 dB, shelf corners sit at half the gain in dB)
+- `tests/biquad.test.js` — `biquadCoeffs` / `magnitudeDb` / `rowInset` from `FreqGraph.jsx` (pure math, no DOM at import; ground truths: peaking hits exactly gain at centre, Butterworth cutoffs are −3.01 dB, shelf corners sit at half the gain in dB) and `fmtHz`
 - `tests/audioInfo.test.js` — header parsing for WAV/FLAC/Ogg/Opus/MP3/M4A with hand-built byte fixtures
 - `tests/noiseGen.test.js` — white/pink noise buffers (finite, in range, RMS bands)
 - `tests/audio-engine-math.test.js` — `clampStartOffset` / `clampToLoopOffset`
+- `tests/trainer.test.js` — `src/lib/trainer.js`: `generateBands` subdivision, `bandRange`, `makeFilter`, octave error calc, Sweep tolerance gating, note naming, `pickDirection`
+- `tests/track-format.test.js` — `src/lib/trackFormat.js`: seeded waveform glyphs (deterministic pick), `formatTime`, `formatSpec`
 
-Add tests when changing any of these modules; pure helpers extracted from hooks/components (see `src/lib/progression.js`, `src/lib/audioEngineMath.js`) are the intended seam for future logic tests.
+**Component tests** (`// @vitest-environment jsdom` + Testing Library):
+
+- `tests/frequency-trainer.test.jsx`, `tests/track-selector.test.jsx`. `FrequencyTrainer` and `TrackSelector` both take `engine` as a prop, so tests inject a stub engine (`play`/`stop`/`seek`/`setLoop`/`loadBuffer`/`getCurrentOffset` as `vi.fn()`, `isLoaded: true`, `duration: 30`) and never touch the real `AudioContext`; `getCtx()` must return `{ sampleRate, createBuffer }` for the noise generators.
+- jsdom gotchas: file inputs swallow `fireEvent.change({ target: { files } })` — assign `Object.defineProperty(input, 'files', { value: [file] })` then `input.dispatchEvent(new Event('change', { bubbles: true }))`. After a real upload, the transport's position effect writes `getCurrentOffset()` back over the slider late, so wait for the upload to settle ("Loading…" gone) before driving `#ctrl-position`.
+
+Add tests when changing any of these modules; pure helpers extracted from hooks/components (`src/lib/progression.js`, `src/lib/audioEngineMath.js`, `src/lib/trainer.js`, `src/lib/trackFormat.js`) are the intended seam for logic tests.
 
 ## Architecture
 
