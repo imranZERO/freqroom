@@ -1,7 +1,7 @@
 // Presentational pieces of the trainer panel. They hold no state: the
 // FrequencyTrainer owns the trial and passes in what to show and what to call.
 import { InfoIcon } from './Icons.jsx';
-import { rowInset } from './FreqGraph.jsx';
+import { rowInset, biquadCoeffs, magnitudeDb } from './FreqGraph.jsx';
 import { FREQ_LABEL, FREQ_UNIT } from '../lib/trainer.js';
 
 export function QuickStart() {
@@ -14,13 +14,51 @@ export function QuickStart() {
   );
 }
 
+// Small response sketches for the mode cards, drawn with the same biquad math
+// as the graph so each shows the real shape of that mode's filter. Each curve
+// is tagged boost or cut so it can take the matching colour on hover.
+const GLYPH_W = 64, GLYPH_H = 28, GLYPH_DB = 13, GLYPH_SR = 48000;
+function sketch(filter) {
+  const coeffs = biquadCoeffs(filter, GLYPH_SR);
+  const pts = [];
+  for (let i = 0; i <= 48; i++) {
+    const f = 20 * Math.pow(1000, i / 48);
+    const db = Math.max(-GLYPH_DB, Math.min(GLYPH_DB, magnitudeDb(coeffs, f, GLYPH_SR)));
+    pts.push(`${((i / 48) * GLYPH_W).toFixed(1)},${(GLYPH_H / 2 - (db / GLYPH_DB) * (GLYPH_H / 2 - 1.5)).toFixed(1)}`);
+  }
+  return pts.join(' ');
+}
+// A wider bell than the app default (Q 1.4) so it reads at this tiny size
+const peak = (frequency, gain) => ({ type: 'peaking', frequency, Q: 0.9, gain });
+const MODE_SKETCHES = {
+  boost: [['boost', sketch(peak(1000, 11))]],
+  cut:   [['cut', sketch(peak(1000, -11))]],
+  both:  [['boost', sketch(peak(250, 11))], ['cut', sketch(peak(4000, -11))]],
+  shelf: [['boost', sketch({ type: 'lowshelf', frequency: 250, gain: 9 })], ['cut', sketch({ type: 'highshelf', frequency: 4000, gain: -9 })]],
+  pass:  [['cut', sketch({ type: 'highpass', frequency: 120, Q: -3.01 })], ['cut', sketch({ type: 'lowpass', frequency: 8000, Q: -3.01 })]],
+  sweep: [['boost', sketch(peak(1400, 11))]],
+};
+
+function ModeGlyph({ id }) {
+  return (
+    <svg className="mode-glyph" viewBox={`0 0 ${GLYPH_W} ${GLYPH_H}`} width={GLYPH_W} height={GLYPH_H} aria-hidden="true">
+      <line className="mode-glyph-zero" x1="0" y1={GLYPH_H / 2} x2={GLYPH_W} y2={GLYPH_H / 2} />
+      {id === 'sweep' && <line className="mode-glyph-marker" x1={GLYPH_W * 0.62} y1="1" x2={GLYPH_W * 0.62} y2={GLYPH_H - 1} />}
+      {(MODE_SKETCHES[id] ?? []).map(([dir, pts], i) => (
+        <polyline key={i} className={`mode-glyph-${dir}`} points={pts} />
+      ))}
+    </svg>
+  );
+}
+
 export function ModePicker({ modes, gainDb, onSelect }) {
   return (
     <div className="mode-grid">
       {modes.map(m => (
         <button key={m.id} className="mode-card" onClick={() => onSelect(m.id)}>
-          <span className="mode-label">{m.label}</span>
           <span className="mode-sign">{m.badge(gainDb)}</span>
+          <ModeGlyph id={m.id} />
+          <span className="mode-label">{m.label}</span>
           <span className="mode-desc">{m.desc}</span>
         </button>
       ))}

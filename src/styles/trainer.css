@@ -69,15 +69,40 @@
   border-radius: var(--radius);
   color: var(--text);
   cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-  padding: 16px;
+  /* Same layout as the source buttons: tag on top, sketch on the right,
+     name below, description across the bottom */
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "sign glyph" "label glyph" "desc desc";
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 3px;
+  padding: 13px 14px 14px;
   transition: border-color 0.15s, background 0.15s, transform 0.15s;
   text-align: left;
   font-family: inherit;
 }
+.mode-sign  { grid-area: sign; }
+.mode-label { grid-area: label; }
+.mode-desc  { grid-area: desc; margin-top: 4px; }
+.mode-glyph { grid-area: glyph; align-self: start; overflow: visible; }
+
+/* Response sketch: muted until hovered, then boosts go amber and cuts blue */
+.mode-glyph polyline {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  opacity: 0.8;
+  transition: stroke 0.2s, opacity 0.2s;
+}
+.mode-glyph-zero { stroke: var(--border-hover); stroke-width: 1; stroke-dasharray: 1 2; }
+.mode-glyph-marker { stroke: var(--muted); stroke-width: 1; opacity: 0.6; transition: stroke 0.2s; }
+.mode-card:hover .mode-glyph polyline { opacity: 1; }
+.mode-card:hover .mode-glyph-boost { stroke: var(--a); }
+.mode-card:hover .mode-glyph-cut { stroke: var(--cut); }
+.mode-card:hover .mode-glyph-marker { stroke: var(--a); opacity: 1; }
 .mode-card:hover {
   border-color: color-mix(in srgb, var(--a) 70%, var(--border-hover));
   border-bottom-color: color-mix(in srgb, var(--a) 40%, var(--key-edge)); /* amber side so it stands out from the tinted face */
@@ -93,11 +118,29 @@
   letter-spacing: -0.02em;
 }
 .mode-sign {
+  /* engraved tag with a lamp, like the source buttons' IN tags */
+  display: flex;
+  align-items: center;
+  gap: 7px;
   font-family: var(--font-mono);
-  font-size: 0.85rem;
+  font-size: 0.7rem;
   font-weight: 500;
-  color: var(--a);
-  order: -1;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  transition: color 0.15s;
+}
+.mode-sign::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--border-hover);
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.mode-card:hover .mode-sign { color: var(--a); }
+.mode-card:hover .mode-sign::before {
+  background: var(--a);
+  box-shadow: 0 0 5px color-mix(in srgb, var(--a) 60%, transparent);
 }
 .mode-desc {
   font-size: 0.78rem;
