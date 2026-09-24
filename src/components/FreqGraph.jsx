@@ -153,17 +153,6 @@ function HeatStrip({ heat, g }) {
   );
 }
 
-// L-shaped marks just inside each plot corner
-function corners(g) {
-  const L = 7 * g.k, o = 3 * g.k, x0 = P.l + o, x1 = P.l + IW - o, y0 = g.T + o, y1 = g.T + g.IH - o;
-  return [
-    `M${x0},${y0 + L}V${y0}H${x0 + L}`,
-    `M${x1 - L},${y0}H${x1}V${y0 + L}`,
-    `M${x0},${y1 - L}V${y1}H${x0 + L}`,
-    `M${x1 - L},${y1}H${x1}V${y1 - L}`,
-  ].join('');
-}
-
 const sameFilter = (a, b) => a.type === b.type && a.frequency === b.frequency && a.gain === b.gain;
 
 // curves: candidate filters drawn in gray; answer: the revealed filter (or null).
@@ -291,9 +280,8 @@ export function FreqGraph({ curves = [], answer = null, hover = null, selected =
 
         <HeatStrip heat={heat} g={g} />
 
-        {/* Border with crop marks at the corners */}
+        {/* Border */}
         <rect x={P.l} y={g.T} width={IW} height={g.IH} className="graph-border" />
-        <path className="graph-corners" d={corners(g)} />
 
         {/* Readout */}
         <text x={P.l + 13 * g.k} y={g.T + 13 * g.k} className="graph-readout graph-readout-title">RESPONSE</text>

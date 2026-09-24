@@ -21,7 +21,6 @@
   --radius: 6px;
   --highlight: rgba(255, 244, 222, 0.035);
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
-  --grain-opacity: 0.05;
   --inset: inset 0 1px 3px rgba(0, 0, 0, 0.18);
   --cap-top: #8a5a31;
   --cap-bottom: #5b3a1d;
@@ -53,7 +52,6 @@
   --red: #c4422e;
   --highlight: rgba(255, 255, 255, 0.7);
   --shadow: 0 1px 2px rgba(60, 45, 20, 0.06);
-  --grain-opacity: 0.07;
   --inset: inset 0 1px 2px rgba(60, 45, 20, 0.06);
   --cap-top: #8f5e33;
   --cap-bottom: #633f1f;
@@ -81,17 +79,6 @@ body {
   line-height: 1.5;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
-}
-
-/* Film grain over everything; pointer-events off so it never interferes */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 100;
-  opacity: var(--grain-opacity);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 .app {
