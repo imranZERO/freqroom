@@ -162,7 +162,7 @@ export function TechnicalDetails({ chrome }) {
                 <tr><td>Mixed</td><td>peaking, ±gain</td><td>band and direction</td><td>20 Hz – 20 kHz</td><td>2–15 bands</td></tr>
                 <tr><td>Shelves</td><td>low/high shelf, ±gain</td><td>corner and direction</td><td>60 Hz – 10 kHz</td><td>2–8 corners</td></tr>
                 <tr><td>Pass Filters</td><td>high-pass or low-pass</td><td>cutoff frequency</td><td>HP 40 Hz – 1 kHz, LP 1 – 16 kHz</td><td>2–8 cutoffs</td></tr>
-                <tr><td>Sweep</td><td>peaking, +gain</td><td>any frequency, by dragging</td><td>40 Hz – 16 kHz</td><td>1–5 (tolerance)</td></tr>
+                <tr><td>Sweep</td><td>peaking, ±gain</td><td>any frequency, by dragging</td><td>40 Hz – 16 kHz</td><td>1–5 (tolerance)</td></tr>
               </tbody>
             </table>
           </div>
@@ -253,7 +253,8 @@ export function TechnicalDetails({ chrome }) {
 
         <Section id="sweep">
           <p className="td-p">
-            Sweep mode has no buttons: you drag a marker across the graph to where you hear the boost (← and → nudge
+            Sweep mode has no buttons: on the start screen you pick the direction (a boost or a dip), then drag a marker across
+            the graph to where you hear it (← and → nudge
             it by a semitone, 1/12 octave). The hidden frequency is drawn from 72 log-spaced points between 40 Hz and
             16 kHz. Your answer is scored by its distance from the true frequency in octaves:
           </p>

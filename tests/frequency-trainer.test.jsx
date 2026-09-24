@@ -158,6 +158,32 @@ describe('FrequencyTrainer', () => {
     expect(onResult).toHaveBeenCalledWith(expect.objectContaining({ mode: 'sweep', correct: false }));
   });
 
+  it('sweep starts as a boost and offers a direction choice on the start screen', () => {
+    const { utils } = renderTrainer({ random: 0, props: { initialMode: 'sweep', initialLevel: 1 } });
+    // Boost/Dip toggle is shown on the start screen, boost selected by default
+    expect(screen.getByRole('button', { name: /boost/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /dip/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /boost/i })).toHaveAttribute('aria-pressed', 'true');
+
+    fireEvent.click(screen.getByText('Start Trial'));
+    const readout = [...utils.container.querySelectorAll('.graph-readout')].map(n => n.textContent).join('');
+    expect(readout).toContain('+6 dB');
+    expect(utils.container.querySelector('.graph-placeholder').textContent).toContain('boost');
+  });
+
+  it('lets you switch the sweep direction to a dip before starting', () => {
+    const { utils } = renderTrainer({ random: 0, props: { initialMode: 'sweep', initialLevel: 1 } });
+    fireEvent.click(screen.getByText('▼ Dip'));
+    expect(screen.getByRole('button', { name: /dip/i })).toHaveAttribute('aria-pressed', 'true');
+    expect(document.querySelector('.start-desc').textContent).toContain('dip');
+
+    // Enter starts the trial; the hidden filter is a cut this time
+    fireEvent.keyDown(window, { key: 'Enter' });
+    const readout = [...utils.container.querySelectorAll('.graph-readout')].map(n => n.textContent).join('');
+    expect(readout).toContain('−6 dB');
+    expect(utils.container.querySelector('.graph-placeholder').textContent).toContain('dip');
+  });
+
   it('uses a challenge link level only until you leave its mode', () => {
     const progress = { ...EMPTY_PROGRESS, levels: { boost: 4 } };
     renderTrainer({ props: { initialMode: 'boost', initialLevel: 9, progress } });

@@ -173,7 +173,7 @@ const sameFilter = (a, b) => a.type === b.type && a.frequency === b.frequency &&
 // curve, drawn prominently until the answer is revealed
 // readout: short status line drawn in the top-right of the plot (filter, gain, Q)
 // idle: nothing loaded yet, so the display runs its scanning animation
-export function FreqGraph({ curves = [], answer = null, hover = null, selected = null, gainDb = 6, sampleRate = 48000, heat = [], marker = null, onPick = null, readout = '', idle = false }) {
+export function FreqGraph({ curves = [], answer = null, hover = null, selected = null, gainDb = 6, sampleRate = 48000, heat = [], marker = null, onPick = null, pickText = 'Click or drag where you hear the boost', readout = '', idle = false }) {
   const g = layout(useMediaQuery(COMPACT_QUERY) ? COMPACT : WIDE);
   const isBoost = answer ? (answer.gain ?? 0) > 0 : false;
   // ±12 dB by default; widens in 6 dB steps so high gains aren't clipped
@@ -285,7 +285,7 @@ export function FreqGraph({ curves = [], answer = null, hover = null, selected =
         {curves.length === 0 && !answer && !marker && (
           // Sits just above the 0 dB line so no grid line runs through it
           <text x={P.l + IW / 2} y={toY(0, range, g) - 10 * g.k} textAnchor="middle" className="graph-placeholder">
-            {onPick ? 'Click or drag where you hear the boost' : 'EQ curve appears here during a trial'}
+            {onPick ? pickText : 'EQ curve appears here during a trial'}
           </text>
         )}
 

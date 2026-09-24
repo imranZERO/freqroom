@@ -17,7 +17,7 @@ export const MODES = [
   { id: 'both',  label: 'Mixed',        family: 'peak',  badge: g => `±${g}dB`, desc: 'Identify the frequency and whether it was a boost or a cut' },
   { id: 'shelf', label: 'Shelves',      family: 'shelf', badge: g => `±${g}dB`, desc: 'Find the corner of a low or high shelf and whether it boosts or cuts', maxLevel: 8 },
   { id: 'pass',  label: 'Pass Filters', family: 'pass',  badge: () => 'HP / LP', desc: 'Find the cutoff of a high-pass or low-pass filter', maxLevel: 8 },
-  { id: 'sweep', label: 'Sweep',        family: 'sweep', badge: g => `+${g}dB`, desc: 'Drag on the graph to where you hear the boost', minLevel: 1, maxLevel: 5 },
+  { id: 'sweep', label: 'Sweep',        family: 'sweep', badge: g => `±${g}dB`, desc: 'Drag on the graph to where you hear the boost or dip', minLevel: 1, maxLevel: 5 },
 ];
 
 // Sweep mode: the per-level tolerance labels ("within ±1 octave counts")
@@ -49,6 +49,8 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
   const [wrongStreak, setWrongStreak] = useState(0);
   const [trial, setTrial] = useState(null);
   const [playMode, setPlayMode] = useState(null);
+  // Sweep direction chosen on the Start Trial screen: +1 boost, −1 dip
+  const [sweepSign, setSweepSign] = useState(1);
   // Band button under the pointer (or keyboard focus); its curve is highlighted on the graph
   const [hovered, setHovered] = useState(null);
 
@@ -93,7 +95,7 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
           e.preventDefault();
           const from = trial.userSelection?.freq ?? 1000;
           const to = from * Math.pow(2, (key === 'ArrowLeft' ? -1 : 1) / 12);
-          selectBand(Math.max(20, Math.min(20000, to)), 1);
+          selectBand(Math.max(20, Math.min(20000, to)), trial.activeSign);
         }
         return;
       }
@@ -119,7 +121,7 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
 
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [trial, testMode, playMode, gainDb, q, level]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [trial, testMode, playMode, gainDb, q, level, sweepSign]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Copies a link that recreates this setup (only the settings the mode uses)
   async function shareChallenge() {
@@ -170,7 +172,7 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
     const activeBand = focus
       ? pickWeighted(pool, progress, family)
       : pool[Math.floor(Math.random() * pool.length)];
-    const activeSign = signForMode(testMode);
+    const activeSign = isSweep ? sweepSign : signForMode(testMode);
     const next = { kind, range, shownBands, activeBand, activeSign, userSelection: null, answered: false, wasCorrect: null };
     setTrial(next);
     if (autoplay) {
@@ -232,7 +234,7 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
   }
 
   // Status line on the graph: which filter is in play and its settings
-  const SIGN = { boost: '+', cut: '−', both: '±', shelf: '±', sweep: '+' };
+  const SIGN = { boost: '+', cut: '−', both: '±', shelf: '±', sweep: sweepSign > 0 ? '+' : '−' };
   const qText = `Q ${q.toFixed(1)}`;
   const readout = !currentMode ? `±${gainDb} dB · ${qText}`
     : family === 'pass' ? `${trial ? (trial.kind === 'highpass' ? 'HIGH-PASS' : 'LOW-PASS') : 'HP / LP'} · 12 dB/oct`
@@ -250,7 +252,8 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
       sampleRate={engine.sampleRate}
       heat={heatFor(progress, family)}
       marker={trial?.kind === 'sweep' ? trial.userSelection?.freq ?? null : null}
-      onPick={trial?.kind === 'sweep' && !trial.answered ? f => selectBand(f, 1) : null}
+      onPick={trial?.kind === 'sweep' && !trial.answered ? f => selectBand(f, trial.activeSign) : null}
+      pickText={sweepSign > 0 ? 'Click or drag where you hear the boost' : 'Click or drag where you hear the dip'}
       readout={readout}
       idle={!engine.isLoaded}
     />
@@ -280,9 +283,21 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
     );
     body = (
       <div className="trainer-start">
-        <p className="start-desc">{currentMode.desc} — {isSweep
-          ? <>within <strong>±{SWEEP_TOL_LABEL[level - 1]}</strong> octave counts</>
-          : <>pick from <strong>{level}</strong> {family === 'shelf' ? 'corners' : family === 'pass' ? 'cutoffs' : 'bands'}</>}
+        {isSweep && (
+          <div className="sweep-dir" role="group" aria-label="Sweep direction">
+            <button
+              className={`btn-ghost sweep-opt sweep-opt-boost${sweepSign === 1 ? ' is-active' : ''}`}
+              onClick={() => setSweepSign(1)} aria-pressed={sweepSign === 1}
+            >▲ Boost</button>
+            <button
+              className={`btn-ghost sweep-opt sweep-opt-dip${sweepSign === -1 ? ' is-active' : ''}`}
+              onClick={() => setSweepSign(-1)} aria-pressed={sweepSign === -1}
+            >▼ Dip</button>
+          </div>
+        )}
+        <p className="start-desc">{isSweep
+          ? <>Drag on the graph to where you hear the <strong>{sweepSign > 0 ? 'boost' : 'dip'}</strong> — within <strong>±{SWEEP_TOL_LABEL[level - 1]}</strong> octave counts</>
+          : <>{currentMode.desc} — pick from <strong>{level}</strong> {family === 'shelf' ? 'corners' : family === 'pass' ? 'cutoffs' : 'bands'}</>}
         </p>
         <button className="btn-primary large" onClick={startTrial}>Start Trial</button>
       </div>
