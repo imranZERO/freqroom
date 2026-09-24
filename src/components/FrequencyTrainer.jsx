@@ -269,8 +269,12 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
     outside = <QuickStart />;
   } else if (!testMode) {
     // ── Mode picker ───────────────────────────────────────────────────────
-    header = <h2>Choose Test Mode</h2>;
-    body = <ModePicker modes={MODES} gainDb={gainDb} onSelect={selectMode} />;
+    body = (
+      <>
+        <h2 className="mode-title">Choose Test Mode</h2>
+        <ModePicker modes={MODES} gainDb={gainDb} onSelect={selectMode} />
+      </>
+    );
   } else if (!trial) {
     // ── Start state ───────────────────────────────────────────────────────
     header = (

@@ -53,6 +53,7 @@
 }
 
 /* Mode picker */
+.card .mode-title { margin-bottom: 0; }
 .mode-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
