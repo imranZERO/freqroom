@@ -68,6 +68,11 @@
 html { color-scheme: dark; }
 [data-theme="light"] { color-scheme: light; }
 
+/* Keep stray wide descendants from widening the page on narrow screens.
+   Intentional horizontal scrollers (e.g. the technical tables) retain their
+   own overflow behavior. */
+html, body { overflow-x: clip; }
+
 body {
   background: var(--bg);
   color: var(--text);
