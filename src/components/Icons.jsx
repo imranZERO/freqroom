@@ -84,3 +84,15 @@ export function SystemThemeIcon() {
     </svg>
   );
 }
+
+// imranZERO's mark ("[ ■ ]"), redrawn from the 16×16 favicon's pixel grid and
+// cropped to the glyph; uses currentColor so it follows the link colour
+export function ImranZeroIcon() {
+  return (
+    <svg width="16" height="16" viewBox="3 3 10 10" fill="currentColor" shapeRendering="crispEdges" aria-hidden="true">
+      <path d="M3 3h3v1H4v8h2v1H3z" />
+      <path d="M10 3h3v10h-3v-1h2V4h-2z" />
+      <rect x="6" y="6" width="4" height="4" />
+    </svg>
+  );
+}

@@ -45,4 +45,9 @@
 .footer-links a:hover { color: var(--a); }
 /* block icons centre cleanly against the caps (no inline baseline gap) */
 .footer-links svg { display: block; width: 13px; height: 13px; flex-shrink: 0; }
-.footer-credit a { color: var(--text); }
+.footer-credit { display: inline-flex; align-items: center; gap: 6px; line-height: 1; }
+.footer-credit a { color: var(--muted); }
+/* the mark is a solid block, so draw it smaller to sit level with the line
+   icons; nudged up a pixel to centre on the caps, and kept close to the name */
+.footer-credit a { gap: 4px; }
+.footer-credit svg { width: 10px; height: 10px; transform: translateY(-1px); }

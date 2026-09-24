@@ -1,5 +1,5 @@
 import { Link } from 'wouter';
-import { InfoIcon, SunIcon, MoonIcon, SystemThemeIcon, GitHubIcon, DocIcon, WaveIcon } from './Icons.jsx';
+import { InfoIcon, SunIcon, MoonIcon, SystemThemeIcon, GitHubIcon, DocIcon, WaveIcon, ImranZeroIcon } from './Icons.jsx';
 
 const THEME_UI = {
   system: { icon: <SystemThemeIcon />, label: 'System', next: 'Light' },
@@ -61,7 +61,7 @@ export function SiteFooter({ page }) {
       </nav>
       <p className="footer-links">
         <span className="footer-credit">
-          Created by <a href="https://imranzero.pages.dev" target="_blank" rel="noopener noreferrer">imranZERO</a>
+          Created by <a href="https://imranzero.pages.dev" target="_blank" rel="noopener noreferrer"><ImranZeroIcon />imranZERO</a>
         </span>
       </p>
     </footer>
