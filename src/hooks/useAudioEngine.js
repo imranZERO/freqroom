@@ -1,5 +1,6 @@
 import { useRef, useState, useCallback } from 'react';
 import { load, save } from '../lib/storage.js';
+import { clampStartOffset, clampToLoopOffset } from '../lib/audioEngineMath.js';
 
 // Time constant for setTargetAtTime ramps; ~5 time constants to settle (≈25 ms)
 const RAMP_TC = 0.005;
@@ -128,12 +129,6 @@ export function useAudioEngine() {
     return pos % bufferRef.current.duration;
   }, []);
 
-  // Offsets outside the loop region snap to its start
-  const clampToLoop = (offset) => {
-    const region = loopRef.current;
-    return region && (offset < region.start || offset >= region.end) ? region.start : offset;
-  };
-
   // Fades the current source out and stops it; the graph is kept for reuse.
   const fadeOutSource = useCallback(() => {
     const source = sourceRef.current;
@@ -150,10 +145,7 @@ export function useAudioEngine() {
   function startSource(graph, offset) {
     const { ctx, input } = graph;
     const dur = bufferRef.current.duration;
-    // Starting at/after the very end schedules no samples and dead-ends playback
-    // (sourceRef stays set, isPlaying stays true, nothing plays). Pull the offset
-    // just inside so the last sample plays and the loop restarts from the top.
-    if (offset >= dur) offset = Math.max(0, dur - 1 / ctx.sampleRate);
+    offset = clampStartOffset(offset, dur, ctx.sampleRate);
     const voice = ctx.createGain();
     voice.gain.value = 0;
     voice.connect(input);
@@ -164,7 +156,7 @@ export function useAudioEngine() {
     if (loopRef.current) {
       source.loopStart = loopRef.current.start;
       source.loopEnd = loopRef.current.end;
-      offset = clampToLoop(offset);
+      offset = clampToLoopOffset(offset, loopRef.current);
     }
     source.connect(voice);
 
@@ -215,7 +207,7 @@ export function useAudioEngine() {
     if (sourceRef.current) {
       play(currentFiltersRef.current, offset);
     } else {
-      startOffsetRef.current = clampToLoop(offset);
+      startOffsetRef.current = clampToLoopOffset(offset, loopRef.current);
     }
   }, [play]);
 
@@ -236,7 +228,7 @@ export function useAudioEngine() {
       const pos = startOffsetRef.current;
       if (region && (pos < region.start || pos >= region.end)) play(currentFiltersRef.current, region.start);
     } else {
-      startOffsetRef.current = clampToLoop(startOffsetRef.current);
+      startOffsetRef.current = clampToLoopOffset(startOffsetRef.current, loopRef.current);
     }
   }, [getCurrentOffset, play]);
 

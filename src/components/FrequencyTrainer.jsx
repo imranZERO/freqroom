@@ -3,13 +3,10 @@ import { InfoIcon } from './Icons.jsx';
 import { FreqGraph, rowInset, fmtHz } from './FreqGraph.jsx';
 import { heatFor, pickWeighted } from '../lib/progress.js';
 import { buildChallengeUrl, copyText } from '../lib/challenge.js';
+import { applyAnswer, CORRECT_TO_ADVANCE, WRONG_TO_DECREASE, MIN_LEVEL, MAX_LEVEL } from '../lib/progression.js';
 
 const FREQ_MIN = 20;
 const FREQ_MAX = 20000;
-const CORRECT_TO_ADVANCE = 3;
-const WRONG_TO_DECREASE = 2;
-const MAX_LEVEL = 15;
-const MIN_LEVEL = 2;
 
 // Web Audio reads lowpass/highpass Q in dB; −3.01 dB gives a Butterworth (Q ≈ 0.707) response
 const BUTTERWORTH_Q_DB = -3.01;
@@ -303,18 +300,12 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
     engine.stop();
     setPlayMode(null);
 
-    let cs = correct ? correctStreak + 1 : 0;
-    let ws = correct ? 0 : wrongStreak + 1;
-    let lv = level;
-
-    if (cs >= CORRECT_TO_ADVANCE) { lv = Math.min(maxLevel, level + 1); cs = 0; }
-    else if (ws >= WRONG_TO_DECREASE) { lv = Math.max(minLevel, level - 1); ws = 0; }
-
-    setCorrectStreak(cs);
-    setWrongStreak(ws);
+    const next = applyAnswer({ correct, correctStreak, wrongStreak, level, minLevel, maxLevel });
+    setCorrectStreak(next.correctStreak);
+    setWrongStreak(next.wrongStreak);
     // The challenge's starting level has done its job; let saved progress take over
     if (testMode === initialMode) challengeLevelRef.current = null;
-    onResult({ mode: testMode, family, freq: activeBand, correct, level: lv });
+    onResult({ mode: testMode, family, freq: activeBand, correct, level: next.level });
     setTrial(prev => ({ ...prev, answered: true, wasCorrect: correct }));
   }
 

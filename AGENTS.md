@@ -8,9 +8,26 @@ This file provides guidance to AI coding agents (Claude Code, Codex, Cursor, etc
 npm run dev      # dev server at http://localhost:5173
 npm run build    # production build → dist/
 npm run preview  # serve the production build
+npm test         # run the vitest suite once (node environment, no DOM)
+npm run test:watch  # watch mode
 ```
 
-No test runner or linter is configured.
+No linter is configured.
+
+## Testing
+
+Vitest runs under Vite's own config (aliases like `react → preact/compat` apply) in a **node** environment — `test/setup.js` provides bare-bones `localStorage`/`location`/`navigator.clipboard`/`window.prompt` stubs. There are no Web Audio, AudioContext, or React component tests yet: the suite covers **pure logic only**:
+
+- `tests/progress.test.js` — octave bucketing, `recordResult`, `heatFor`, `pickWeighted`
+- `tests/progression.test.js` — `applyAnswer` (3-up / 2-down / clamp rules from `src/lib/progression.js`)
+- `tests/challenge.test.js` — `parseChallenge` / `buildChallengeUrl` / clipboard fallback
+- `tests/storage.test.js` — `load`/`save`/`clearAll` incl. storage-unavailable fallbacks
+- `tests/biquad.test.js` — `biquadCoeffs` / `magnitudeDb` / `rowInset` from `FreqGraph.jsx` (pure math, no DOM at import; ground truths: peaking hits exactly gain at centre, Butterworth cutoffs are −3.01 dB, shelf corners sit at half the gain in dB)
+- `tests/audioInfo.test.js` — header parsing for WAV/FLAC/Ogg/Opus/MP3/M4A with hand-built byte fixtures
+- `tests/noiseGen.test.js` — white/pink noise buffers (finite, in range, RMS bands)
+- `tests/audio-engine-math.test.js` — `clampStartOffset` / `clampToLoopOffset`
+
+Add tests when changing any of these modules; pure helpers extracted from hooks/components (see `src/lib/progression.js`, `src/lib/audioEngineMath.js`) are the intended seam for future logic tests.
 
 ## Architecture
 
@@ -57,7 +74,7 @@ App.jsx (Wouter Router)
 
 Deployed on Cloudflare Pages. `public/_redirects` contains `/* /index.html 200` to enable client-side routing — any new Wouter routes will work automatically without changes to this file.
 
-## Key constants (FrequencyTrainer)
+## Key constants (`src/lib/progression.js`)
 
 | Constant | Value | Meaning |
 |---|---|---|

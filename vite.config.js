@@ -9,4 +9,8 @@ export default defineConfig({
       'react-dom': 'preact/compat',
     },
   },
+  test: {
+    environment: 'node',
+    setupFiles: ['./test/setup.js'],
+  },
 });
