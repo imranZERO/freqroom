@@ -2,12 +2,15 @@
 // Only valid values are kept, so a hand-edited or stale link degrades gracefully.
 
 const SOURCES = ['pink', 'white'];
+const SWEEP_DIRS = ['boost', 'dip'];
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
 export function parseChallenge(search, modeIds) {
   const p = new URLSearchParams(search);
   const out = {};
   if (modeIds.includes(p.get('mode'))) out.mode = p.get('mode');
+  // Sweep direction: sweep-only, so it rides along with the mode
+  if (out.mode === 'sweep' && SWEEP_DIRS.includes(p.get('dir'))) out.sweepDir = p.get('dir');
   if (SOURCES.includes(p.get('source'))) out.source = p.get('source');
   const gain = parseInt(p.get('gain'), 10);
   if (Number.isFinite(gain)) out.gainDb = clamp(gain, 1, 18);
@@ -18,12 +21,13 @@ export function parseChallenge(search, modeIds) {
   return Object.keys(out).length ? out : null;
 }
 
-export function buildChallengeUrl({ mode, gainDb, q, source, level }) {
+export function buildChallengeUrl({ mode, gainDb, q, source, level, sweepDir }) {
   const p = new URLSearchParams();
   p.set('mode', mode);
   if (gainDb !== undefined) p.set('gain', String(gainDb));
   if (q !== undefined) p.set('q', String(q));
   if (SOURCES.includes(source)) p.set('source', source);
+  if (SWEEP_DIRS.includes(sweepDir) && mode === 'sweep') p.set('dir', sweepDir);
   if (level !== undefined) p.set('level', String(level));
   return `${location.origin}/?${p}`;
 }

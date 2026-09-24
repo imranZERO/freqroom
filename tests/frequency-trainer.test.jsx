@@ -184,6 +184,15 @@ describe('FrequencyTrainer', () => {
     expect(utils.container.querySelector('.graph-placeholder').textContent).toContain('dip');
   });
 
+  it('honours a sweep dip direction from a challenge link', () => {
+    const { utils } = renderTrainer({ random: 0, props: { initialMode: 'sweep', initialLevel: 1, initialSweepDir: 'dip' } });
+    expect(screen.getByRole('button', { name: /dip/i })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: /boost/i })).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(screen.getByText('Start Trial'));
+    const readout = [...utils.container.querySelectorAll('.graph-readout')].map(n => n.textContent).join('');
+    expect(readout).toContain('−6 dB');
+  });
+
   it('uses a challenge link level only until you leave its mode', () => {
     const progress = { ...EMPTY_PROGRESS, levels: { boost: 4 } };
     renderTrainer({ props: { initialMode: 'boost', initialLevel: 9, progress } });

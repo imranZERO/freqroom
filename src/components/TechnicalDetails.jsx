@@ -69,7 +69,7 @@ const FEATURES = [
   ]],
   ['Everything else', [
     ['Keyboard shortcuts', '1–9/0 pick bands, ← → step, ↑ ↓ switch boost/cut in Mixed and Shelves, Space toggles EQ/Flat, Enter checks or advances.', null],
-    ['Share links', 'Copy a link that recreates a challenge: mode, level, gain, Q, and noise source.', 'storage'],
+    ['Share links', 'Copy a link that recreates a challenge: mode, level, gain, Q, noise source, and for Sweep its boost/dip direction.', 'storage'],
     ['Light and dark themes', 'System (the default) follows your device; you can also pick Light or Dark, and your choice is remembered.', null],
     ['Installable and offline', 'Install it as an app and keep training without a connection.', 'storage'],
     ['Private', 'No account, no server: your audio and data never leave your browser.', 'storage'],
@@ -447,7 +447,8 @@ export function TechnicalDetails({ chrome }) {
             If storage is unavailable (for example in some private-browsing modes), the app works with defaults.
           </p>
           <p className="td-p">
-            Share links carry only the challenge settings in the URL (mode, level, gain, Q, noise source). A service
+            Share links carry only the challenge settings in the URL (mode, level, gain, Q, noise source, plus the boost/dip
+            direction for Sweep). A service
             worker caches the app so it can be installed and used offline: pages load from the network when
             available, falling back to the cached copy, and other files load from the cache and refresh in the
             background.

@@ -46,6 +46,15 @@ describe('parseChallenge', () => {
   it('ignores non-numeric numbers', () => {
     expect(parseChallenge('?mode=boost&gain=abc', MODES)).toEqual({ mode: 'boost' });
   });
+
+  it('keeps a sweep direction only for sweep mode', () => {
+    expect(parseChallenge('?mode=sweep&dir=dip', MODES)).toEqual({ mode: 'sweep', sweepDir: 'dip' });
+    expect(parseChallenge('?mode=sweep&dir=boost', MODES)).toEqual({ mode: 'sweep', sweepDir: 'boost' });
+    // unknown directions and dir on other modes are dropped
+    expect(parseChallenge('?mode=sweep&dir=shelf', MODES)).toEqual({ mode: 'sweep' });
+    expect(parseChallenge('?mode=cut&dir=dip', MODES)).toEqual({ mode: 'cut' });
+    expect(parseChallenge('?mode=nope&dir=dip', MODES)).toBeNull();
+  });
 });
 
 describe('buildChallengeUrl', () => {
@@ -71,6 +80,16 @@ describe('buildChallengeUrl', () => {
     // parseChallenge takes the search string, not a full URL
     const search = new URL(buildChallengeUrl(setup)).search;
     expect(parseChallenge(search, MODES)).toEqual(setup);
+  });
+
+  it('writes the sweep direction only for a sweep link', () => {
+    expect(buildChallengeUrl({ mode: 'sweep', sweepDir: 'dip' }))
+      .toBe('https://freqroom.test/?mode=sweep&dir=dip');
+    expect(buildChallengeUrl({ mode: 'sweep', sweepDir: 'boost' }))
+      .toBe('https://freqroom.test/?mode=sweep&dir=boost');
+    // invalid directions and dir on non-sweep modes are omitted
+    expect(buildChallengeUrl({ mode: 'sweep', sweepDir: 'shelf' })).toBe('https://freqroom.test/?mode=sweep');
+    expect(buildChallengeUrl({ mode: 'cut', sweepDir: 'dip' })).toBe('https://freqroom.test/?mode=cut');
   });
 });
 

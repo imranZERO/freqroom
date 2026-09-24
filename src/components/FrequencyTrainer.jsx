@@ -28,7 +28,7 @@ const TYPE_LABELS = {
   lowshelf: 'low shelf', highshelf: 'high shelf', lowpass: 'low-pass', highpass: 'high-pass',
 };
 
-export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay, onResult, initialMode, initialLevel, sourceId }) {
+export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay, onResult, initialMode, initialLevel, sourceId, initialSweepDir }) {
   const [testMode, setTestMode] = useState(initialMode ?? null);
   const [copied, setCopied] = useState(false);
   const currentMode = MODES.find(m => m.id === testMode);
@@ -50,7 +50,8 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
   const [trial, setTrial] = useState(null);
   const [playMode, setPlayMode] = useState(null);
   // Sweep direction chosen on the Start Trial screen: +1 boost, −1 dip
-  const [sweepSign, setSweepSign] = useState(1);
+  // (a challenge link can set it, e.g. ?mode=sweep&dir=dip)
+  const [sweepSign, setSweepSign] = useState(initialSweepDir === 'dip' ? -1 : 1);
   // Band button under the pointer (or keyboard focus); its curve is highlighted on the graph
   const [hovered, setHovered] = useState(null);
 
@@ -131,6 +132,7 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
       q: family === 'peak' || family === 'sweep' ? q : undefined,
       source: sourceId,
       level,
+      sweepDir: isSweep ? (sweepSign > 0 ? 'boost' : 'dip') : undefined,
     });
     if (await copyText(url)) {
       setCopied(true);

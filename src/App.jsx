@@ -106,7 +106,7 @@ function MainApp({ chrome }) {
           <FrequencyTrainer
             engine={engine} gainDb={gainDb} q={q}
             progress={progress} focus={focus} autoplay={autoplay} onResult={handleResult}
-            initialMode={challenge?.mode} initialLevel={challenge?.level} sourceId={sourceId}
+            initialMode={challenge?.mode} initialLevel={challenge?.level} initialSweepDir={challenge?.sweepDir} sourceId={sourceId}
           />
           <ScoreBoard
             scores={scores} lifetime={progress.lifetime}
