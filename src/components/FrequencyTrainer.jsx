@@ -312,6 +312,8 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
 
     setCorrectStreak(cs);
     setWrongStreak(ws);
+    // The challenge's starting level has done its job; let saved progress take over
+    if (testMode === initialMode) challengeLevelRef.current = null;
     onResult({ mode: testMode, family, freq: activeBand, correct, level: lv });
     setTrial(prev => ({ ...prev, answered: true, wasCorrect: correct }));
   }
@@ -515,15 +517,15 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
             {playMode === 'flat' ? '◼' : '▶'} Flat
           </button>
           <div className="transport-action">
-            <button
+            <span
               className="icon-btn trainer-kb-hint"
-              aria-label="Keyboard shortcuts"
+              aria-hidden="true"
               data-tooltip={kind === 'sweep'
                 ? 'Click/drag the graph · ← → nudge · Space EQ/Flat · Enter check/next'
                 : `1–9, 0 pick band · ← → move${twoRows ? ' · ↑ ↓ boost/cut' : ''} · Space EQ/Flat · Enter check/next`}
             >
               <InfoIcon />
-            </button>
+            </span>
             {!answered ? (
               <button className="btn-primary" onClick={checkAnswer} disabled={!hasSelection}>
                 Check Answer
