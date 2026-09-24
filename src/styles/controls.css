@@ -64,24 +64,19 @@
   cursor: pointer;
 }
 .control-slider:focus-visible { outline: 2px solid var(--a); outline-offset: 8px; }
-/* Hover: the row's label and value brighten, the unfilled track lightens, and
-   the cap gets an amber rim */
+/* Hover: the row's label and value brighten and the cap picks up a crisp
+   accent outline — no soft halo, no scaling */
 .control-label, .control-value { transition: color 0.15s; }
 .control-row:hover .control-label { color: var(--text); }
 .control-row:hover .control-value { color: var(--a); }
-.control-slider:hover {
-  background: linear-gradient(to right, var(--a) var(--fill, 80%), color-mix(in srgb, var(--a) 25%, var(--border-hover)) var(--fill, 80%));
-}
 .control-slider:hover::-webkit-slider-thumb {
   border-color: var(--a);
-  box-shadow: inset 0 1px 0 var(--cap-shine), 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 0 3px color-mix(in srgb, var(--a) 22%, transparent);
-  transform: scale(1.06);
+  box-shadow: inset 0 1px 0 var(--cap-shine), 0 0 0 1.5px var(--a);
 }
 .control-slider:hover::-moz-range-thumb {
   border-color: var(--a);
-  box-shadow: inset 0 1px 0 var(--cap-shine), 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 0 3px color-mix(in srgb, var(--a) 22%, transparent);
+  box-shadow: inset 0 1px 0 var(--cap-shine), 0 0 0 1.5px var(--a);
 }
-.control-slider:hover::-moz-range-track { background: color-mix(in srgb, var(--a) 25%, var(--border-hover)); }
 .control-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 14px;
