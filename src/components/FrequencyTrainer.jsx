@@ -131,7 +131,7 @@ function signForMode(mode) {
   return Math.random() < 0.5 ? 1 : -1;
 }
 
-export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay, onResult, initialMode, sourceId }) {
+export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay, onResult, initialMode, initialLevel, sourceId }) {
   const [testMode, setTestMode] = useState(initialMode ?? null);
   const [copied, setCopied] = useState(false);
   const currentMode = MODES.find(m => m.id === testMode);
@@ -139,15 +139,21 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
   const isSweep = family === 'sweep';
   const minLevel = currentMode?.minLevel ?? MIN_LEVEL;
   const maxLevel = currentMode?.maxLevel ?? MAX_LEVEL;
+  const answeringRef = useRef(false);
+  // A challenge link can set the starting level for its mode without writing to
+  // saved progress; it yields to the adaptive level once the first answer lands.
+  const challengeLevelRef = useRef(initialLevel ?? null);
   // Level is remembered per mode in saved progress
-  const level = Math.max(minLevel, Math.min(maxLevel, (testMode && progress.levels[testMode]) || minLevel));
+  const savedLevel = testMode === initialMode && challengeLevelRef.current != null
+    ? challengeLevelRef.current
+    : testMode ? progress.levels[testMode] : null;
+  const level = Math.max(minLevel, Math.min(maxLevel, savedLevel ?? minLevel));
   const [correctStreak, setCorrectStreak] = useState(0);
   const [wrongStreak, setWrongStreak] = useState(0);
   const [trial, setTrial] = useState(null);
   const [playMode, setPlayMode] = useState(null);
   // Band button under the pointer (or keyboard focus); its curve is highlighted on the graph
   const [hovered, setHovered] = useState(null);
-  const answeringRef = useRef(false);
 
   // The hidden filter for a trial at the current Gain/Q settings. engine.play
   // takes a list of filters, so calls wrap this in [ ]; an empty list is Flat.

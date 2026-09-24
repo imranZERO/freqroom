@@ -42,9 +42,6 @@ function MainApp({ chrome }) {
     history.replaceState(null, '', location.pathname);
     if (challenge.gainDb) setGainDb(challenge.gainDb);
     if (challenge.q) setQ(challenge.q);
-    if (challenge.level) {
-      setProgress(p => ({ ...p, levels: { ...p.levels, [challenge.mode]: challenge.level } }));
-    }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Called by the trainer for every answered trial
@@ -108,7 +105,7 @@ function MainApp({ chrome }) {
           <FrequencyTrainer
             engine={engine} gainDb={gainDb} q={q}
             progress={progress} focus={focus} autoplay={autoplay} onResult={handleResult}
-            initialMode={challenge?.mode} sourceId={sourceId}
+            initialMode={challenge?.mode} initialLevel={challenge?.level} sourceId={sourceId}
           />
           <ScoreBoard
             scores={scores} lifetime={progress.lifetime}
