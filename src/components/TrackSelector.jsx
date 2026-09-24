@@ -119,6 +119,7 @@ export function TrackSelector({ engine, gainDb, setGainDb, q, setQ, focus, setFo
     setActiveId(id);
     onSourceChange?.(id);
     setPosition(0);
+    setLoopA(null);
     const ctx = engine.getCtx();
     const buf = id === 'pink' ? generatePinkNoise(ctx) : generateWhiteNoise(ctx);
     await engine.loadBuffer(buf);
@@ -164,7 +165,11 @@ export function TrackSelector({ engine, gainDb, setGainDb, q, setQ, focus, setFo
   }
 
   function handleSeekChange(e) {
-    setPosition(parseFloat(e.target.value));
+    const offset = parseFloat(e.target.value);
+    setPosition(offset);
+    // Mouse/touch drags seek once on release (handleSeekEnd); keyboard and
+    // assistive-tech input only produce onChange, so seek straight away.
+    if (!isDraggingRef.current) engine.seek(offset);
   }
 
   function handleSeekEnd(e) {
