@@ -77,16 +77,6 @@
 .qs-step.is-current .qs-num { color: var(--a); }
 .qs-step.is-current .qs-num::before { background: var(--a); box-shadow: 0 0 5px color-mix(in srgb, var(--a) 60%, transparent); }
 .qs-step.is-current .qs-glyph polyline { stroke: var(--a); opacity: 1; }
-/* Hovering step 1 ("Load a source") points at the Source panel: its cards
-   take an amber edge and glow, and the panel's label lights up */
-.qs-step.is-current { cursor: default; }
-.source-card .track-btn,
-.rack-side .panel-group:first-child .panel-label { transition: border-color 0.2s, box-shadow 0.2s, color 0.2s; }
-.rack:has(.qs-step.is-current:hover) .source-card .track-btn {
-  border-color: color-mix(in srgb, var(--a) 65%, var(--border-hover));
-  box-shadow: inset 0 1px 0 var(--highlight), var(--key-drop), 0 0 0 3px color-mix(in srgb, var(--a) 16%, transparent);
-}
-.rack:has(.qs-step.is-current:hover) .rack-side .panel-group:first-child .panel-label { color: var(--a); }
 @media (max-width: 520px) {
   .quickstart { grid-template-columns: 1fr; }
   /* Stacked: hairlines between rows instead of columns */
