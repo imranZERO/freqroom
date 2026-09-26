@@ -45,6 +45,7 @@ const RESOURCES = [
 const FEATURES = [
   ['Training', [
     ['Six training modes', 'Boosts, Cuts, Mixed, Shelves, Pass Filters, and Sweep — peaks, dips, shelves, filter cutoffs, and free-form location.', 'modes'],
+    ['Explore', 'A free-play EQ: drag a bell, shelf, or pass filter on the graph and hear it live, with a guide to what each region sounds like.', 'modes'],
     ['Adaptive difficulty', 'Each mode has its own level: 3 correct in a row levels up, 2 wrong levels down.', 'difficulty'],
     ['Gain and Q controls', 'Boost/cut amount (1–18 dB) and bell width (Q 0.5–8), applied live, even mid-trial.', 'peaking'],
     ['Instant A/B comparison', 'EQ and Flat switch without a click or restart, so both continue from the same point.', 'chain'],
@@ -169,6 +170,13 @@ export function TechnicalDetails({ chrome }) {
           <p className="td-p">
             In Shelves, corners below 1 kHz are low shelves and corners above are high shelves; the direction
             (boost or cut) is random, and you answer it with the corner using the boost and cut rows. In Pass Filters the Gain slider has no effect.
+          </p>
+          <p className="td-p">
+            <strong>Explore</strong> sits above the six modes and isn't scored. You drag one filter across the graph — left and
+            right set the frequency, up and down the gain (±18 dB) — and pick its type: bell, low or high shelf, high-pass,
+            or low-pass. The bell uses the Q fader. The engine retunes the filter live while EQ plays, and a guide under the
+            graph names the region, the nearest note, and what a boost or cut there tends to sound like (for example,
+            boxy for a low-mid boost, dull for a treble cut). Nothing is recorded to your progress.
           </p>
         </Section>
 

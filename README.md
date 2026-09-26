@@ -8,6 +8,8 @@ FreqRoom trains your ears to recognise EQ changes. Each trial hides one filter â
 
 Difficulty adapts per mode: 3 correct in a row levels you up, 2 wrong in a row steps you back down.
 
+**Explore** is a free-play EQ with no quiz: drag a bell, shelf, or pass filter across the graph, hear it live, and read what that region tends to sound like (boomy, boxy, harsh, airyâ€¦).
+
 **Six training modes:**
 
 | Mode | You identify | Levels |

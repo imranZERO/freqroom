@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   generateBands, octaveError, withinSweepTolerance, bandRange, typeAt, makeFilter,
   signForMode, pickDirection, freqToNote, freqRegion, FREQ_LABEL, FREQ_UNIT,
-  SWEEP_TOLERANCE, SWEEP_RANGE, SWEEP_GRID, FREQ_MIN, FREQ_MAX,
+  SWEEP_TOLERANCE, SWEEP_RANGE, SWEEP_GRID, FREQ_MIN, FREQ_MAX, describeRegion, EXPLORE_TYPES,
 } from '../src/lib/trainer.js';
 
 afterEach(() => vi.restoreAllMocks());
@@ -169,5 +169,40 @@ describe('freq labels', () => {
     expect(FREQ_LABEL(1000)).toBe('1');
     expect(FREQ_LABEL(1240)).toBe('1.2');
     expect(FREQ_LABEL(20000)).toBe('20');
+  });
+});
+describe('describeRegion', () => {
+  it('names the region and note and describes a boost or a cut', () => {
+    expect(describeRegion(100, 1)).toEqual({ region: 'Bass', note: freqToNote(100), character: 'fuller, boomy' });
+    expect(describeRegion(100, -1).character).toBe('thinner, lighter');
+    expect(describeRegion(10000, 1).character).toBe('airy, sparkly');
+    expect(describeRegion(10000, -1).character).toBe('dull, dark');
+  });
+
+  it('has a boost and a cut description for every region', () => {
+    for (const f of [40, 150, 350, 1000, 3000, 6000, 12000]) {
+      const up = describeRegion(f, 1), down = describeRegion(f, -1);
+      expect(up.region).toBe(freqRegion(f));
+      expect(up.character).toMatch(/\w/);
+      expect(down.character).toMatch(/\w/);
+      expect(up.character).not.toBe(down.character);
+    }
+  });
+
+  it('follows the region edges used by freqRegion', () => {
+    expect(describeRegion(79, 1).region).toBe('Sub Bass');
+    expect(describeRegion(80, 1).region).toBe('Bass');
+    expect(describeRegion(7999, 1).region).toBe('Presence');
+    expect(describeRegion(8000, 1).region).toBe('Brilliance');
+  });
+
+  it('reports no change for zero gain', () => {
+    expect(describeRegion(1000, 0).character).toBe('no change');
+  });
+});
+
+describe('EXPLORE_TYPES', () => {
+  it('offers bell, shelves, and pass filters in keyboard order', () => {
+    expect(EXPLORE_TYPES.map(t => t.type)).toEqual(['peaking', 'lowshelf', 'highshelf', 'highpass', 'lowpass']);
   });
 });

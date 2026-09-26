@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { FreqGraph, fmtHz } from './FreqGraph.jsx';
-import { QuickStart, ModePicker, BandRows, AnswerLegend, Transport, StreakMeter } from './TrainerParts.jsx';
+import { QuickStart, ModePicker, BandRows, AnswerLegend, Transport, StreakMeter, ExploreBody } from './TrainerParts.jsx';
 import { heatFor, pickWeighted } from '../lib/progress.js';
 import { buildChallengeUrl, copyText } from '../lib/challenge.js';
 import { applyAnswer, CORRECT_TO_ADVANCE, WRONG_TO_DECREASE, MIN_LEVEL, MAX_LEVEL } from '../lib/progression.js';
 import {
   generateBands, octaveError, withinSweepTolerance, bandRange, typeAt, makeFilter,
-  signForMode, pickDirection, freqToNote, freqRegion,
-  SWEEP_RANGE, SWEEP_GRID,
+  signForMode, pickDirection, freqToNote, freqRegion, describeRegion,
+  SWEEP_RANGE, SWEEP_GRID, EXPLORE_TYPES,
 } from '../lib/trainer.js';
 
 // family: which stats bucket set a mode records under; maxLevel caps the band count
@@ -22,6 +22,13 @@ export const MODES = [
 
 // Sweep mode: the per-level tolerance labels ("within ±1 octave counts")
 const SWEEP_TOL_LABEL = ['1', '⅔', '½', '⅓', '⅙'];
+
+// Explore mode: free play with one draggable filter (not a scored mode)
+const EXPLORE_START = { type: 'peaking', freq: 1000, gain: 6 };
+const EXPLORE_RANGE_DB = 18;
+const isPassType = type => type === 'highpass' || type === 'lowpass';
+const clampFreq = f => Math.max(20, Math.min(20000, f));
+const clampGain = db => Math.max(-EXPLORE_RANGE_DB, Math.min(EXPLORE_RANGE_DB, db));
 
 // Filter type names used in the answer reveal ("low shelf cut", "low-pass")
 const TYPE_LABELS = {
@@ -54,6 +61,10 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
   const [sweepSign, setSweepSign] = useState(initialSweepDir === 'dip' ? -1 : 1);
   // Band button under the pointer (or keyboard focus); its curve is highlighted on the graph
   const [hovered, setHovered] = useState(null);
+  // Explore mode's filter: type, frequency, and gain (Q comes from the Controls fader)
+  const isExplore = testMode === 'explore';
+  const [explore, setExplore] = useState(EXPLORE_START);
+  const exploreFilter = makeFilter(explore.type, explore.freq, explore.gain, q);
 
   // The hidden filter for a trial at the current Gain/Q settings. engine.play
   // takes a list of filters, so calls wrap this in [ ]; an empty list is Flat.
@@ -64,6 +75,11 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
     if (trial && playMode === 'eq') engine.play([activeFilter(trial)]);
   }, [gainDb, q]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Explore: retune the live EQ as the curve is dragged or Q changes
+  useEffect(() => {
+    if (isExplore && playMode === 'eq') engine.play([exploreFilter]);
+  }, [explore, q]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Engine stopped elsewhere (e.g. source track changed) — clear the play toggle
   useEffect(() => {
     if (!engine.isPlaying && playMode !== null) setPlayMode(null);
@@ -73,6 +89,22 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
     function onKey(e) {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
       const key = e.key;
+
+      if (isExplore) {
+        if (e.metaKey || e.ctrlKey || e.altKey) return;
+        if (key === ' ') { e.preventDefault(); handlePlayMode(playMode === 'eq' ? 'flat' : 'eq'); }
+        else if (key === 'ArrowLeft' || key === 'ArrowRight') {
+          e.preventDefault();
+          const step = Math.pow(2, (key === 'ArrowLeft' ? -1 : 1) / 12); // a semitone
+          setExplore(x => ({ ...x, freq: clampFreq(x.freq * step) }));
+        } else if (key === 'ArrowUp' || key === 'ArrowDown') {
+          e.preventDefault();
+          setExplore(x => isPassType(x.type) ? x : { ...x, gain: clampGain(Math.round(x.gain) + (key === 'ArrowUp' ? 1 : -1)) });
+        } else if (/^[1-5]$/.test(key)) {
+          setExplore(x => ({ ...x, type: EXPLORE_TYPES[Number(key) - 1].type }));
+        }
+        return;
+      }
 
       if (key === 'Enter') {
         if (!testMode) return;
@@ -122,7 +154,7 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
 
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [trial, testMode, playMode, gainDb, q, level, sweepSign]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [trial, testMode, playMode, gainDb, q, level, sweepSign, explore]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Copies a link that recreates this setup (only the settings the mode uses)
   async function shareChallenge() {
@@ -185,8 +217,17 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
 
   function handlePlayMode(mode) {
     if (playMode === mode) { engine.stop(); setPlayMode(null); return; }
-    engine.play(mode === 'eq' ? [activeFilter(trial)] : []);
+    engine.play(mode === 'eq' ? [isExplore ? exploreFilter : activeFilter(trial)] : []);
     setPlayMode(mode);
+  }
+
+  // Explore: dragging on the graph moves the curve (gain only for bell and shelves)
+  function handleExplorePoint({ freq, db }) {
+    setExplore(x => ({
+      ...x,
+      freq: clampFreq(freq),
+      gain: isPassType(x.type) ? x.gain : clampGain(Math.round(db * 2) / 2),
+    }));
   }
 
   // userSelection stores { freq, sign } where sign is ±1
@@ -238,7 +279,11 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
   // Status line on the graph: which filter is in play and its settings
   const SIGN = { boost: '+', cut: '−', both: '±', shelf: '±', sweep: sweepSign > 0 ? '+' : '−' };
   const qText = `Q ${q.toFixed(1)}`;
-  const readout = !currentMode ? `±${gainDb} dB · ${qText}`
+  const exploreLabel = EXPLORE_TYPES.find(t => t.type === explore.type).label.toUpperCase();
+  const fmtGain = db => `${db > 0 ? '+' : db < 0 ? '−' : ''}${Math.abs(db)} dB`;
+  const readout = isExplore
+    ? (isPassType(explore.type) ? `${exploreLabel} · 12 dB/oct` : `${exploreLabel} · ${fmtGain(explore.gain)}${explore.type === 'peaking' ? ` · ${qText}` : ''}`)
+    : !currentMode ? `±${gainDb} dB · ${qText}`
     : family === 'pass' ? `${trial ? (trial.kind === 'highpass' ? 'HIGH-PASS' : 'LOW-PASS') : 'HP / LP'} · 12 dB/oct`
     : family === 'shelf' ? `SHELF · ±${gainDb} dB`
     : `PEAK · ${SIGN[testMode]}${gainDb} dB · ${qText}`;
@@ -248,13 +293,14 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
     <FreqGraph
       curves={curves}
       hover={hoverCurve}
-      selected={selectedCurve}
+      selected={isExplore ? exploreFilter : selectedCurve}
       answer={trial?.answered ? activeFilter(trial) : null}
-      gainDb={gainDb}
+      gainDb={isExplore ? EXPLORE_RANGE_DB : gainDb}
       sampleRate={engine.sampleRate}
       heat={heatFor(progress, family)}
-      marker={trial?.kind === 'sweep' ? trial.userSelection?.freq ?? null : null}
+      marker={isExplore ? explore.freq : trial?.kind === 'sweep' ? trial.userSelection?.freq ?? null : null}
       onPick={trial?.kind === 'sweep' && !trial.answered ? f => selectBand(f, trial.activeSign) : null}
+      onPoint={isExplore ? handleExplorePoint : null}
       pickText={sweepSign > 0 ? 'Click or drag where you hear the boost' : 'Click or drag where you hear the dip'}
       readout={readout}
       idle={!engine.isLoaded}
@@ -274,6 +320,29 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
         <h2 className="mode-title">Choose Test Mode</h2>
         <ModePicker modes={MODES} gainDb={gainDb} onSelect={selectMode} />
       </>
+    );
+  } else if (isExplore) {
+    // ── Explore (free play) ───────────────────────────────────────────────
+    const pass = isPassType(explore.type);
+    const where = describeRegion(explore.freq, pass ? -1 : Math.sign(explore.gain));
+    const guide = pass
+      ? `${exploreLabel === 'HIGH-PASS' ? 'Removes the lows below' : 'Removes the highs above'} ${fmtHz(explore.freq)} (${where.region}): ${
+          exploreLabel === 'HIGH-PASS' ? 'thinner, less weight' : 'darker, duller'}`
+      : `${fmtHz(explore.freq)} · ${where.note} · ${where.region}: ${where.character}`;
+    header = (
+      <>
+        <div className="mode-badge">Explore · free play</div>
+        <span className="trainer-status">Drag the curve on the graph</span>
+        <span className="trainer-header-end">
+          <button className="btn-ghost trainer-back" onClick={() => selectMode(null)}>← Back</button>
+        </span>
+      </>
+    );
+    body = (
+      <ExploreBody
+        type={explore.type} onType={type => setExplore(x => ({ ...x, type }))}
+        guide={guide} playMode={playMode} onPlay={handlePlayMode}
+      />
     );
   } else if (!trial) {
     // ── Start state ───────────────────────────────────────────────────────

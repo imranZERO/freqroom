@@ -193,6 +193,43 @@ describe('FrequencyTrainer', () => {
     expect(readout).toContain('−6 dB');
   });
 
+  it('Explore mode moves the curve with the keyboard and plays it without scoring', () => {
+    const { engine, onResult, utils } = renderTrainer();
+    const readout = () => [...utils.container.querySelectorAll('.graph-readout')].map(n => n.textContent).join('');
+    const guide = () => utils.container.querySelector('.explore-guide').textContent;
+
+    fireEvent.click(screen.getByText('Explore'));
+    expect(readout()).toContain('BELL');
+    expect(readout()).toContain('+6 dB');
+    expect(guide()).toContain('1.00 kHz');
+
+    fireEvent.keyDown(window, { key: 'ArrowUp' });       // +1 dB
+    expect(readout()).toContain('+7 dB');
+    for (let i = 0; i < 12; i++) fireEvent.keyDown(window, { key: 'ArrowRight' }); // up an octave
+    expect(guide()).toContain('2.00 kHz');
+
+    // Space plays the EQ: the engine gets the explore filter as a one-item list
+    fireEvent.keyDown(window, { key: ' ' });
+    expect(engine.play).toHaveBeenLastCalledWith([expect.objectContaining({ type: 'peaking', gain: 7 })]);
+    expect(engine.play.mock.lastCall[0][0].frequency).toBeCloseTo(2000, 6);
+
+    // 2 switches to a low shelf; the live EQ follows
+    fireEvent.keyDown(window, { key: '2' });
+    expect(readout()).toContain('LOW SHELF');
+    expect(engine.play).toHaveBeenLastCalledWith([expect.objectContaining({ type: 'lowshelf', gain: 7 })]);
+    expect(screen.getByRole('button', { name: /Low shelf/ })).toHaveAttribute('aria-pressed', 'true');
+
+    // pass filters ignore gain and describe what they remove
+    fireEvent.click(screen.getByRole('button', { name: /High-pass/ }));
+    fireEvent.keyDown(window, { key: 'ArrowUp' });
+    expect(readout()).toContain('HIGH-PASS · 12 dB/oct');
+    expect(guide()).toMatch(/Removes the lows below/);
+
+    expect(onResult).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByText('← Back'));
+    expect(screen.getByText('Choose Test Mode')).toBeInTheDocument();
+  });
+
   it('uses a challenge link level only until you leave its mode', () => {
     const progress = { ...EMPTY_PROGRESS, levels: { boost: 4 } };
     renderTrainer({ props: { initialMode: 'boost', initialLevel: 9, progress } });

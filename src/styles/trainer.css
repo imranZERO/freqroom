@@ -295,3 +295,43 @@
 }
 .ptog-eq::after   { background: var(--a);    box-shadow: 0 0 4px color-mix(in srgb, var(--a) 60%, transparent); }
 .ptog-flat::after { background: var(--text); box-shadow: 0 0 4px color-mix(in srgb, var(--text) 40%, transparent); }
+
+/* ── Explore (free play) ─────────────────────────────────────────────────── */
+/* Full-width card above the six test modes */
+.mode-card-explore { grid-column: 1 / -1; }
+.mode-card-explore .mode-desc { max-width: 60ch; }
+
+/* Filter type selector: a row of small keycaps with their number key */
+.explore-types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.explore-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 11px;
+}
+.explore-type.is-active {
+  color: var(--a);
+  border-color: var(--a);
+  background: color-mix(in srgb, var(--a) 10%, transparent);
+}
+.explore-key {
+  font-size: 0.6rem;
+  padding: 1px 4px;
+  border: 1px solid var(--border-hover);
+  border-radius: 3px;
+  color: var(--muted);
+}
+.explore-type.is-active .explore-key { border-color: color-mix(in srgb, var(--a) 60%, var(--border-hover)); color: var(--a); }
+
+/* Region guide under the graph: where the curve is and what it does */
+.explore-guide {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+  color: var(--text);
+  min-height: 1.4em;
+}

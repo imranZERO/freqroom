@@ -60,6 +60,10 @@ export function HowItWorksModal({ isOpen, onClose }) {
             <h3>2 · Pick a test mode</h3>
             <div className="info-mode-list">
               <div className="info-mode-item">
+                <strong>Explore</strong> — no quiz: drag an EQ curve on the graph and hear what each region
+                sounds like. A good place to start.
+              </div>
+              <div className="info-mode-item">
                 <strong>Boosts</strong> — one frequency band is boosted; identify which one.
               </div>
               <div className="info-mode-item">

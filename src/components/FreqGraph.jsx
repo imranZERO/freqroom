@@ -14,13 +14,20 @@ const IW = VW - P.l - P.r;
 const WIDE = { k: 1, T: 17, IH: 144, B: 39.4 };
 const COMPACT = { k: 1.7, T: 17 * 1.7, IH: 190, B: 39.4 * 1.7 };
 const layout = g => ({ ...g, VH: g.T + g.IH + g.B });
+// Vertical layout for the wide (desktop) or compact (phone) graph
+export const graphLayout = compact => layout(compact ? COMPACT : WIDE);
 const COMPACT_QUERY = '(max-width: 600px)';
 
 const FREQ_TICKS = [20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000];
 
 const toX = f => P.l + (Math.log10(f / F_MIN) / Math.log10(F_MAX / F_MIN)) * IW;
 const fromX = x => F_MIN * Math.pow(F_MAX / F_MIN, (Math.max(P.l, Math.min(P.l + IW, x)) - P.l) / IW);
-const toY = (db, range, g) => g.T + ((range - db) / (2 * range)) * g.IH;
+export const toY = (db, range, g) => g.T + ((range - db) / (2 * range)) * g.IH;
+// Inverse of toY, clamped to the plot: a y position (viewBox units) to dB
+export const fromY = (y, range, g) => {
+  const t = Math.max(0, Math.min(1, (y - g.T) / g.IH));
+  return range - t * 2 * range;
+};
 const fmtFreq = f => f >= 1000 ? `${f / 1000}k` : `${f}`;
 
 // Readout format for arbitrary frequencies, e.g. "87 Hz", "1.24 kHz", "12.5 kHz"
@@ -39,7 +46,8 @@ function SweepMarker({ marker, answerFreq, g }) {
   return (
     <g className="graph-marker">
       <line x1={mx} y1={g.T} x2={mx} y2={g.T + g.IH} className="marker-line" />
-      <text x={mx} y={g.T + 10 * g.k} textAnchor={anchorAt(mx)} className="marker-label">{fmtHz(marker)}</text>
+      {/* one line below the RESPONSE / readout row so the two never collide */}
+      <text x={mx} y={g.T + 27 * g.k} textAnchor={anchorAt(mx)} dx={anchorAt(mx) === 'start' ? 4 : anchorAt(mx) === 'end' ? -4 : 0} className="marker-label">{fmtHz(marker)}</text>
       {ax !== null && (
         <g className="marker-error">
           <line x1={mx} y1={by} x2={ax} y2={by} />
@@ -162,8 +170,9 @@ const sameFilter = (a, b) => a.type === b.type && a.frequency === b.frequency &&
 // curve, drawn prominently until the answer is revealed
 // readout: short status line drawn in the top-right of the plot (filter, gain, Q)
 // idle: nothing loaded yet, so the display runs its scanning animation
-export function FreqGraph({ curves = [], answer = null, hover = null, selected = null, gainDb = 6, sampleRate = 48000, heat = [], marker = null, onPick = null, pickText = 'Click or drag where you hear the boost', readout = '', idle = false }) {
-  const g = layout(useMediaQuery(COMPACT_QUERY) ? COMPACT : WIDE);
+// onPoint: like onPick but reports { freq, db } (Explore mode drags a curve)
+export function FreqGraph({ curves = [], answer = null, hover = null, selected = null, gainDb = 6, sampleRate = 48000, heat = [], marker = null, onPick = null, onPoint = null, pickText = 'Click or drag where you hear the boost', readout = '', idle = false }) {
+  const g = graphLayout(useMediaQuery(COMPACT_QUERY));
   const isBoost = answer ? (answer.gain ?? 0) > 0 : false;
   // ±12 dB by default; widens in 6 dB steps so high gains aren't clipped
   const range = Math.max(12, Math.ceil(Math.abs(gainDb) / 6) * 6);
@@ -171,9 +180,11 @@ export function FreqGraph({ curves = [], answer = null, hover = null, selected =
 
   function pickAt(e) {
     const rect = e.currentTarget.getBoundingClientRect();
-    onPick(fromX(((e.clientX - rect.left) / rect.width) * VW));
+    const freq = fromX(((e.clientX - rect.left) / rect.width) * VW);
+    if (onPoint) onPoint({ freq, db: fromY(((e.clientY - rect.top) / rect.height) * g.VH, range, g) });
+    else onPick(freq);
   }
-  const pointerProps = onPick ? {
+  const pointerProps = onPick || onPoint ? {
     onPointerDown: e => {
       e.preventDefault(); // don't start a text selection while dragging
       try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* capture is a nicety */ }
@@ -186,7 +197,7 @@ export function FreqGraph({ curves = [], answer = null, hover = null, selected =
     <div className="freq-graph-wrap">
       <svg
         viewBox={`0 0 ${VW} ${g.VH}`} width="100%"
-        className={`freq-graph-svg${onPick ? ' graph-interactive' : ''}`}
+        className={`freq-graph-svg${onPick || onPoint ? ' graph-interactive' : ''}`}
         style={{ '--gk': g.k }}
         {...pointerProps}
       >

@@ -2,7 +2,7 @@
 // FrequencyTrainer owns the trial and passes in what to show and what to call.
 import { InfoIcon } from './Icons.jsx';
 import { rowInset, biquadCoeffs, magnitudeDb } from './FreqGraph.jsx';
-import { FREQ_LABEL, FREQ_UNIT } from '../lib/trainer.js';
+import { FREQ_LABEL, FREQ_UNIT, EXPLORE_TYPES } from '../lib/trainer.js';
 
 export function QuickStart() {
   return (
@@ -37,6 +37,7 @@ const MODE_SKETCHES = {
   shelf: [['boost', sketch({ type: 'lowshelf', frequency: 250, gain: 9 })], ['cut', sketch({ type: 'highshelf', frequency: 4000, gain: -9 })]],
   pass:  [['cut', sketch({ type: 'highpass', frequency: 120, Q: -3.01 })], ['cut', sketch({ type: 'lowpass', frequency: 8000, Q: -3.01 })]],
   sweep: [['boost', sketch(peak(1400, 11))]],
+  explore: [['boost', sketch(peak(500, 10))], ['cut', sketch(peak(5000, -7))]],
 };
 
 function ModeGlyph({ id }) {
@@ -54,6 +55,15 @@ function ModeGlyph({ id }) {
 export function ModePicker({ modes, gainDb, onSelect }) {
   return (
     <div className="mode-grid">
+      {/* Explore: free play, no quiz; full width above the six test modes */}
+      <button className="mode-card mode-card-explore" onClick={() => onSelect('explore')}>
+        <span className="mode-sign">FREE PLAY</span>
+        <ModeGlyph id="explore" />
+        <span className="mode-label">Explore</span>
+        <span className="mode-desc">
+          No quiz: drag an EQ curve on the graph and hear what each region sounds like before testing yourself.
+        </span>
+      </button>
       {modes.map(m => (
         <button key={m.id} className="mode-card" onClick={() => onSelect(m.id)}>
           <span className="mode-sign">{m.badge(gainDb)}</span>
@@ -134,7 +144,8 @@ export function AnswerLegend({ wasCorrect, hasSelection, directionLabel }) {
 }
 
 // EQ/Flat toggles on the left; keyboard hint and Check / Next on the right
-export function Transport({ playMode, onPlay, shortcuts, answered, canCheck, onCheck, onNext }) {
+// hideAction: no Check / Next buttons (Explore mode has nothing to answer)
+export function Transport({ playMode, onPlay, shortcuts, answered, canCheck, onCheck, onNext, hideAction = false }) {
   return (
     <div className="transport">
       <button
@@ -153,7 +164,7 @@ export function Transport({ playMode, onPlay, shortcuts, answered, canCheck, onC
         <span className="icon-btn trainer-kb-hint" aria-hidden="true" data-tooltip={shortcuts}>
           <InfoIcon />
         </span>
-        {!answered ? (
+        {hideAction ? null : !answered ? (
           <button className="btn-primary" onClick={onCheck} disabled={!canCheck}>Check Answer</button>
         ) : (
           <button className="btn-primary" onClick={onNext}>Next Trial →</button>
@@ -180,5 +191,30 @@ export function StreakMeter({ correctStreak, wrongStreak, correctToAdvance, wron
         ))}
       </div>
     </div>
+  );
+}
+
+// Explore mode controls: filter type, the region guide, and EQ/Flat
+export function ExploreBody({ type, onType, guide, playMode, onPlay }) {
+  return (
+    <>
+      <div className="explore-types" role="group" aria-label="Filter type">
+        {EXPLORE_TYPES.map((t, i) => (
+          <button
+            key={t.type}
+            className={`btn-ghost explore-type${type === t.type ? ' is-active' : ''}`}
+            onClick={() => onType(t.type)}
+            aria-pressed={type === t.type}
+          >
+            <span className="explore-key">{i + 1}</span>{t.label}
+          </button>
+        ))}
+      </div>
+      <p className="explore-guide" aria-live="polite">{guide}</p>
+      <Transport
+        playMode={playMode} onPlay={onPlay} hideAction
+        shortcuts="Drag the graph · ← → frequency · ↑ ↓ gain · 1–5 filter type · Space EQ/Flat"
+      />
+    </>
   );
 }

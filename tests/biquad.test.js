@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { biquadCoeffs, magnitudeDb, rowInset, fmtHz } from '../src/components/FreqGraph.jsx';
+import { biquadCoeffs, magnitudeDb, rowInset, fmtHz, toY, fromY, graphLayout } from '../src/components/FreqGraph.jsx';
 
 const SR = 48000;
 const db = (filter, f) => magnitudeDb(biquadCoeffs(filter, SR), f, SR);
@@ -92,5 +92,23 @@ describe('fmtHz', () => {
     expect(fmtHz(10000)).toBe('10.0 kHz');
     expect(fmtHz(12500)).toBe('12.5 kHz');
     expect(fmtHz(19999)).toBe('20.0 kHz');
+  });
+});
+describe('toY / fromY', () => {
+  for (const compact of [false, true]) {
+    it(`round-trips dB through the ${compact ? 'compact' : 'wide'} layout`, () => {
+      const g = graphLayout(compact);
+      for (const range of [12, 18]) {
+        for (const db of [-range, -7.5, 0, 3, range]) {
+          expect(fromY(toY(db, range, g), range, g)).toBeCloseTo(db, 9);
+        }
+      }
+    });
+  }
+
+  it('clamps positions outside the plot to the range', () => {
+    const g = graphLayout(false);
+    expect(fromY(-100, 12, g)).toBe(12);
+    expect(fromY(g.VH + 100, 12, g)).toBe(-12);
   });
 });

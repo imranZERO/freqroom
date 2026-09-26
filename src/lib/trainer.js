@@ -87,3 +87,31 @@ export function signForMode(mode) {
   if (mode === 'cut' || mode === 'pass') return -1;
   return Math.random() < 0.5 ? 1 : -1;
 }
+// What a change in each region tends to sound like, for boosts and cuts.
+// Used by Explore mode's region guide.
+const REGION_CHARACTER = {
+  'Sub Bass':   { boost: 'rumble, weight',  cut: 'tighter, less rumble' },
+  'Bass':       { boost: 'fuller, boomy',   cut: 'thinner, lighter' },
+  'Low Mid':    { boost: 'muddy, boxy',     cut: 'clearer, a little hollow' },
+  'Midrange':   { boost: 'honky, nasal',    cut: 'scooped, distant' },
+  'Upper Mid':  { boost: 'forward, harsh',  cut: 'softer, recessed' },
+  'Presence':   { boost: 'edgy, clear',     cut: 'smoother, veiled' },
+  'Brilliance': { boost: 'airy, sparkly',   cut: 'dull, dark' },
+};
+
+// Region name, nearest note, and the character of a boost (sign > 0) or cut
+// (sign < 0) at `freq`; a sign of 0 means no change.
+export function describeRegion(freq, sign) {
+  const region = freqRegion(freq);
+  const character = sign === 0 ? 'no change' : REGION_CHARACTER[region][sign > 0 ? 'boost' : 'cut'];
+  return { region, note: freqToNote(freq), character };
+}
+
+// Filter types offered in Explore mode, in keyboard order (1–5)
+export const EXPLORE_TYPES = [
+  { type: 'peaking',   label: 'Bell' },
+  { type: 'lowshelf',  label: 'Low shelf' },
+  { type: 'highshelf', label: 'High shelf' },
+  { type: 'highpass',  label: 'High-pass' },
+  { type: 'lowpass',   label: 'Low-pass' },
+];
