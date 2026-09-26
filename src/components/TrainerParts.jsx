@@ -1,16 +1,51 @@
 // Presentational pieces of the trainer panel. They hold no state: the
 // FrequencyTrainer owns the trial and passes in what to show and what to call.
-import { useState } from 'react';
 import { InfoIcon } from './Icons.jsx';
 import { rowInset, biquadCoeffs, magnitudeDb } from './FreqGraph.jsx';
 import { FREQ_LABEL, FREQ_UNIT, EXPLORE_TYPES } from '../lib/trainer.js';
+import { PINK_LINE } from '../lib/trackFormat.js';
+
+// Quick start: three step cards in the mode cards' style. Step 1 is lit (it's
+// what to do next); hovering it highlights the Source panel (CSS, in trainer.css).
+const QS_W = 60, QS_H = 26;
+// Computed on first use: sketch() needs constants declared further down
+let qsBellPts = null;
+const qsBell = () => (qsBellPts ??= sketch({ type: 'peaking', frequency: 700, Q: 0.9, gain: 10 }));
+
+function QuickStartGlyph({ step }) {
+  return (
+    <svg className="qs-glyph" viewBox={`0 0 ${QS_W} ${QS_H}`} width={QS_W} height={QS_H} aria-hidden="true">
+      {step === 1 && <polyline points={PINK_LINE} transform={`translate(0 ${(QS_H - 28) / 2})`} />}
+      {step === 2 && [0, 1, 2].flatMap(c => [0, 1].map(r => (
+        <rect key={`${c}${r}`} x={6 + c * 17} y={2 + r * 12} width={14} height={10} rx={2} />
+      )))}
+      {step === 3 && (
+        <>
+          <line className="qs-flat" x1="0" y1={QS_H - 6} x2={QS_W} y2={QS_H - 6} />
+          <polyline className="qs-eq" points={qsBell()} transform="translate(0 -2) scale(0.94 0.95)" />
+        </>
+      )}
+    </svg>
+  );
+}
+
+const QS_STEPS = [
+  { title: 'Load a source', desc: 'Pink noise is best for learning. The music loops, or your own file, come next.' },
+  { title: 'Choose a mode', desc: 'Spot boosts and cuts, find shelves and filter cutoffs, sweep for the exact spot, or just explore.' },
+  { title: 'Listen and pick', desc: 'Switch between EQ and Flat as often as you like, then pick the change you hear.' },
+];
 
 export function QuickStart() {
   return (
     <ol className="quickstart">
-      <li><strong>Load a source</strong> — pink noise is best for learning; the loops or your own music come next.</li>
-      <li><strong>Choose a mode</strong> — spot boosts and cuts, shelves, filter cutoffs, or sweep for the exact spot.</li>
-      <li><strong>Compare EQ and Flat</strong>, then pick the band you hear changing.</li>
+      {QS_STEPS.map((st, i) => (
+        <li key={st.title} className={`qs-step${i === 0 ? ' is-current' : ''}`}>
+          <span className="qs-num">STEP {String(i + 1).padStart(2, '0')}</span>
+          <QuickStartGlyph step={i + 1} />
+          <span className="qs-title">{st.title}</span>
+          <span className="qs-desc">{st.desc}</span>
+        </li>
+      ))}
     </ol>
   );
 }
@@ -38,16 +73,19 @@ const MODE_SKETCHES = {
   shelf: [['boost', sketch({ type: 'lowshelf', frequency: 250, gain: 9 })], ['cut', sketch({ type: 'highshelf', frequency: 4000, gain: -9 })]],
   pass:  [['cut', sketch({ type: 'highpass', frequency: 120, Q: -3.01 })], ['cut', sketch({ type: 'lowpass', frequency: 8000, Q: -3.01 })]],
   sweep: [['boost', sketch(peak(1400, 11))]],
+  'sweep-dip': [['cut', sketch(peak(1400, -11))]],
   explore: [['boost', sketch(peak(500, 10))], ['cut', sketch(peak(5000, -7))]],
   gain:  [['boost', sketch(peak(1000, 4))], ['boost', sketch(peak(1000, 8))], ['boost', sketch(peak(1000, 12))]],
   match: [['cut', sketch(peak(1300, 8))], ['boost', sketch(peak(900, 11))]],
 };
 
-function ModeGlyph({ id }) {
+function ModeGlyph({ id, small = false }) {
+  // small: the keys inside a grouped panel; the viewBox scales the same sketch
+  const w = small ? 52 : GLYPH_W, h = small ? 22 : GLYPH_H;
   return (
-    <svg className="mode-glyph" viewBox={`0 0 ${GLYPH_W} ${GLYPH_H}`} width={GLYPH_W} height={GLYPH_H} aria-hidden="true">
+    <svg className="mode-glyph" viewBox={`0 0 ${GLYPH_W} ${GLYPH_H}`} width={w} height={h} aria-hidden="true">
       <line className="mode-glyph-zero" x1="0" y1={GLYPH_H / 2} x2={GLYPH_W} y2={GLYPH_H / 2} />
-      {id === 'sweep' && <line className="mode-glyph-marker" x1={GLYPH_W * 0.62} y1="1" x2={GLYPH_W * 0.62} y2={GLYPH_H - 1} />}
+      {id.startsWith('sweep') && <line className="mode-glyph-marker" x1={GLYPH_W * 0.62} y1="1" x2={GLYPH_W * 0.62} y2={GLYPH_H - 1} />}
       {(MODE_SKETCHES[id] ?? []).map(([dir, pts], i) => (
         <polyline key={i} className={`mode-glyph-${dir}`} points={pts} />
       ))}
@@ -55,51 +93,48 @@ function ModeGlyph({ id }) {
   );
 }
 
-// Modes that differ only in direction or filter type share a card with a
-// switch, like the grouped source cards; the rest get a card each
+// Modes that differ only in direction or filter type share a card with a strip
+// of keys along its bottom, one per mode (each opens it); the rest get a card each
+// A key's `opts` go to onSelect with its mode (Sweep's keys set the direction)
 const MODE_GROUPS = [
-  { id: 'bands', label: 'Bands', modes: ['boost', 'cut', 'both'] },
-  { id: 'filters', label: 'Filters', modes: ['shelf', 'pass'] },
-  { modes: ['sweep'] },
+  { id: 'bands', label: 'Bands', desc: 'Hear a peak change and pick its band', modes: ['boost', 'cut', 'both'] },
+  { id: 'filters', label: 'Filters', desc: "Find a shelf's corner or a pass filter's cutoff", modes: ['shelf', 'pass'] },
+  {
+    id: 'sweep', label: 'Sweep', desc: 'Drag on the graph to where you hear the change',
+    keys: [
+      { mode: 'sweep', opts: { dir: 'boost' }, label: 'Boost', name: 'Sweep boost', glyph: 'sweep', badge: g => `+${g}dB`, desc: 'Drag to where you hear the boost' },
+      { mode: 'sweep', opts: { dir: 'dip' }, label: 'Dip', name: 'Sweep dip', glyph: 'sweep-dip', badge: g => `−${g}dB`, desc: 'Drag to where you hear the dip' },
+    ],
+  },
   { modes: ['gain'] },
   { modes: ['match'] },
 ];
+// Shorter key labels where the full mode name won't fit a key
+const KEY_LABEL = { pass: 'Pass' };
 
-function ModeCardFace({ mode, label, gainDb }) {
+function ModeGroupPanel({ group, modes, gainDb, onSelect }) {
+  const keys = group.keys ?? group.modes.map(id => {
+    const m = modes.find(x => x.id === id);
+    return { mode: id, label: KEY_LABEL[id] ?? m.label, name: m.label, glyph: id, badge: m.badge, desc: m.desc };
+  });
   return (
-    <>
-      <span className="mode-sign">{mode.badge(gainDb)}</span>
-      <ModeGlyph id={mode.id} />
-      <span className="mode-label">{label}</span>
-      <span className="mode-desc">{mode.desc}</span>
-    </>
-  );
-}
-
-// A grouped card: the face opens the shown variant, the switch opens another.
-// Hovering or focusing a variant previews its sketch and description.
-function ModeGroupCard({ group, modes, lastMode, gainDb, onSelect }) {
-  const variants = group.modes.map(id => modes.find(m => m.id === id));
-  const [preview, setPreview] = useState(null);
-  const current = variants.find(m => m.id === lastMode) ?? variants[0];
-  const shown = variants.find(m => m.id === preview) ?? current;
-  return (
-    <div className="mode-card mode-group" role="group" aria-label={group.label}>
-      <button className="mode-main" onClick={() => onSelect(shown.id)}>
-        <ModeCardFace mode={shown} label={group.label} gainDb={gainDb} />
-      </button>
-      <div className="track-variants mode-variants">
-        {variants.map(m => (
+    <div className="mode-panel" role="group" aria-label={group.label}>
+      <div className="mode-panel-head">
+        <span className="mode-label">{group.label}</span>
+        <span className="mode-desc">{group.desc}</span>
+      </div>
+      <div className="mode-keys" style={{ '--n': keys.length }}>
+        {keys.map(k => (
           <button
-            key={m.id}
-            className={`track-variant ${m.id === shown.id ? 'is-active' : ''}`}
-            onClick={() => onSelect(m.id)}
-            onMouseEnter={() => setPreview(m.id)}
-            onMouseLeave={() => setPreview(null)}
-            onFocus={() => setPreview(m.id)}
-            onBlur={() => setPreview(null)}
+            key={k.name}
+            className="mode-key"
+            onClick={() => onSelect(k.mode, k.opts)}
+            aria-label={`${k.name}: ${k.desc}`}
+            data-tooltip={k.desc}
           >
-            {m.label}
+            <ModeGlyph id={k.glyph} small />
+            <span className="mode-key-label">{k.label}</span>
+            <span className="mode-key-sign">{k.badge(gainDb)}</span>
           </button>
         ))}
       </div>
@@ -107,18 +142,20 @@ function ModeGroupCard({ group, modes, lastMode, gainDb, onSelect }) {
   );
 }
 
-// lastMode: the mode played last, so its group's card opens it again
-export function ModePicker({ modes, gainDb, lastMode, onSelect }) {
+export function ModePicker({ modes, gainDb, onSelect }) {
   return (
     <div className="mode-grid">
       {MODE_GROUPS.map(group => {
-        if (group.modes.length > 1) {
-          return <ModeGroupCard key={group.id} group={group} modes={modes} lastMode={lastMode} gainDb={gainDb} onSelect={onSelect} />;
+        if (group.keys || group.modes.length > 1) {
+          return <ModeGroupPanel key={group.id} group={group} modes={modes} gainDb={gainDb} onSelect={onSelect} />;
         }
         const m = modes.find(x => x.id === group.modes[0]);
         return (
           <button key={m.id} className="mode-card" onClick={() => onSelect(m.id)}>
-            <ModeCardFace mode={m} label={m.label} gainDb={gainDb} />
+            <span className="mode-sign">{m.badge(gainDb)}</span>
+            <ModeGlyph id={m.id} />
+            <span className="mode-label">{m.label}</span>
+            <span className="mode-desc">{m.desc}</span>
           </button>
         );
       })}

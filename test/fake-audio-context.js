@@ -70,6 +70,16 @@ export class FakeAudioContext {
     return n;
   }
 
+  createAnalyser() {
+    const n = new FakeNode(this, 'analyser');
+    n.fftSize = 2048;
+    n.smoothingTimeConstant = 0.8;
+    Object.defineProperty(n, 'frequencyBinCount', { get: () => n.fftSize / 2 });
+    n.getFloatFrequencyData = arr => arr.fill(-60);
+    this.analysers = [...(this.analysers ?? []), n];
+    return n;
+  }
+
   createBiquadFilter() {
     const n = new FakeNode(this, 'biquad');
     n.type = 'lowpass';

@@ -197,17 +197,17 @@ export function TrackSelector({ engine, gainDb, setGainDb, q, setQ, focus, setFo
                     <span className="track-name">{g.label}</span>
                     <span className="track-desc">{sel.description}</span>
                   </button>
-                  <div className="track-variants">
+                  <div className="source-keys" style={{ '--n': g.variants.length }}>
                     {g.variants.map(v => (
                       <button
                         key={v.id}
-                        className={`track-variant ${v.id === sel.id ? 'is-active' : ''}`}
+                        className={`source-key${v.id === sel.id ? ' is-picked' : ''}`}
                         onClick={() => loadGenerated(v.id)}
                         disabled={engine.isLoading}
                         aria-pressed={activeId === v.id}
                         aria-label={`${v.label} ${g.id === 'noise' ? 'noise' : 'loop'}`}
                       >
-                        {v.label}
+                        <span className="source-key-label">{v.label}</span>
                       </button>
                     ))}
                   </div>
@@ -365,6 +365,7 @@ export function TrackSelector({ engine, gainDb, setGainDb, q, setQ, focus, setFo
               <span className="switch-track" aria-hidden="true" />
               <span className="switch-label">Focus weak bands</span>
             </label>
+
           </div>
         </section>
       </div>

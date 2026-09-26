@@ -50,7 +50,8 @@ const FEATURES = [
     ['Adaptive difficulty', 'Each mode has its own level: 3 correct in a row levels up, 2 wrong levels down.', 'difficulty'],
     ['Gain and Q controls', 'Boost/cut amount (1–18 dB) and bell width (Q 0.5–8), applied live, even mid-trial.', 'peaking'],
     ['Instant A/B comparison', 'EQ and Flat switch without a click or restart, so both continue from the same point.', 'chain'],
-    ['Frequency response graph', 'Every candidate curve is drawn during a trial and the hidden one is revealed after you answer; buttons sit under their curves.', 'graph'],
+    ['Frequency response graph', 'Every candidate curve is drawn during a trial and the hidden one is revealed after you answer; buttons sit under their curves. EQ regions are shaded and named, and a cursor readout shows the frequency, note, and region under the mouse.', 'graph'],
+    ['Live spectrum', "A faint real-time spectrum of what's playing behind the curves. During a trial it only shows the Flat signal (or Match EQ's Yours) until you answer, so it can't give the EQ away.", 'graph'],
     ['Sweep scoring', 'Drag on the graph to the frequency you hear; scored by octave error with a tolerance that tightens by level, and near misses earn partial points.', 'sweep'],
     ['Answer labels', 'The nearest note, EQ region, filter type, or (in Sweep) your error in octaves.', 'labels'],
     ['Auto-play EQ', 'Optionally starts each trial playing the EQ straight away.', null],
@@ -292,7 +293,7 @@ export function TechnicalDetails({ chrome }) {
 
         <Section id="sweep">
           <p className="td-p">
-            Sweep mode has no buttons: on the start screen you pick the direction (a boost or a dip), then drag a marker across
+            Sweep mode has no band buttons: you pick the direction (a boost or a dip) with the Boost and Dip keys on its card, then drag a marker across
             the graph to where you hear it (← and → nudge
             it by a semitone, 1/12 octave). The hidden frequency is drawn from 72 log-spaced points between 40 Hz and
             16 kHz. Your answer is scored by its distance from the true frequency in octaves:
@@ -333,7 +334,33 @@ export function TechnicalDetails({ chrome }) {
             During a trial every candidate is drawn in grey — both directions in Mixed and Shelves — and after you
             answer, the hidden filter is revealed in colour: amber for boosts, blue for cuts and pass filters. The dB
             axis is ±12 dB and widens in 6 dB steps (to ±18 dB) when the gain exceeds 12 dB, so curves are never
-            clipped.
+            clipped. The revealed curve rises out of the 0 dB line.
+          </p>
+          <p className="td-p">
+            The plot is divided into the seven EQ regions used in the answer labels (see{' '}
+            <a href="#labels">Note and Region Labels</a>), with alternate regions faintly shaded and named along the
+            bottom. With a mouse, a hairline follows the pointer and the top-left readout shows the frequency, nearest
+            note, and region under it (and the gain, where dragging sets one).
+          </p>
+          <h3 className="td-h3">Live spectrum</h3>
+          <p className="td-p">
+            Behind the curves, a soft live spectrum shows what's playing. An{' '}
+            <code className="td-code">AnalyserNode</code> sits inline after the EQ/Flat mix (FFT size 16384, about
+            3 Hz per bin at 48 kHz, smoothing 0.8). Each of 160 log-spaced points averages the bins' power over a
+            third of an octave, with every bin weighted by f / 1 kHz — a +3 dB/octave tilt, so pink noise reads flat
+            and an EQ change stands out as a bump. Points are eased from frame to frame in power (averaging in dB
+            would read low where there are few bins), and the display is centred on the average level from 100 Hz
+            to 10 kHz. Real material varies far more than an EQ does, so the spectrum is drawn at about
+            three-quarters of the curves' scale and rounds off towards the plot's edges (a tanh soft limit) instead
+            of flat-topping.
+          </p>
+          <p className="td-p">
+            Because the spectrum would show where a hidden EQ is, during a trial it only shows while{' '}
+            <strong>Flat</strong> plays — your source with no EQ — or Match EQ's <strong>Yours</strong> (your own
+            bell), and only after that has played for half a second, since the analyser's 0.34-second window still
+            holds the hidden EQ's sound just after switching. Once you answer it shows for EQ too, so you can watch
+            the change. In Explore it's always on. The spectrum button (the bars icon beside Back and Share, once
+            a mode is open) turns it off.
           </p>
         </Section>
 
@@ -491,6 +518,8 @@ export function TechnicalDetails({ chrome }) {
       │                   EQ GainNode
       │                     │
       ├─────────────────────┘
+      │
+  AnalyserNode                  live spectrum (passes audio through)
       │
   master GainNode               volume
       │

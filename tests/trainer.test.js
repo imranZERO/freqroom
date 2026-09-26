@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   generateBands, octaveError, withinSweepTolerance, bandRange, typeAt, makeFilter,
-  signForMode, pickDirection, freqToNote, freqRegion, FREQ_LABEL, FREQ_UNIT,
+  signForMode, pickDirection, freqToNote, freqRegion, REGIONS, FREQ_LABEL, FREQ_UNIT,
   SWEEP_TOLERANCE, SWEEP_RANGE, SWEEP_GRID, FREQ_MIN, FREQ_MAX, describeRegion, EXPLORE_TYPES,
   GAIN_LEVELS, GAIN_FREQS, MATCH_TOLERANCE, MATCH_GAINS, MATCH_RANGE_DB, withinMatchTolerance,
 } from '../src/lib/trainer.js';
@@ -249,5 +249,16 @@ describe('Match EQ tolerance', () => {
   it('hides gains the match range can reach', () => {
     for (const g of MATCH_GAINS) expect(g).toBeLessThanOrEqual(MATCH_RANGE_DB);
     expect(Math.min(...MATCH_GAINS)).toBeGreaterThanOrEqual(3);
+  });
+});
+
+describe('REGIONS', () => {
+  it('runs in order and ends open-ended, matching freqRegion at every edge', () => {
+    for (let i = 1; i < REGIONS.length; i++) expect(REGIONS[i].to).toBeGreaterThan(REGIONS[i - 1].to);
+    expect(REGIONS.at(-1).to).toBe(Infinity);
+    for (let i = 0; i < REGIONS.length - 1; i++) {
+      expect(freqRegion(REGIONS[i].to - 0.01)).toBe(REGIONS[i].name);
+      expect(freqRegion(REGIONS[i].to)).toBe(REGIONS[i + 1].name);
+    }
   });
 });

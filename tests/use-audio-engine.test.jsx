@@ -47,13 +47,17 @@ describe('useAudioEngine', () => {
       expect(voice.gain.targetValues()).toEqual([1]);
       expect(master.gain.value).toBe(DEFAULT_VOLUME);
 
-      // flat path: input → flat → master and EQ path: input → biquad → eqOut → master,
-      // master → limiter → destination
+      // flat path: input → flat → analyser and EQ path: input → biquad → eqOut → analyser,
+      // then analyser (inline, for the graph's spectrum) → master → limiter → destination
+      const [analyser] = ctx.analysers;
       expect(input.connections).toContain(flat);
       expect(input.connections).toContain(ctx.biquads[0]);
       expect(ctx.biquads[0].connections).toContain(eqOut);
-      expect(flat.connections).toContain(master);
-      expect(eqOut.connections).toContain(master);
+      expect(flat.connections).toContain(analyser);
+      expect(eqOut.connections).toContain(analyser);
+      expect(analyser.connections).toContain(master);
+      expect(engine.getAnalyser()).toBe(analyser);
+      expect(analyser.fftSize).toBe(16384);
       expect(master.connections).toContain(ctx.compressors[0]);
       expect(ctx.compressors[0].connections).toContain(ctx.destination);
 

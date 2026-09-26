@@ -49,6 +49,14 @@
 
 /* Weak-spot strip under the plot: accuracy per octave */
 .graph-heat rect { transition: fill 0.3s; }
+/* Hover targets over the strip (HTML, so they get the app's tooltips) */
+.graph-heat-hits { position: absolute; inset: 0; pointer-events: none; }
+.graph-heat-hit {
+  position: absolute;
+  pointer-events: auto;
+  border-radius: 3px;
+}
+.graph-heat-hit:not(.graph-heat-hit-label):hover { box-shadow: inset 0 0 0 1px var(--text); }
 .graph-heat-label { font-size: calc(7.5px * var(--gk, 1)); letter-spacing: 0.04em; }
 .heat-none { fill: var(--border); opacity: 0.6; }
 .heat-low  { fill: var(--red); }
@@ -60,11 +68,39 @@
   from { opacity: 0; }
   to   { opacity: 1; }
 }
-@keyframes graph-draw {
-  from { stroke-dashoffset: 1; }
-  to   { stroke-dashoffset: 0; }
+/* The revealed curve rises out of the 0 dB line (--y0, set per graph) */
+@keyframes graph-rise {
+  from { transform: scaleY(0); }
+  to   { transform: scaleY(1); }
 }
-.graph-reveal { animation: graph-in 0.3s ease; }
+.graph-reveal {
+  transform-box: view-box;
+  transform-origin: 0 var(--y0);
+  animation: graph-rise 0.55s cubic-bezier(0.2, 0.8, 0.25, 1) both;
+}
+
+/* EQ regions: faint shading on alternate regions, names along the plot's foot */
+.graph-region-shade { fill: color-mix(in srgb, var(--text) 3%, transparent); }
+.graph-region-label {
+  font-family: var(--font-mono);
+  font-size: calc(6.5px * var(--gk, 1));
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  fill: var(--muted);
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Live spectrum of what's playing, behind the curves; fades when idle */
+.graph-spectrum { opacity: 0; transition: opacity 0.4s; pointer-events: none; }
+.graph-spectrum.is-live { opacity: 1; }
+.graph-spectrum-fill { fill: color-mix(in srgb, var(--muted) 6%, transparent); }
+.graph-spectrum-line { fill: none; stroke: color-mix(in srgb, var(--muted) 26%, transparent); stroke-width: 1; stroke-linejoin: round; }
+
+/* Cursor readout */
+.graph-cursor { pointer-events: none; }
+.graph-cursor-line { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 2 2; opacity: 0.7; }
+.graph-cursor-text { fill: var(--text); }
 
 .graph-fill-boost  { fill: color-mix(in srgb, var(--a) 16%, transparent); }
 .graph-fill-cut    { fill: color-mix(in srgb, var(--cut) 16%, transparent); }
@@ -75,8 +111,6 @@
   fill: none;
   stroke-width: 2;
   stroke-linejoin: round;
-  stroke-dasharray: 1;
-  animation: graph-draw 0.6s cubic-bezier(0.3, 0.6, 0.2, 1) both;
 }
 .graph-curve-boost { stroke: var(--a);   filter: drop-shadow(0 0 2px color-mix(in srgb, var(--a) 40%, transparent)); }
 .graph-curve-cut   { stroke: var(--cut); filter: drop-shadow(0 0 2px color-mix(in srgb, var(--cut) 40%, transparent)); }

@@ -1,4 +1,6 @@
+import { useState, useEffect, useRef } from 'react';
 import { useMediaQuery } from '../hooks/useMediaQuery.js';
+import { REGIONS, freqToNote, freqRegion } from '../lib/trainer.js';
 
 const F_MIN = 20, F_MAX = 20000;
 const N = 300;
@@ -137,26 +139,168 @@ const hzLabel = f => f >= 1000 ? `${f / 1000} kHz` : `${f} Hz`;
 // Weak-spot strip: your accuracy per octave, on its own line below the frequency
 // labels. Every octave has a faint placeholder segment; it takes a colour once it
 // has enough answers to rate (see MIN_ATTEMPTS in progress.js).
+const heatY = g => g.T + g.IH + 20 * g.k;
+const heatH = g => 7 * g.k;
+const heatSpan = center => [toX(Math.max(F_MIN, center / Math.SQRT2)), toX(Math.min(F_MAX, center * Math.SQRT2))];
+const HEAT_LABEL_TIP = 'Your accuracy per octave in this mode: red under 50%, amber under 80%, green above';
+const heatTip = ({ center, n, hits, acc }) => `${hzLabel(center)} octave · ${acc === null
+  ? `not rated yet (${n} of 3 answers)`
+  : `${hits}/${n} correct (${Math.round(acc * 100)}%)`}`;
+
 function HeatStrip({ heat, g }) {
-  const y = g.T + g.IH + 20 * g.k;
-  const h = 7 * g.k;
+  const y = heatY(g), h = heatH(g);
   return (
     <g className="graph-heat">
-      <text x={P.l - 4} y={y + h / 2} textAnchor="end" dominantBaseline="middle" className="graph-label graph-heat-label">
-        acc
-        <title>Your accuracy per octave (red under 50%, amber under 80%, green above)</title>
-      </text>
-      {heat.map(({ center, n, hits, acc }) => {
-        const x0 = toX(Math.max(F_MIN, center / Math.SQRT2));
-        const x1 = toX(Math.min(F_MAX, center * Math.SQRT2));
+      <text x={P.l - 4} y={y + h / 2} textAnchor="end" dominantBaseline="middle" className="graph-label graph-heat-label">acc</text>
+      {heat.map(({ center, acc }) => {
+        const [x0, x1] = heatSpan(center);
+        return <rect key={center} x={x0 + 0.5} y={y} width={Math.max(0, x1 - x0 - 1)} height={h} rx={1.5} className={heatClass(acc)} />;
+      })}
+    </g>
+  );
+}
+
+// SVG elements can't show the app's CSS tooltips, so invisible HTML hit areas sit
+// over the strip (positioned in % of the viewBox, so they scale with the graph)
+function HeatHits({ heat, g }) {
+  const y = heatY(g), h = heatH(g), pad = 3 * g.k;
+  const box = (x0, x1) => ({
+    left: `${(x0 / VW) * 100}%`, width: `${((x1 - x0) / VW) * 100}%`,
+    top: `${((y - pad) / g.VH) * 100}%`, height: `${((h + 2 * pad) / g.VH) * 100}%`,
+  });
+  return (
+    <div className="graph-heat-hits">
+      <span className="graph-heat-hit graph-heat-hit-label tt-start" style={box(4, P.l - 2)} data-tooltip={HEAT_LABEL_TIP} aria-label={HEAT_LABEL_TIP} role="img" />
+      {heat.map((cell, i) => {
+        const [x0, x1] = heatSpan(cell.center);
+        const edge = i < 2 ? ' tt-start' : i >= heat.length - 2 ? ' tt-end' : '';
         return (
-          <rect key={center} x={x0 + 0.5} y={y} width={Math.max(0, x1 - x0 - 1)} height={h} rx={1.5} className={heatClass(acc)}>
-            <title>{`${hzLabel(center)} octave: ${acc === null
-              ? `not rated yet (${n} of 3 answers)`
-              : `${hits}/${n} correct (${Math.round(acc * 100)}%)`}`}</title>
-          </rect>
+          <span
+            key={cell.center}
+            className={`graph-heat-hit${edge}`}
+            style={box(x0 + 0.5, x1 - 0.5)}
+            data-tooltip={heatTip(cell)}
+            aria-label={heatTip(cell)}
+            role="img"
+          />
         );
       })}
+    </div>
+  );
+}
+
+// ── Live spectrum ─────────────────────────────────────────────────────────
+// What's playing, drawn softly behind the curves. Each point averages the
+// analyser's power over a third of an octave (or its share of the log axis, if
+// wider; the usual analyser smoothing, so noise doesn't look ragged), with every bin tilted
+// +3 dB/octave around 1 kHz (power × f / 1 kHz) so pink noise reads flat and an
+// EQ change shows as a bump.
+const SPEC_N = 160;
+const SPEC_FREQS = Array.from({ length: SPEC_N }, (_, i) => F_MIN * Math.pow(F_MAX / F_MIN, i / (SPEC_N - 1)));
+export function spectrumDb(bins, sampleRate, freqs = SPEC_FREQS) {
+  const binHz = sampleRate / 2 / bins.length;
+  // half the averaging window, as a frequency ratio
+  const half = Math.max(Math.pow(2, 1 / 6), Math.pow(F_MAX / F_MIN, 0.5 / (freqs.length - 1)));
+  return freqs.map(f => {
+    const lo = Math.max(1, Math.floor(f / half / binHz));
+    const hi = Math.min(bins.length - 1, Math.max(lo, Math.ceil(f * half / binHz)));
+    let power = 0;
+    for (let b = lo; b <= hi; b++) power += Math.pow(10, bins[b] / 10) * (b * binHz / 1000);
+    return 10 * Math.log10(power / (hi - lo + 1) || 1e-12);
+  });
+}
+// The display is centred on the average level between these. The centre eases
+// slowly (so a boost doesn't lift the whole trace), but jumps when it's far off,
+// e.g. when playback restarts after silence; near-silent frames don't move it.
+// Each point also eases so it moves smoothly. Easing is by time constant, so it
+// behaves the same at any frame rate.
+const SPEC_CENTRE = [100, 10000];
+const SPEC_CENTRE_TAU = 0.33;   // seconds
+const SPEC_POINT_TAU = 0.06;    // seconds
+const SPEC_SNAP_DB = 12;
+const SPEC_SILENT_DB = -100;
+const easeFor = (dt, tau) => 1 - Math.exp(-dt / tau);
+// The spectrum is drawn at about 0.75× the curves' scale in the middle and
+// soft-limited (tanh) towards the edges, so real material, which varies far
+// more than the EQ, rounds off inside the plot instead of flat-topping at ±range
+// (±12 dB in most modes), while an EQ bump still reads clearly.
+const SPEC_SCALE = 0.75;
+export const spectrumToAxis = (db, range) => range * Math.tanh((SPEC_SCALE * db) / range);
+
+// Draws straight to the DOM each frame (no React re-render); fades out when idle
+function SpectrumLayer({ getAnalyser, live, range, g }) {
+  const lineRef = useRef(null);
+  const fillRef = useRef(null);
+  useEffect(() => {
+    if (!live || !getAnalyser) return;
+    let raf = 0, centre = null, bins = null, shown = null, last = null;
+    const bottom = (g.T + g.IH).toFixed(1);
+    const tick = now => {
+      const dt = last === null ? 1 / 60 : Math.min(0.25, (now - last) / 1000);
+      last = now;
+      const an = getAnalyser();
+      if (an && lineRef.current) {
+        if (!bins || bins.length !== an.frequencyBinCount) bins = new Float32Array(an.frequencyBinCount);
+        an.getFloatFrequencyData(bins);
+        // Ease in power, not dB: averaging a noisy signal's dB values reads low,
+        // most visibly in the lowest octaves where each point spans few bins
+        const rawDb = spectrumDb(bins, an.context?.sampleRate ?? 48000);
+        const raw = rawDb.map(db => Math.pow(10, db / 10));
+        const pointEase = easeFor(dt, SPEC_POINT_TAU);
+        shown = shown ? shown.map((v, i) => v + (raw[i] - v) * pointEase) : raw;
+        const dbs = shown.map(p => 10 * Math.log10(p || 1e-12));
+        // The centre follows this frame's raw level, so it's right at once;
+        // only the drawn points ease (after silence they rise into place)
+        let sum = 0, n = 0;
+        rawDb.forEach((db, i) => {
+          if (SPEC_FREQS[i] >= SPEC_CENTRE[0] && SPEC_FREQS[i] <= SPEC_CENTRE[1]) { sum += db; n++; }
+        });
+        const mean = sum / n;
+        if (Number.isFinite(mean) && mean > SPEC_SILENT_DB) {
+          centre = centre === null || Math.abs(mean - centre) > SPEC_SNAP_DB
+            ? mean
+            : centre + (mean - centre) * easeFor(dt, SPEC_CENTRE_TAU);
+        }
+        if (centre !== null) {
+          const line = dbs.map((db, i) => {
+            const y = toY(spectrumToAxis(db - centre, range), range, g);
+            return `${i ? 'L' : 'M'}${toX(SPEC_FREQS[i]).toFixed(1)},${y.toFixed(1)}`;
+          }).join('');
+          lineRef.current.setAttribute('d', line);
+          fillRef.current.setAttribute('d', `${line}L${(P.l + IW).toFixed(1)},${bottom}L${P.l},${bottom}Z`);
+        }
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [live, getAnalyser, range, g.VH]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!getAnalyser) return null;
+  return (
+    <g className={`graph-spectrum${live ? ' is-live' : ''}`} aria-hidden="true">
+      <path ref={fillRef} className="graph-spectrum-fill" />
+      <path ref={lineRef} className="graph-spectrum-line" />
+    </g>
+  );
+}
+
+// ── Cursor readout ────────────────────────────────────────────────────────
+// A hairline under the mouse and, in place of the RESPONSE title, the frequency,
+// nearest note, and region there (plus dB where the plot sets gain). Its own
+// state, so moving the mouse re-renders only this layer, not every curve.
+function CursorLayer({ bindRef, withDb, range, g }) {
+  const [pos, setPos] = useState(null);
+  bindRef.current = setPos;
+  const titleXY = { x: P.l + 13 * g.k, y: g.T + 13 * g.k };
+  if (!pos) return <text {...titleXY} className="graph-readout graph-readout-title">RESPONSE</text>;
+  const f = fromX(pos.x);
+  const db = fromY(pos.y, range, g);
+  const dbText = `${db >= 0.05 ? '+' : db <= -0.05 ? '−' : ''}${Math.abs(db).toFixed(1)} dB`;
+  const label = `${fmtHz(f)} · ${freqToNote(f).replace('~', '')} · ${freqRegion(f)}${withDb ? ` · ${dbText}` : ''}`;
+  return (
+    <g className="graph-cursor" aria-hidden="true">
+      <line x1={pos.x} y1={g.T} x2={pos.x} y2={g.T + g.IH} className="graph-cursor-line" />
+      <text {...titleXY} className="graph-readout graph-cursor-text">{label}</text>
     </g>
   );
 }
@@ -171,7 +315,9 @@ const sameFilter = (a, b) => a.type === b.type && a.frequency === b.frequency &&
 // readout: short status line drawn in the top-right of the plot (filter, gain, Q)
 // idle: nothing loaded yet, so the display runs its scanning animation
 // onPoint: like onPick but reports { freq, db } (Explore mode drags a curve)
-export function FreqGraph({ curves = [], answer = null, hover = null, selected = null, selectedTone = null, gainDb = 6, sampleRate = 48000, heat = [], marker = null, onPick = null, onPoint = null, pickText = 'Click or drag where you hear the boost', readout = '', idle = false }) {
+// getAnalyser/live: the engine's analyser and whether audio is playing, for the
+// live spectrum (omit getAnalyser to turn it off)
+export function FreqGraph({ curves = [], answer = null, hover = null, selected = null, selectedTone = null, gainDb = 6, sampleRate = 48000, heat = [], marker = null, onPick = null, onPoint = null, pickText = 'Click or drag where you hear the boost', readout = '', idle = false, getAnalyser = null, live = false }) {
   const g = graphLayout(useMediaQuery(COMPACT_QUERY));
   const isBoost = answer ? (answer.gain ?? 0) > 0 : false;
   // ±12 dB by default; widens in 6 dB steps so high gains aren't clipped
@@ -184,20 +330,41 @@ export function FreqGraph({ curves = [], answer = null, hover = null, selected =
     if (onPoint) onPoint({ freq, db: fromY(((e.clientY - rect.top) / rect.height) * g.VH, range, g) });
     else onPick(freq);
   }
-  const pointerProps = onPick || onPoint ? {
-    onPointerDown: e => {
-      e.preventDefault(); // don't start a text selection while dragging
-      try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* capture is a nicety */ }
-      pickAt(e);
+  // Cursor readout: mouse only (a touch has no hover), and only over the plot
+  const cursorRef = useRef(null);
+  function trackCursor(e) {
+    if (e.pointerType !== 'mouse' || !cursorRef.current) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * VW;
+    const y = ((e.clientY - rect.top) / rect.height) * g.VH;
+    const inside = x >= P.l && x <= P.l + IW && y >= g.T && y <= g.T + g.IH;
+    cursorRef.current(inside ? { x, y } : null);
+  }
+  const interactive = onPick || onPoint;
+  const pointerProps = {
+    onPointerMove: e => {
+      trackCursor(e);
+      if (interactive && e.buttons) pickAt(e);
     },
-    onPointerMove: e => { if (e.buttons) pickAt(e); },
-  } : {};
+    onPointerLeave: () => cursorRef.current?.(null),
+    ...(interactive ? {
+      onPointerDown: e => {
+        e.preventDefault(); // don't start a text selection while dragging
+        try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* capture is a nicety */ }
+        pickAt(e);
+      },
+    } : {}),
+  };
+  // Region names sit along the bottom of the plot, except while a Sweep or
+  // Match EQ error bracket is drawn there, and on phones, where the scaled-up
+  // text won't fit the narrow upper regions (the shading stays)
+  const regionLabels = !(marker && answer) && g.k === 1;
 
   return (
     <div className="freq-graph-wrap">
       <svg
         viewBox={`0 0 ${VW} ${g.VH}`} width="100%"
-        className={`freq-graph-svg${onPick || onPoint ? ' graph-interactive' : ''}`}
+        className={`freq-graph-svg${interactive ? ' graph-interactive' : ''}`}
         style={{ '--gk': g.k }}
         {...pointerProps}
       >
@@ -207,6 +374,15 @@ export function FreqGraph({ curves = [], answer = null, hover = null, selected =
             <stop offset="1" stopColor="var(--a)" stopOpacity="0.9" />
           </linearGradient>
         </defs>
+
+        {/* EQ regions: alternate ones shaded */}
+        {REGIONS.map((r, i) => {
+          if (i % 2 === 0) return null;
+          const x0 = toX(REGIONS[i - 1].to), x1 = toX(Math.min(r.to, F_MAX));
+          return <rect key={r.name} x={x0} y={g.T} width={x1 - x0} height={g.IH} className="graph-region-shade" />;
+        })}
+
+        <SpectrumLayer getAnalyser={getAnalyser} live={live} range={range} g={g} />
 
         {/* dB grid */}
         {dbTicks.map(db => (
@@ -228,6 +404,15 @@ export function FreqGraph({ curves = [], answer = null, hover = null, selected =
             </text>
           </g>
         ))}
+
+        {regionLabels && REGIONS.map((r, i) => {
+          const x0 = toX(i ? REGIONS[i - 1].to : F_MIN), x1 = toX(Math.min(r.to, F_MAX));
+          return (
+            <text key={r.name} x={(x0 + x1) / 2} y={g.T + g.IH - 5 * g.k} textAnchor="middle" className="graph-region-label">
+              {r.name}
+            </text>
+          );
+        })}
 
         {/* Candidate curves in gray, skipping the revealed one */}
         {curves.map(c => {
@@ -265,9 +450,10 @@ export function FreqGraph({ curves = [], answer = null, hover = null, selected =
         {answer && (() => {
           const pts = computeCurve(answer, sampleRate, range, g);
           return (
-            <g className="graph-reveal">
+            // Rises out of the 0 dB line (the transform origin)
+            <g className="graph-reveal" style={{ '--y0': `${toY(0, range, g)}px` }}>
               <path d={makeFill(pts, range, g)} className={isBoost ? 'graph-fill-boost' : 'graph-fill-cut'} />
-              <path d={makeLine(pts)} pathLength="1" className={isBoost ? 'graph-curve-boost' : 'graph-curve-cut'} />
+              <path d={makeLine(pts)} className={isBoost ? 'graph-curve-boost' : 'graph-curve-cut'} />
             </g>
           );
         })()}
@@ -295,12 +481,13 @@ export function FreqGraph({ curves = [], answer = null, hover = null, selected =
         {/* Border */}
         <rect x={P.l} y={g.T} width={IW} height={g.IH} className="graph-border" />
 
-        {/* Readout */}
-        <text x={P.l + 13 * g.k} y={g.T + 13 * g.k} className="graph-readout graph-readout-title">RESPONSE</text>
+        {/* Readout: the cursor layer shows RESPONSE, or the cursor's position */}
+        <CursorLayer bindRef={cursorRef} withDb={!!onPoint} range={range} g={g} />
         {readout && (
           <text x={P.l + IW - 13 * g.k} y={g.T + 13 * g.k} textAnchor="end" className="graph-readout">{readout}</text>
         )}
       </svg>
+      {heat.length > 0 && <HeatHits heat={heat} g={g} />}
     </div>
   );
 }

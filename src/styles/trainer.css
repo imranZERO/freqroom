@@ -22,34 +22,74 @@
 /* Empty state: numbered quick-start steps */
 .quickstart {
   list-style: none;
-  counter-reset: step;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
 }
-.quickstart li {
-  counter-increment: step;
+/* Step cards: the mode cards' face, anatomy, and sketch; not buttons themselves */
+.qs-step {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "num glyph" "title glyph" "desc desc" "extra extra";
+  align-content: start;
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 3px;
+  padding: 13px 14px 14px;
   background: linear-gradient(to bottom, var(--key-top), var(--key-bottom));
-  box-shadow: inset 0 1px 0 var(--highlight);
   border: 1px solid var(--border-hover);
+  border-bottom: 3px solid var(--key-edge);
   border-radius: var(--radius);
-  padding: 12px 14px;
-  font-size: 0.82rem;
-  line-height: 1.45;
+  box-shadow: inset 0 1px 0 var(--highlight), var(--key-drop);
+}
+.qs-num {
+  grid-area: num;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
   color: var(--muted);
 }
-.quickstart li::before {
-  content: counter(step, decimal-leading-zero);
-  display: block;
-  margin-bottom: 6px;
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  letter-spacing: 0.1em;
-  color: var(--a);
+.qs-num::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--border-hover);
 }
-.quickstart li strong { color: var(--text); font-weight: 600; }
+.qs-glyph { grid-area: glyph; align-self: start; overflow: visible; }
+.qs-glyph polyline, .qs-glyph line { fill: none; stroke: var(--muted); stroke-width: 1.4; stroke-linejoin: round; opacity: 0.75; }
+.qs-glyph rect { fill: none; stroke: var(--muted); stroke-width: 1.2; opacity: 0.7; }
+.qs-glyph .qs-flat { stroke-dasharray: 2 2; opacity: 0.6; }
+.qs-title { grid-area: title; font-size: 1.05rem; font-weight: 700; letter-spacing: -0.01em; color: var(--text); }
+.qs-desc { grid-area: desc; margin-top: 4px; font-size: 0.82rem; line-height: 1.45; color: var(--muted); }
+/* The current step: amber edge, lit lamp, amber sketch */
+.qs-step.is-current {
+  border-color: color-mix(in srgb, var(--a) 70%, var(--border-hover));
+  border-bottom-color: color-mix(in srgb, var(--a) 40%, var(--key-edge));
+  background: linear-gradient(to bottom,
+    color-mix(in srgb, var(--a) 9%, var(--key-top)),
+    color-mix(in srgb, var(--a) 5%, var(--key-bottom)));
+}
+.qs-step.is-current .qs-num { color: var(--a); }
+.qs-step.is-current .qs-num::before { background: var(--a); box-shadow: 0 0 5px color-mix(in srgb, var(--a) 60%, transparent); }
+.qs-step.is-current .qs-glyph polyline { stroke: var(--a); opacity: 1; }
+/* Hovering step 1 ("Load a source") points at the Source panel: its cards
+   take an amber edge and glow, and the panel's label lights up */
+.qs-step.is-current { cursor: default; }
+.source-card .track-btn,
+.rack-side .panel-group:first-child .panel-label { transition: border-color 0.2s, box-shadow 0.2s, color 0.2s; }
+.rack:has(.qs-step.is-current:hover) .source-card .track-btn {
+  border-color: color-mix(in srgb, var(--a) 65%, var(--border-hover));
+  box-shadow: inset 0 1px 0 var(--highlight), var(--key-drop), 0 0 0 3px color-mix(in srgb, var(--a) 16%, transparent);
+}
+.rack:has(.qs-step.is-current:hover) .rack-side .panel-group:first-child .panel-label { color: var(--a); }
 @media (max-width: 520px) {
-  .quickstart { grid-template-columns: 1fr; }
+  .quickstart { grid-template-columns: 1fr; gap: 10px; }
 }
 
 /* Mode picker */
@@ -84,35 +124,71 @@
   text-align: left;
   font-family: inherit;
 }
-/* Grouped card (Bands, Filters): the face is its own button and a variant
-   switch sits along the bottom; padding moves onto the parts */
-.mode-group {
+/* Grouped card (Bands, Filters): the same raised card as the others, with its
+   modes as a strip of keys along the bottom edge, flush and split by hairlines.
+   Each key opens its mode, so nothing looks like a setting. */
+.mode-panel {
   display: flex;
   flex-direction: column;
-  align-items: stretch;
-  padding: 0;
-  cursor: default;
+  background: linear-gradient(to bottom, var(--key-top), var(--key-bottom));
+  border: 1px solid var(--border-hover);
+  border-bottom: 3px solid var(--key-edge);
+  border-radius: var(--radius);
+  box-shadow: inset 0 1px 0 var(--highlight), var(--key-drop);
 }
-.mode-main {
-  flex: 1;
+.mode-panel-head {
+  display: flex;
+  flex-direction: column;
+  padding: 13px 14px 12px;
+}
+.mode-panel-head .mode-desc { margin-top: 4px; }
+.mode-keys {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas: "sign glyph" "label glyph" "desc desc";
-  align-content: start;
-  align-items: center;
-  column-gap: 12px;
-  row-gap: 3px;
-  padding: 13px 14px 10px;
-  background: none;
-  border: 0;
-  color: inherit;
-  font-family: inherit; /* not the full font shorthand: keep the button line height the single cards use */
-  text-align: left;
-  cursor: pointer;
+  grid-template-columns: repeat(var(--n), minmax(0, 1fr));
+  margin-top: auto;
+  border-top: 1px solid var(--border-hover);
 }
-.mode-main:focus-visible { outline: 2px solid var(--a); outline-offset: -2px; border-radius: var(--radius); }
-.mode-variants { margin: 0 14px 14px; }
-.mode-variants .track-variant { white-space: nowrap; padding-inline: 4px; }
+.mode-key {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  padding: 9px 4px 8px;
+  background: color-mix(in srgb, var(--card-2) 55%, transparent);
+  border: 0;
+  border-radius: 0;
+  color: var(--text);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+.mode-key + .mode-key { border-left: 1px solid var(--border-hover); }
+/* The outer keys round off with the card's bottom corners. (Not overflow:
+   hidden on the card, which would clip the keys' tooltips.) */
+.mode-key:first-child { border-bottom-left-radius: calc(var(--radius) - 1px); }
+.mode-key:last-child { border-bottom-right-radius: calc(var(--radius) - 1px); }
+.mode-key-label { font-size: 0.86rem; font-weight: 700; white-space: nowrap; }
+.mode-key-sign {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+/* Hover lights the key amber from below, like a lit button; press sinks it */
+.mode-key:hover {
+  background: color-mix(in srgb, var(--a) 12%, var(--card-2));
+  box-shadow: inset 0 -2px 0 var(--a);
+}
+.mode-key:hover .mode-glyph polyline { opacity: 1; }
+.mode-key:hover .mode-glyph-boost { stroke: var(--a); }
+.mode-key:hover .mode-glyph-cut { stroke: var(--cut); }
+.mode-key:hover .mode-key-sign { color: var(--text); }
+.mode-key:active { box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.18), inset 0 -2px 0 var(--a); }
+.mode-key:focus-visible { outline: 2px solid var(--a); outline-offset: -2px; }
+.mode-key .mode-glyph { align-self: center; }
+
 .mode-sign  { grid-area: sign; }
 .mode-label { grid-area: label; }
 .mode-desc  { grid-area: desc; margin-top: 4px; }
@@ -213,21 +289,6 @@
 .start-desc { color: var(--muted); font-size: 0.9rem; }
 .start-desc strong { color: var(--text); font-family: var(--font-mono); }
 
-/* Sweep direction toggle on the start screen */
-.sweep-dir { display: flex; gap: 10px; justify-content: center; }
-.sweep-opt { padding: 9px 20px; font-size: 0.78rem; }
-.sweep-opt.is-active {
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
-  background: color-mix(in srgb, var(--a) 12%, transparent);
-  border-color: color-mix(in srgb, var(--a) 55%, var(--border));
-  color: var(--a);
-}
-.sweep-opt-dip.is-active {
-  background: color-mix(in srgb, var(--cut) 12%, transparent);
-  border-color: color-mix(in srgb, var(--cut) 55%, var(--border));
-  color: var(--cut);
-}
-
 .trainer-header {
   display: flex;
   align-items: center;
@@ -239,12 +300,24 @@
 /* Inner step title — the panel's lamp lives on the outer .panel-label */
 .trainer-header h2::before { display: none; }
 .trainer-header-end { margin-left: auto; display: flex; gap: 8px; }
+/* Spectrum on/off: icon-only, the same height as Back / Share; amber when on */
+.spectrum-toggle { display: inline-flex; align-items: center; padding: 5px 8px; }
+.spectrum-toggle svg { display: block; }
+.spectrum-toggle.is-on {
+  color: var(--a);
+  border-color: color-mix(in srgb, var(--a) 55%, var(--border));
+  background: color-mix(in srgb, var(--a) 10%, transparent);
+}
 .trainer-status {
   color: var(--muted);
   font-size: 0.86rem;
   margin-left: 4px;
 }
+/* A long result (e.g. Match EQ's) wraps within its own space, so Back / Share
+   stay on the header's top row; below 260px it takes its own line (phones) */
 .trainer-result {
+  flex: 1 1 260px;
+  min-width: 0;
   font-weight: 700;
   font-size: 1rem;
   margin-left: 4px;

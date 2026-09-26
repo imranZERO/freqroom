@@ -17,9 +17,16 @@ function rampTo(param, value, t) {
   param.setTargetAtTime(value, t, RAMP_TC);
 }
 
+// Analyser FFT size: 8192 bins over 0–24 kHz at 48 kHz, ~3 Hz apart, so the
+// spectrum still resolves the lowest octaves
+const ANALYSER_FFT = 16384;
+
 // Persistent graph, built once per AudioContext:
-//   voice(s) → input ─┬─ flat ─────────────┬─ master(volume) → limiter → destination
+//   voice(s) → input ─┬─ flat ─────────────┬─ analyser → master(volume) → limiter → destination
 //                     └─ eqChain → eqOut ──┘
+// The analyser sits inline (it passes audio through unchanged) so it is always
+// processed; it sees what you hear before the volume fader, for the graph's
+// live spectrum.
 // Switching EQ/flat crossfades flat/eqOut instead of restarting the source.
 function createGraph(ctx, volume) {
   const input = ctx.createGain();
@@ -27,6 +34,7 @@ function createGraph(ctx, volume) {
   const eqOut = ctx.createGain();
   const master = ctx.createGain();
   const limiter = ctx.createDynamicsCompressor();
+  const analyser = ctx.createAnalyser();
 
   flat.gain.value = 1;
   eqOut.gain.value = 0;
@@ -36,15 +44,18 @@ function createGraph(ctx, volume) {
   limiter.ratio.value = 20;
   limiter.attack.value = 0.001;
   limiter.release.value = 0.1;
+  analyser.fftSize = ANALYSER_FFT;
+  analyser.smoothingTimeConstant = 0.8;
 
   input.connect(flat);
   input.connect(eqOut);
-  flat.connect(master);
-  eqOut.connect(master);
+  flat.connect(analyser);
+  eqOut.connect(analyser);
+  analyser.connect(master);
   master.connect(limiter);
   limiter.connect(ctx.destination);
 
-  return { ctx, input, flat, eqOut, master, eqNodes: [] };
+  return { ctx, input, flat, eqOut, analyser, master, eqNodes: [] };
 }
 
 export function useAudioEngine() {
@@ -278,9 +289,12 @@ export function useAudioEngine() {
     }
   }, [fadeOutSource]);
 
+  // The live analyser for the graph's spectrum (null until something has played)
+  const getAnalyser = useCallback(() => graphRef.current?.analyser ?? null, []);
+
   return {
     isLoaded, isLoading, isPlaying, loadError,
-    play, stop, loadBuffer, getCtx,
+    play, stop, loadBuffer, getCtx, getAnalyser,
     volume, setVolume,
     seek, getCurrentOffset,
     loop, setLoop,

@@ -5,7 +5,7 @@
   min-width: 0;
   gap: 10px;
 }
-.rack-side .track-grid { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.rack-side .track-grid { grid-template-columns: minmax(0, 1fr); gap: 10px; }
 .panel-label { margin: 0 0 8px 2px; }
 /* Label with an action on the right (e.g. reset); fixed height so the
    button appearing or disappearing doesn't shift the panel */
@@ -71,7 +71,7 @@
   align-items: center;
   column-gap: 12px;
   row-gap: 2px;
-  padding: 11px 14px 12px;
+  padding: 8px 14px 10px;
   background: linear-gradient(to bottom, var(--key-top), var(--key-bottom));
   border: 1px solid var(--border-hover);
   border-bottom: 3px solid var(--key-edge);
@@ -88,8 +88,9 @@
 .track-glyph { grid-area: glyph; align-self: center; }
 
 /* Grouped source (Noise, Music Loop): the card face loads the picked variant,
-   the switch below picks and loads another. Padding moves onto the inner
-   button so the whole face is clickable. */
+   and a strip of keys along the bottom edge picks and loads another, like the
+   mode cards' keys. The loaded variant's key stays lit. Padding moves onto
+   the inner button so the whole face is clickable. */
 .track-group {
   display: flex;
   flex-direction: column;
@@ -97,6 +98,9 @@
   padding: 0;
   cursor: default;
 }
+/* The keys are the buttons here, so the card itself doesn't lift or sink */
+.track-group:hover:not(:disabled),
+.track-group:active:not(:disabled) { transform: none; border-bottom-width: 3px; }
 .track-main {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -104,8 +108,8 @@
   align-items: center;
   column-gap: 12px;
   row-gap: 2px;
-  padding: 11px 14px 9px;
-  flex: 1;              /* fill the card so the switch sits at the bottom */
+  padding: 7px 14px 7px;
+  flex: 1;              /* fill the card so the keys sit at the bottom */
   align-content: start;
   background: none;
   border: 0;
@@ -116,53 +120,52 @@
 }
 .track-main:focus-visible { outline: 2px solid var(--a); outline-offset: -2px; border-radius: var(--radius); }
 .track-group:has(.track-main:disabled) { opacity: 0.5; }
-.track-main:disabled, .track-variant:disabled { cursor: default; }
-.track-variants {
-  display: flex;
-  margin: 0 14px 12px;
-  border: 1px solid var(--border-hover);
-  border-radius: var(--radius);
-  background: var(--card-2);
+.track-main:disabled, .source-key:disabled { cursor: default; }
+
+.source-keys {
+  display: grid;
+  grid-template-columns: repeat(var(--n), minmax(0, 1fr));
+  border-top: 1px solid var(--border-hover);
 }
-.track-variant {
-  flex: 1;
-  padding: 4px 8px;
-  background: none;
+.source-key {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 6px 6px;
+  background: color-mix(in srgb, var(--card-2) 55%, transparent);
   border: 0;
-  border-radius: calc(var(--radius) - 1px);
+  border-radius: 0;
   color: var(--muted);
   cursor: pointer;
-  font-family: var(--font-mono);
-  font-size: 0.64rem;
-  font-weight: 500;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  transition: color 0.15s, background 0.15s;
+  font-family: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  transition: background 0.15s, box-shadow 0.15s, color 0.15s;
 }
-.track-variant + .track-variant { border-left: 1px solid var(--border-hover); border-radius: 0 calc(var(--radius) - 1px) calc(var(--radius) - 1px) 0; }
-.track-variant:first-child { border-radius: calc(var(--radius) - 1px) 0 0 calc(var(--radius) - 1px); }
-.track-variant:hover:not(:disabled) { color: var(--text); }
-.track-variant.is-active { color: var(--text); background: color-mix(in srgb, var(--muted) 12%, transparent); }
-/* Caret on the picked variant, pointing up at the description it names */
-.track-variant { position: relative; }
-.track-variant.is-active::before {
-  content: '';
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  margin-bottom: 1px;
-  transform: translateX(-50%);
-  border: 5px solid transparent;
-  border-top: 0;
-  border-bottom-color: var(--muted);
-  opacity: 0.7;
-  transition: border-color 0.15s, opacity 0.15s;
-}
-.track-btn.active .track-variant.is-active::before { border-bottom-color: var(--a); opacity: 1; }
-.track-btn.active .track-variant.is-active {
+.source-key + .source-key { border-left: 1px solid var(--border-hover); }
+/* Outer keys round off with the card's bottom corners */
+.source-key:first-child { border-bottom-left-radius: calc(var(--radius) - 1px); }
+.source-key:last-child { border-bottom-right-radius: calc(var(--radius) - 1px); }
+.source-key-label { white-space: nowrap; }
+.source-key:focus-visible { outline: 2px solid var(--a); outline-offset: -2px; }
+
+/* The card's picked variant (what its face loads) reads in full colour */
+.source-key.is-picked { color: var(--text); }
+/* Loaded: lit amber from below, like the mode keys on hover */
+.track-btn.active .source-key.is-picked {
   color: var(--a);
-  background: color-mix(in srgb, var(--a) 14%, transparent);
+  background: color-mix(in srgb, var(--a) 12%, var(--card-2));
+  box-shadow: inset 0 -2px 0 var(--a);
 }
+@media (hover: hover) {
+  .source-key:hover:not(:disabled) {
+    color: var(--text);
+    background: color-mix(in srgb, var(--a) 8%, var(--card-2));
+    box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--a) 55%, transparent);
+  }
+}
+.source-key:active:not(:disabled) { box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.18), inset 0 -2px 0 var(--a); }
 
 /* Status lamp before the source name */
 .track-name::before {

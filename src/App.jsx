@@ -33,6 +33,7 @@ function MainApp({ chrome }) {
   }
   const [focus, setFocus] = usePersistentState('focus', false);
   const [autoplay, setAutoplay] = usePersistentState('autoplay', true);
+  const [spectrum, setSpectrum] = usePersistentState('spectrum', true);
   const [progress, setProgress] = usePersistentState('progress', EMPTY_PROGRESS);
   // Which built-in source is loaded ('pink' | 'white'), for challenge links
   const [sourceId, setSourceId] = useState(null);
@@ -105,7 +106,7 @@ function MainApp({ chrome }) {
         <div className="rack-main">
           <FrequencyTrainer
             engine={engine} gainDb={gainDb} q={q}
-            progress={progress} focus={focus} autoplay={autoplay} onResult={handleResult}
+            progress={progress} focus={focus} autoplay={autoplay} spectrum={spectrum} setSpectrum={setSpectrum} onResult={handleResult}
             initialMode={challenge?.mode} initialLevel={challenge?.level} initialSweepDir={challenge?.sweepDir} sourceId={sourceId}
           />
           <ScoreBoard

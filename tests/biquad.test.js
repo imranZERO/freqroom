@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { biquadCoeffs, magnitudeDb, rowInset, fmtHz, toY, fromY, graphLayout } from '../src/components/FreqGraph.jsx';
+import { biquadCoeffs, magnitudeDb, rowInset, fmtHz, toY, fromY, graphLayout, spectrumDb, spectrumToAxis } from '../src/components/FreqGraph.jsx';
 
 const SR = 48000;
 const db = (filter, f) => magnitudeDb(biquadCoeffs(filter, SR), f, SR);
@@ -110,5 +110,47 @@ describe('toY / fromY', () => {
     const g = graphLayout(false);
     expect(fromY(-100, 12, g)).toBe(12);
     expect(fromY(g.VH + 100, 12, g)).toBe(-12);
+  });
+});
+
+describe('spectrumDb', () => {
+  // Analyser-style bins (dB per bin) for a spectrum with power ∝ f^slope
+  const bins = (slope, n = 8192, sr = 48000) => Float32Array.from({ length: n }, (_, i) => {
+    const f = Math.max(1, (i * sr) / 2 / n);
+    return 10 * Math.log10(Math.pow(f, slope));
+  });
+  const freqs = [50, 100, 1000, 5000, 15000];
+
+  it('reads pink noise (power ∝ 1/f) as flat, after the +3 dB/octave tilt', () => {
+    const out = spectrumDb(bins(-1), 48000, freqs);
+    for (const v of out) expect(v).toBeCloseTo(out[2], 0);
+  });
+
+  it('shows white noise rising 3 dB per octave', () => {
+    // a 160-point log grid like the graph's, so each point spans a narrow slice
+    const grid = Array.from({ length: 160 }, (_, i) => 20 * Math.pow(1000, i / 159));
+    const out = spectrumDb(bins(0), 48000, grid);
+    const at = hz => out[grid.findIndex(f => f >= hz)];
+    const octaves = Math.log2(grid.find(f => f >= 4000) / grid.find(f => f >= 250));
+    expect(at(4000) - at(250)).toBeCloseTo(3.01 * octaves, 0);
+  });
+
+  it('stays finite for silence', () => {
+    const silent = new Float32Array(1024).fill(-Infinity);
+    for (const v of spectrumDb(silent, 48000, freqs)) expect(Number.isFinite(v)).toBe(true);
+  });
+});
+
+describe('spectrumToAxis', () => {
+  it('maps the spectrum onto the axis on its own scale, never reaching the edges', () => {
+    expect(spectrumToAxis(0, 12)).toBe(0);
+    // small levels are drawn at about 0.75×
+    expect(spectrumToAxis(2, 12)).toBeCloseTo(1.5, 1);
+    expect(spectrumToAxis(6, 12)).toBeCloseTo(4.3, 1);
+    // big swings round off inside the plot instead of clipping at ±range
+    expect(spectrumToAxis(30, 12)).toBeLessThan(12);
+    expect(spectrumToAxis(-60, 12)).toBeGreaterThan(-12);
+    // near the middle, about the same size on ±12 and ±18 dB axes
+    expect(spectrumToAxis(4, 18)).toBeCloseTo(spectrumToAxis(4, 12), 0);
   });
 });

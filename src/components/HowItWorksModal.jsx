@@ -84,8 +84,8 @@ export function HowItWorksModal({ isOpen, onClose }) {
                 find the cutoff. The Gain slider doesn't apply here.
               </div>
               <div className="info-mode-item">
-                <strong>Sweep</strong> — no buttons: click or drag on the graph to where you hear the boost
-                (← → nudge by a semitone). You're scored on how many octaves off you are; the allowed error
+                <strong>Sweep</strong> — pick Boost or Dip on its card, then click or drag on the graph to where
+                you hear it (← → nudge by a semitone). You're scored on how many octaves off you are; the allowed error
                 shrinks from 1 octave at level 1 to ⅙ octave at level 5.
               </div>
               <div className="info-mode-item">

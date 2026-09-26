@@ -100,14 +100,19 @@ export function freqToNote(hz) {
   return `~${name}${octave}`;
 }
 
+// EQ regions and where each ends (Hz); the graph shades and labels them too
+export const REGIONS = [
+  { name: 'Sub Bass', to: 80 },
+  { name: 'Bass', to: 250 },
+  { name: 'Low Mid', to: 500 },
+  { name: 'Midrange', to: 2000 },
+  { name: 'Upper Mid', to: 4000 },
+  { name: 'Presence', to: 8000 },
+  { name: 'Brilliance', to: Infinity },
+];
+
 export function freqRegion(hz) {
-  if (hz < 80)   return 'Sub Bass';
-  if (hz < 250)  return 'Bass';
-  if (hz < 500)  return 'Low Mid';
-  if (hz < 2000) return 'Midrange';
-  if (hz < 4000) return 'Upper Mid';
-  if (hz < 8000) return 'Presence';
-  return 'Brilliance';
+  return REGIONS.find(r => hz < r.to).name;
 }
 
 // Modes where you answer the direction (boost or cut) as well as the frequency;

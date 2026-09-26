@@ -34,6 +34,7 @@ Gain (1–18 dB) and Q (0.5–8) are adjustable, even mid-trial, so you can star
 - Scoring that rewards difficulty: points per answer grow with the number of choices (and Sweep near misses earn partial credit), with accuracy, streaks, your last 10 answers, and a per-mode breakdown for the session or all time
 - Progress is saved in your browser: level per mode, lifetime score, and an accuracy strip under the graph showing how you do in each octave
 - *Focus weak bands* drills the octaves you miss most
+- The graph shades and names the EQ regions, reads out the frequency, note, and region under the mouse, and can show a live spectrum of what's playing (during a trial, only for Flat until you answer)
 - Keyboard: 1–9/0 pick bands, ← → step, ↑ ↓ switch boost/cut rows, Space toggles EQ/Flat, Enter checks or advances
 - Share links recreate a challenge — mode, level, gain, Q, generated source, and Sweep direction
 - System, light, and dark themes

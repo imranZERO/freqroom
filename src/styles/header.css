@@ -101,12 +101,12 @@
   bottom: calc(100% + 8px);
   left: 50%;
   width: max-content;
-  max-width: 260px;
+  max-width: 280px;
   background: var(--text);
   border-radius: 4px;
-  padding: 4px 8px;
+  padding: 5px 9px;
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: 0.74rem;
   font-weight: 500;
   letter-spacing: normal;
   text-transform: none;
@@ -138,10 +138,33 @@
 /* Edge-aligned variants so tooltips near the page edges don't spill off it */
 .trainer-kb-hint[data-tooltip]::after { left: 0; transform: translateY(4px); }
 .trainer-share[data-tooltip]::after { left: auto; right: 0; transform: translateY(4px); }
+.mode-key:first-child[data-tooltip]::after,
+.tt-start[data-tooltip]::after { left: 0; transform: translateY(4px); }
+.mode-key:last-child[data-tooltip]::after,
+.tt-end[data-tooltip]::after { left: auto; right: 0; transform: translateY(4px); }
 .trainer-kb-hint[data-tooltip]:hover::after,
 .trainer-kb-hint[data-tooltip]:focus-visible::after,
 .trainer-share[data-tooltip]:hover::after,
-.trainer-share[data-tooltip]:focus-visible::after { transform: translateY(0); }
+.trainer-share[data-tooltip]:focus-visible::after,
+.mode-key:first-child[data-tooltip]:hover::after,
+.mode-key:first-child[data-tooltip]:focus-visible::after,
+.mode-key:last-child[data-tooltip]:hover::after,
+.mode-key:last-child[data-tooltip]:focus-visible::after,
+.tt-start[data-tooltip]:hover::after,
+.tt-end[data-tooltip]:hover::after { transform: translateY(0); }
+
+/* The trainer header's buttons (spectrum, Share) sit just under the page header,
+   which is layered above the main column, so their tooltips open downward over
+   the graph instead, aligned to the right edge */
+.trainer-header-end [data-tooltip]::after {
+  bottom: auto;
+  top: calc(100% + 8px);
+  left: auto;
+  right: 0;
+  transform: translateY(-4px);
+}
+.trainer-header-end [data-tooltip]:hover::after,
+.trainer-header-end [data-tooltip]:focus-visible::after { transform: translateY(0); }
 
 :focus-visible {
   outline: 2px solid var(--a);

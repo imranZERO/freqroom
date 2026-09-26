@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { FreqGraph, fmtHz } from './FreqGraph.jsx';
+import { SpectrumIcon } from './Icons.jsx';
 import { QuickStart, ModePicker, BandRows, GainRow, AnswerLegend, Transport, StreakMeter, ExploreBody } from './TrainerParts.jsx';
 import { heatFor, pickWeighted } from '../lib/progress.js';
 import { buildChallengeUrl, copyText } from '../lib/challenge.js';
@@ -23,6 +24,9 @@ export const MODES = [
   { id: 'match', label: 'Match EQ',     family: 'match', badge: () => 'FREQ + dB', desc: 'Drag your own curve until it sounds like the hidden one', minLevel: 1, maxLevel: 5 },
 ];
 
+// How long Flat (or Yours) must play before the live spectrum shows during a quiz (ms)
+const SPECTRUM_SETTLE_MS = 500;
+
 // Sweep and Match EQ: the per-level octave tolerance labels ("within ±1 octave counts")
 const SWEEP_TOL_LABEL = ['1', '⅔', '½', '⅓', '⅙'];
 // Match EQ: where a guess starts when first nudged from the keyboard
@@ -44,7 +48,7 @@ const TYPE_LABELS = {
   lowshelf: 'low shelf', highshelf: 'high shelf', lowpass: 'low-pass', highpass: 'high-pass',
 };
 
-export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay, onResult, initialMode, initialLevel, sourceId, initialSweepDir }) {
+export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay, spectrum = false, setSpectrum = null, onResult, initialMode, initialLevel, sourceId, initialSweepDir }) {
   const [testMode, setTestMode] = useState(initialMode ?? null);
   const [copied, setCopied] = useState(false);
   const currentMode = MODES.find(m => m.id === testMode);
@@ -55,8 +59,6 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
   const minLevel = currentMode?.minLevel ?? MIN_LEVEL;
   const maxLevel = currentMode?.maxLevel ?? MAX_LEVEL;
   const answeringRef = useRef(false);
-  // Last mode opened, so the picker's grouped cards reopen that variant
-  const lastModeRef = useRef(initialMode ?? null);
   // A challenge link can set the starting level for its mode without writing to
   // saved progress; it yields to the adaptive level once the first answer lands.
   const challengeLevelRef = useRef(initialLevel ?? null);
@@ -104,6 +106,17 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
   useEffect(() => {
     if (isExplore && playMode === 'eq') engine.play([exploreFilter]);
   }, [explore, q]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Flat or Yours has played long enough for the analyser to hold none of the
+  // hidden EQ's sound (see spectrumAllowed)
+  const safePlay = playMode === 'flat' || playMode === 'mine';
+  const [playSettled, setPlaySettled] = useState(false);
+  useEffect(() => {
+    setPlaySettled(false);
+    if (!safePlay) return;
+    const t = setTimeout(() => setPlaySettled(true), SPECTRUM_SETTLE_MS);
+    return () => clearTimeout(t);
+  }, [playMode, trial?.activeBand, trial?.activeGain]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Engine stopped elsewhere (e.g. source track changed) — clear the play toggle
   useEffect(() => {
@@ -228,14 +241,28 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
       setTimeout(() => setCopied(false), 1800);
     }
   }
+  // Spectrum on/off: an icon toggle beside Back / Share (every header that has
+  // them is a mode that can show the spectrum)
+  const spectrumButton = setSpectrum && (
+    <button
+      className={`btn-ghost spectrum-toggle${spectrum ? ' is-on' : ''}`}
+      onClick={() => setSpectrum(!spectrum)}
+      aria-pressed={spectrum}
+      aria-label="Live spectrum"
+      data-tooltip={spectrum ? 'Spectrum on: what\'s playing, faintly behind the curves (in a trial: Flat only, until you answer)' : 'Spectrum off'}
+    >
+      <SpectrumIcon />
+    </button>
+  );
   const shareButton = (
     <button className="btn-ghost trainer-share" onClick={shareChallenge} data-tooltip="Copy a link to this exact challenge">
       {copied ? 'Link copied' : 'Share'}
     </button>
   );
 
-  function selectMode(mode) {
-    if (mode) lastModeRef.current = mode;
+  // opts.dir: Sweep's direction, picked on its card ('boost' or 'dip')
+  function selectMode(mode, opts) {
+    if (opts?.dir) setSweepSign(opts.dir === 'dip' ? -1 : 1);
     // Leaving the challenge's mode ends the challenge's starting level
     if (mode !== initialMode) challengeLevelRef.current = null;
     answeringRef.current = false;
@@ -380,6 +407,9 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
     if (hovered && !(sel && sel.freq === hovered.freq && sel.sign === hovered.sign)) hoverCurve = curveFor(hovered);
   }
 
+  // Header badge; Sweep shows its direction (picked on its card)
+  const modeBadge = isSweep ? `${sweepSign > 0 ? '+' : '−'}${gainDb}dB` : currentMode?.badge(gainDb);
+
   // Status line on the graph: which filter is in play and its settings
   const SIGN = { boost: '+', cut: '−', both: '±', shelf: '±', sweep: sweepSign > 0 ? '+' : '−' };
   const qText = `Q ${q.toFixed(1)}`;
@@ -392,6 +422,13 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
     : family === 'pass' ? `${trial ? (trial.kind === 'highpass' ? 'HIGH-PASS' : 'LOW-PASS') : 'HP / LP'} · 12 dB/oct`
     : family === 'shelf' ? `SHELF · ±${gainDb} dB`
     : `PEAK · ${SIGN[testMode]}${gainDb} dB · ${qText}`;
+
+  // The live spectrum would show where a hidden EQ is, so during an unanswered
+  // trial it only shows while Flat (or Match EQ's Yours, your own bell) plays,
+  // and only once that has settled: the analyser's window (16384 samples,
+  // ~0.34 s) and smoothing still hold the hidden EQ's sound for a moment after
+  // switching. Explore has nothing to hide.
+  const spectrumAllowed = isExplore || !trial || trial.answered || (safePlay && playSettled);
 
   // The graph is the instrument's "screen" and is shown in every state
   const screen = (
@@ -414,6 +451,8 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
         : sweepSign > 0 ? 'Click or drag where you hear the boost' : 'Click or drag where you hear the dip'}
       readout={readout}
       idle={!engine.isLoaded}
+      getAnalyser={spectrum ? engine.getAnalyser : null}
+      live={engine.isPlaying && spectrumAllowed}
     />
   );
 
@@ -428,7 +467,7 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
     body = (
       <>
         <h2 className="mode-title">Choose Test Mode</h2>
-        <ModePicker modes={MODES} gainDb={gainDb} lastMode={lastModeRef.current} onSelect={selectMode} />
+        <ModePicker modes={MODES} gainDb={gainDb} onSelect={selectMode} />
       </>
     );
   } else if (isExplore) {
@@ -444,6 +483,7 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
         <div className="mode-badge">Explore · free play</div>
         <span className="trainer-status">Drag the curve on the graph</span>
         <span className="trainer-header-end">
+          {spectrumButton}
           <button className="btn-ghost trainer-back" onClick={() => selectMode(null)}>← Back</button>
         </span>
       </>
@@ -459,8 +499,9 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
     header = (
       <>
         <div className="level-chip">Level {level}</div>
-        <div className="mode-badge">{currentMode.badge(gainDb)} · {currentMode.label}</div>
+        <div className="mode-badge">{modeBadge} · {currentMode.label}</div>
         <span className="trainer-header-end">
+          {spectrumButton}
           {shareButton}
           <button className="btn-ghost" onClick={() => setTestMode(null)}>Change mode</button>
         </span>
@@ -468,18 +509,6 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
     );
     body = (
       <div className="trainer-start">
-        {isSweep && (
-          <div className="sweep-dir" role="group" aria-label="Sweep direction">
-            <button
-              className={`btn-ghost sweep-opt sweep-opt-boost${sweepSign === 1 ? ' is-active' : ''}`}
-              onClick={() => setSweepSign(1)} aria-pressed={sweepSign === 1}
-            >▲ Boost</button>
-            <button
-              className={`btn-ghost sweep-opt sweep-opt-dip${sweepSign === -1 ? ' is-active' : ''}`}
-              onClick={() => setSweepSign(-1)} aria-pressed={sweepSign === -1}
-            >▼ Dip</button>
-          </div>
-        )}
         <p className="start-desc">{isSweep
           ? <>Drag on the graph to where you hear the <strong>{sweepSign > 0 ? 'boost' : 'dip'}</strong> — within <strong>±{SWEEP_TOL_LABEL[level - 1]}</strong> octave counts</>
           : isGain
@@ -528,7 +557,7 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
     header = (
       <>
         <div className="level-chip">Level {level}</div>
-        <div className="mode-badge">{currentMode.badge(gainDb)} · {currentMode.label}</div>
+        <div className="mode-badge">{modeBadge} · {currentMode.label}</div>
         {!answered ? (
           <span className="trainer-status">
             {hasSelection ? (kind === 'sweep' ? `Guess ${fmtHz(userSelection.freq)} — ready to check`
@@ -556,6 +585,7 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
           </span>
         )}
         <span className="trainer-header-end">
+          {spectrumButton}
           <button className="btn-ghost trainer-back" onClick={() => selectMode(null)}>← Back</button>
           {shareButton}
         </span>
