@@ -53,7 +53,7 @@ const FEATURES = [
     ['Frequency response graph', 'Every candidate curve is drawn during a trial and the hidden one is revealed after you answer; buttons sit under their curves. EQ regions are shaded and named, and a cursor readout shows the frequency, note, and region under the mouse.', 'graph'],
     ['Live spectrum', "A faint real-time spectrum of what's playing behind the curves. During a trial it only shows the Flat signal (or Match EQ's Yours) until you answer, so it can't give the EQ away.", 'graph'],
     ['Sweep scoring', 'Drag on the graph to the frequency you hear; scored by octave error with a tolerance that tightens by level, and near misses earn partial points.', 'sweep'],
-    ['Answer labels', 'The nearest note, EQ region, filter type, or (in Sweep) your error in octaves.', 'labels'],
+    ['Answer labels', 'A verdict and points, then the answer with its note, filter type, or (in Sweep and Match EQ) your error, and its EQ region.', 'labels'],
     ['Auto-play EQ', 'Optionally starts each trial playing the EQ straight away.', null],
     ['Focus weak bands', 'Optionally drills the octaves you miss most often.', 'progress'],
   ]],
@@ -153,6 +153,12 @@ export function TechnicalDetails({ chrome }) {
           <p className="td-p">
             Every mode hides one filter and asks you to identify it. They differ in the filter type, what you
             answer, and how difficulty scales:
+          </p>
+          <p className="td-p">
+            In the mode picker, modes that differ only in direction or filter type share a card with a row of keys
+            along its bottom: <strong>Bands</strong> (Boosts, Cuts, Mixed) and <strong>Filters</strong> (Shelves,
+            Pass Filters). Sweep's card has <strong>Boost</strong> and <strong>Dip</strong> keys that set its
+            direction. How Much?, Match EQ, and Explore have a card each.
           </p>
           <div className="td-table-wrap">
             <table className="td-table">
@@ -419,7 +425,8 @@ export function TechnicalDetails({ chrome }) {
           </p>
           <div className="td-formula">{`bucket = clamp( round( log₂(f / 31.5) ), 0, 9 )`}</div>
           <p className="td-p">
-            Stats are kept separately for peak, shelf, pass, and sweep modes. The strip under the graph's frequency
+            Stats are kept separately for peak (Boosts, Cuts, Mixed), shelf, pass, Sweep, How Much?, and Match EQ
+            modes. The strip under the graph's frequency
             axis shows accuracy per bucket — red below 50%, amber below 80%, green above — once a bucket has at
             least 3 answers; hovering a segment shows the exact count.
           </p>
@@ -543,10 +550,23 @@ export function TechnicalDetails({ chrome }) {
 
         <Section id="labels">
           <p className="td-p">
-            After each answer the hidden frequency is labelled with an EQ region name, plus its nearest musical note
-            (Boosts, Cuts, Mixed), its exact frequency and your error (Sweep), its gain (How Much?), its frequency,
-            gain, and both errors (Match EQ), or its filter type (Shelves, Pass Filters).
+            After each answer the trainer's header shows a <strong>Correct</strong> or <strong>Incorrect</strong>{' '}
+            verdict and the points earned (Sweep and Match EQ near misses earn some even when incorrect). The line
+            below spells out the answer in three parts: the answer itself, then what it was or how far off you were,
+            then its EQ region:
           </p>
+          <div className="td-table-wrap">
+            <table className="td-table">
+              <thead><tr><th>Mode</th><th>Answer</th><th>Then</th></tr></thead>
+              <tbody>
+                <tr><td>Boosts, Cuts, Mixed</td><td>frequency</td><td>nearest note</td></tr>
+                <tr><td>Shelves, Pass Filters</td><td>frequency</td><td>filter type (e.g. low shelf cut, high-pass)</td></tr>
+                <tr><td>Sweep</td><td>frequency</td><td>your error in octaves</td></tr>
+                <tr><td>How Much?</td><td>gain</td><td>its frequency</td></tr>
+                <tr><td>Match EQ</td><td>frequency and gain</td><td>your error in octaves and dB</td></tr>
+              </tbody>
+            </table>
+          </div>
           <h3 className="td-h3">Note name</h3>
           <p className="td-p">
             The nearest MIDI note uses A4 = 440 Hz (MIDI note 69) as the reference:
@@ -559,7 +579,7 @@ export function TechnicalDetails({ chrome }) {
         <Section id="storage">
           <p className="td-p">
             FreqRoom has no server and sends nothing anywhere. Uploaded files are read locally in the browser. Your
-            settings (theme, volume, gain, Q, switches) and progress (level per mode, lifetime score, per-octave
+            settings (theme, volume, gain, Q, switches, spectrum on/off) and progress (level per mode, lifetime score, per-octave
             stats) are saved in the browser's <code className="td-code">localStorage</code> under a{' '}
             <code className="td-code">freqroom:</code> prefix. <strong>Reset progress</strong> clears the progress
             only; <strong>Clear saved data</strong> removes every <code className="td-code">freqroom:</code> entry.
