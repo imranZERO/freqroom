@@ -4,51 +4,79 @@ Interactive EQ ear training for producers, engineers, and audiophiles.
 
 ## What it does
 
-FreqRoom trains your ears to identify frequency changes in audio. Each trial applies a peak EQ filter at a hidden frequency — you toggle between the processed signal and a flat reference, then pick the band you hear changing. Gain (1–18 dB) and Q are configurable so you can start broad and easy, then tighten the challenge as your ears improve.
+FreqRoom trains your ears to recognise EQ changes. Each trial hides one filter — a boost, a cut, a shelf, or a high/low-pass — in the audio. You flip between the processed signal and a flat reference as often as you like, then say where the change is. A live frequency-response graph shows every candidate curve, previews the one you're hovering, and reveals the answer after you choose.
 
-Difficulty adapts automatically: get 3 correct in a row and you advance to a harder level with more candidate bands. Miss 2 in a row and it steps back down. Levels range from 2 to 15 bands spread evenly across 20Hz–20kHz on a log scale.
+Difficulty adapts per mode: 3 correct in a row levels you up, 2 wrong in a row steps you back down.
 
-**Six test modes:**
-- **Boosts** — identify which band was boosted
-- **Cuts** — identify which band was cut
-- **Mixed** — identify the frequency *and* whether it was a boost or cut
-- **Shelves** — find the corner of a low or high shelf, and whether it's a boost or a cut
-- **Pass Filters** — find the cutoff of a high-pass or low-pass filter
-- **Sweep** — drag on the graph to where you hear the boost; scored by how many octaves off you are
+**Six training modes:**
+
+| Mode | You identify | Levels |
+|---|---|---|
+| **Boosts** | which band was boosted | 2–15 bands |
+| **Cuts** | which band was cut | 2–15 bands |
+| **Mixed** | the band *and* whether it was boosted or cut | 2–15 bands |
+| **Shelves** | the corner of a low or high shelf, and its direction | 2–8 corners |
+| **Pass Filters** | the cutoff of a high-pass or low-pass filter | 2–8 cutoffs |
+| **Sweep** | the exact frequency of a boost or a dip, by dragging on the graph — scored by how many octaves off you are | 1–5 (±1 → ±⅙ octave) |
+
+Gain (1–18 dB) and Q (0.5–8) are adjustable, even mid-trial, so you can start broad and easy and tighten the challenge as your ears improve.
 
 **Source audio:**
 - Pink noise (recommended — equal energy per octave)
 - White noise
-- Upload your own music (MP3, WAV, FLAC, OGG) — shows the file's format, sample rate, bit depth, and bitrate, and can loop an A/B section
+- Your own music (MP3, WAV, FLAC, OGG, and anything else your browser plays), with its format, sample rate, bit depth, and bitrate shown, a position fader, and A/B loop points for drilling one section
 
 **Practice tools:**
-- Progress is saved in your browser: level per mode, lifetime score, and a weak-spot strip on the graph showing your accuracy per octave
-- "Focus weak bands" drills the octaves you miss most
-- Keyboard: 1–9/0 pick bands, ← → step, ↑ ↓ switch boost/cut in Mixed and Shelves, Space toggles EQ/Flat, Enter checks
-- Share links recreate a challenge (mode, level, gain, Q, noise source)
-- Installable and works offline
+- Progress is saved in your browser: level per mode, session and lifetime scores, and an accuracy strip under the graph showing how you do in each octave
+- *Focus weak bands* drills the octaves you miss most
+- Keyboard: 1–9/0 pick bands, ← → step, ↑ ↓ switch boost/cut rows, Space toggles EQ/Flat, Enter checks or advances
+- Share links recreate a challenge — mode, level, gain, Q, noise source, and Sweep direction
+- System, light, and dark themes
+- Installable, works offline, and private: no account, and nothing leaves your browser
+
+The in-app **Technical Details** page explains the filter math, band placement, scoring, the Web Audio signal chain, and more.
 
 ## Running locally
 
 ```bash
 npm install
-npm run dev
+npm run dev      # dev server at http://localhost:5173
 ```
-
-Then open `http://localhost:5173`.
 
 ```bash
-npm run build    # production build → dist/
-npm run preview  # preview the production build
+npm run build       # production build → dist/
+npm run preview     # serve the production build
+npm test            # run the test suite once
+npm run test:watch  # tests in watch mode
 ```
+
+## Project layout
+
+```
+src/
+  App.jsx               routes, theme, saved settings and progress
+  components/           trainer, graph, source/controls, header/footer, dialogs, Technical Details
+  hooks/                useAudioEngine (the Web Audio graph), useMediaQuery
+  lib/                  pure logic: filters and bands, level progression, progress stats,
+                        file-header parsing, noise generation, storage, challenge links
+  styles/               CSS split by area, imported in cascade order from App.css
+tests/                  Vitest suite: pure logic, components (jsdom), and the audio engine
+                        against a fake AudioContext
+```
+
+`AGENTS.md` has a deeper tour of the architecture for contributors and coding agents.
 
 ## Stack
 
-- Preact
-- Wouter (client-side routing)
-- Web Audio API (no audio libraries)
-- Vite
+- [Preact](https://preactjs.com) (with `preact/compat`) and [Wouter](https://github.com/molefrog/wouter) for routing
+- Web Audio API — no audio libraries
+- [Vite](https://vite.dev) and [Vitest](https://vitest.dev) with Testing Library
+- Deployed on Cloudflare Pages
 
 ## Inspired by
 
 [Harman: How to Listen](https://harmanhowtolisten.blogspot.com)
+
+## License
+
+MIT — see [LICENSE](LICENSE).
