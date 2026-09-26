@@ -1,5 +1,6 @@
 // Presentational pieces of the trainer panel. They hold no state: the
 // FrequencyTrainer owns the trial and passes in what to show and what to call.
+import { useState } from 'react';
 import { InfoIcon } from './Icons.jsx';
 import { rowInset, biquadCoeffs, magnitudeDb } from './FreqGraph.jsx';
 import { FREQ_LABEL, FREQ_UNIT, EXPLORE_TYPES } from '../lib/trainer.js';
@@ -54,17 +55,73 @@ function ModeGlyph({ id }) {
   );
 }
 
-export function ModePicker({ modes, gainDb, onSelect }) {
+// Modes that differ only in direction or filter type share a card with a
+// switch, like the grouped source cards; the rest get a card each
+const MODE_GROUPS = [
+  { id: 'bands', label: 'Bands', modes: ['boost', 'cut', 'both'] },
+  { id: 'filters', label: 'Filters', modes: ['shelf', 'pass'] },
+  { modes: ['sweep'] },
+  { modes: ['gain'] },
+  { modes: ['match'] },
+];
+
+function ModeCardFace({ mode, label, gainDb }) {
+  return (
+    <>
+      <span className="mode-sign">{mode.badge(gainDb)}</span>
+      <ModeGlyph id={mode.id} />
+      <span className="mode-label">{label}</span>
+      <span className="mode-desc">{mode.desc}</span>
+    </>
+  );
+}
+
+// A grouped card: the face opens the shown variant, the switch opens another.
+// Hovering or focusing a variant previews its sketch and description.
+function ModeGroupCard({ group, modes, lastMode, gainDb, onSelect }) {
+  const variants = group.modes.map(id => modes.find(m => m.id === id));
+  const [preview, setPreview] = useState(null);
+  const current = variants.find(m => m.id === lastMode) ?? variants[0];
+  const shown = variants.find(m => m.id === preview) ?? current;
+  return (
+    <div className="mode-card mode-group" role="group" aria-label={group.label}>
+      <button className="mode-main" onClick={() => onSelect(shown.id)}>
+        <ModeCardFace mode={shown} label={group.label} gainDb={gainDb} />
+      </button>
+      <div className="track-variants mode-variants">
+        {variants.map(m => (
+          <button
+            key={m.id}
+            className={`track-variant ${m.id === shown.id ? 'is-active' : ''}`}
+            onClick={() => onSelect(m.id)}
+            onMouseEnter={() => setPreview(m.id)}
+            onMouseLeave={() => setPreview(null)}
+            onFocus={() => setPreview(m.id)}
+            onBlur={() => setPreview(null)}
+          >
+            {m.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// lastMode: the mode played last, so its group's card opens it again
+export function ModePicker({ modes, gainDb, lastMode, onSelect }) {
   return (
     <div className="mode-grid">
-      {modes.map(m => (
-        <button key={m.id} className="mode-card" onClick={() => onSelect(m.id)}>
-          <span className="mode-sign">{m.badge(gainDb)}</span>
-          <ModeGlyph id={m.id} />
-          <span className="mode-label">{m.label}</span>
-          <span className="mode-desc">{m.desc}</span>
-        </button>
-      ))}
+      {MODE_GROUPS.map(group => {
+        if (group.modes.length > 1) {
+          return <ModeGroupCard key={group.id} group={group} modes={modes} lastMode={lastMode} gainDb={gainDb} onSelect={onSelect} />;
+        }
+        const m = modes.find(x => x.id === group.modes[0]);
+        return (
+          <button key={m.id} className="mode-card" onClick={() => onSelect(m.id)}>
+            <ModeCardFace mode={m} label={m.label} gainDb={gainDb} />
+          </button>
+        );
+      })}
       {/* Explore: free play, no quiz; last in the grid */}
       <button className="mode-card mode-card-explore" onClick={() => onSelect('explore')}>
         <span className="mode-sign">FREE PLAY</span>

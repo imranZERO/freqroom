@@ -55,6 +55,8 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
   const minLevel = currentMode?.minLevel ?? MIN_LEVEL;
   const maxLevel = currentMode?.maxLevel ?? MAX_LEVEL;
   const answeringRef = useRef(false);
+  // Last mode opened, so the picker's grouped cards reopen that variant
+  const lastModeRef = useRef(initialMode ?? null);
   // A challenge link can set the starting level for its mode without writing to
   // saved progress; it yields to the adaptive level once the first answer lands.
   const challengeLevelRef = useRef(initialLevel ?? null);
@@ -233,6 +235,7 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
   );
 
   function selectMode(mode) {
+    if (mode) lastModeRef.current = mode;
     // Leaving the challenge's mode ends the challenge's starting level
     if (mode !== initialMode) challengeLevelRef.current = null;
     answeringRef.current = false;
@@ -425,7 +428,7 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
     body = (
       <>
         <h2 className="mode-title">Choose Test Mode</h2>
-        <ModePicker modes={MODES} gainDb={gainDb} onSelect={selectMode} />
+        <ModePicker modes={MODES} gainDb={gainDb} lastMode={lastModeRef.current} onSelect={selectMode} />
       </>
     );
   } else if (isExplore) {

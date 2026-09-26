@@ -75,6 +75,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-areas: "sign glyph" "label glyph" "desc desc";
+  align-content: start; /* keep rows together when the grid row is taller */
   align-items: center;
   column-gap: 12px;
   row-gap: 3px;
@@ -83,6 +84,35 @@
   text-align: left;
   font-family: inherit;
 }
+/* Grouped card (Bands, Filters): the face is its own button and a variant
+   switch sits along the bottom; padding moves onto the parts */
+.mode-group {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0;
+  cursor: default;
+}
+.mode-main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "sign glyph" "label glyph" "desc desc";
+  align-content: start;
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 3px;
+  padding: 13px 14px 10px;
+  background: none;
+  border: 0;
+  color: inherit;
+  font-family: inherit; /* not the full font shorthand: keep the button line height the single cards use */
+  text-align: left;
+  cursor: pointer;
+}
+.mode-main:focus-visible { outline: 2px solid var(--a); outline-offset: -2px; border-radius: var(--radius); }
+.mode-variants { margin: 0 14px 14px; }
+.mode-variants .track-variant { white-space: nowrap; padding-inline: 4px; }
 .mode-sign  { grid-area: sign; }
 .mode-label { grid-area: label; }
 .mode-desc  { grid-area: desc; margin-top: 4px; }

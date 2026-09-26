@@ -60,6 +60,25 @@ describe('FrequencyTrainer', () => {
     expect(screen.queryByText('Start Trial')).not.toBeInTheDocument();
   });
 
+  it('groups Bands and Filters variants on one card that reopens the last one played', () => {
+    renderTrainer();
+    const bands = screen.getByRole('group', { name: 'Bands' });
+    expect(bands).toHaveTextContent('Identify which band was boosted');
+    // hovering a variant previews it on the card
+    fireEvent.mouseEnter(screen.getByText('Cuts'));
+    expect(bands).toHaveTextContent('Identify which band was cut');
+    fireEvent.mouseLeave(screen.getByText('Cuts'));
+
+    fireEvent.click(screen.getByText('Mixed'));           // a variant opens its mode
+    expect(screen.getByText(/· Mixed/)).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Change mode'));
+    // the Bands card now shows Mixed, and its face opens it again
+    const again = screen.getByRole('group', { name: 'Bands' });
+    expect(again).toHaveTextContent('whether it was a boost or a cut');
+    fireEvent.click(again.querySelector('.mode-main'));
+    expect(screen.getByText(/· Mixed/)).toBeInTheDocument();
+  });
+
   it('starts a trial with the level band count and transport controls', async () => {
     const { utils } = await startBoostTrial();
     // level 2 (default min) → two band buttons
