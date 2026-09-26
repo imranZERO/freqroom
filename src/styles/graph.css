@@ -55,7 +55,28 @@
   pointer-events: auto;
   border-radius: 3px;
 }
-.graph-heat-hit:not(.graph-heat-hit-label):hover { box-shadow: inset 0 0 0 1px var(--text); }
+/* Hovered octave: the segment glows in its own colour, and a faint band of the
+   same colour marks the octave's span over the plot */
+.heat-tone-none { --heat: var(--muted); }
+.heat-tone-low  { --heat: var(--red); }
+.heat-tone-mid  { --heat: var(--a); }
+.heat-tone-high { --heat: var(--green); }
+.graph-heat-ring,
+.graph-heat-band { position: absolute; pointer-events: none; animation: heat-hover-in 0.15s ease-out both; }
+.graph-heat-ring {
+  border-radius: 2px;
+  box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--heat) 70%, transparent),
+    0 0 8px 1px color-mix(in srgb, var(--heat) 45%, transparent);
+}
+.graph-heat-band {
+  background: color-mix(in srgb, var(--heat) 8%, transparent);
+  border-left: 1px solid color-mix(in srgb, var(--heat) 30%, transparent);
+  border-right: 1px solid color-mix(in srgb, var(--heat) 30%, transparent);
+}
+@keyframes heat-hover-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
 .graph-heat-label { font-size: calc(7.5px * var(--gk, 1)); letter-spacing: 0.04em; }
 .heat-none { fill: var(--border); opacity: 0.6; }
 .heat-low  { fill: var(--red); }

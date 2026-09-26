@@ -161,27 +161,39 @@ function HeatStrip({ heat, g }) {
 }
 
 // SVG elements can't show the app's CSS tooltips, so invisible HTML hit areas sit
-// over the strip (positioned in % of the viewBox, so they scale with the graph)
+// over the strip (positioned in % of the viewBox, so they scale with the graph).
+// Hovering one glows the segment in its own colour and lights a faint band over
+// the plot for the octave it covers. Only this layer re-renders on hover.
+const heatTone = acc => heatClass(acc).replace('heat-', 'heat-tone-');
 function HeatHits({ heat, g }) {
+  const [hovered, setHovered] = useState(null);
   const y = heatY(g), h = heatH(g), pad = 3 * g.k;
-  const box = (x0, x1) => ({
-    left: `${(x0 / VW) * 100}%`, width: `${((x1 - x0) / VW) * 100}%`,
-    top: `${((y - pad) / g.VH) * 100}%`, height: `${((h + 2 * pad) / g.VH) * 100}%`,
-  });
+  const pct = (v, of) => `${(v / of) * 100}%`;
+  const box = (x0, x1, top, height) => ({ left: pct(x0, VW), width: pct(x1 - x0, VW), top: pct(top, g.VH), height: pct(height, g.VH) });
+  const cell = hovered === null ? null : heat[hovered];
+  const span = cell && heatSpan(cell.center);
   return (
     <div className="graph-heat-hits">
-      <span className="graph-heat-hit graph-heat-hit-label tt-start" style={box(4, P.l - 2)} data-tooltip={HEAT_LABEL_TIP} aria-label={HEAT_LABEL_TIP} role="img" />
-      {heat.map((cell, i) => {
-        const [x0, x1] = heatSpan(cell.center);
+      {cell && (
+        <>
+          <span className={`graph-heat-band ${heatTone(cell.acc)}`} style={box(Math.max(P.l, span[0]), Math.min(P.l + IW, span[1]), g.T, g.IH)} />
+          <span className={`graph-heat-ring ${heatTone(cell.acc)}`} style={box(span[0] + 0.5, span[1] - 0.5, y, h)} />
+        </>
+      )}
+      <span className="graph-heat-hit graph-heat-hit-label tt-start" style={box(4, P.l - 2, y - pad, h + 2 * pad)} data-tooltip={HEAT_LABEL_TIP} aria-label={HEAT_LABEL_TIP} role="img" />
+      {heat.map((c, i) => {
+        const [x0, x1] = heatSpan(c.center);
         const edge = i < 2 ? ' tt-start' : i >= heat.length - 2 ? ' tt-end' : '';
         return (
           <span
-            key={cell.center}
+            key={c.center}
             className={`graph-heat-hit${edge}`}
-            style={box(x0 + 0.5, x1 - 0.5)}
-            data-tooltip={heatTip(cell)}
-            aria-label={heatTip(cell)}
+            style={box(x0 + 0.5, x1 - 0.5, y - pad, h + 2 * pad)}
+            data-tooltip={heatTip(c)}
+            aria-label={heatTip(c)}
             role="img"
+            onMouseEnter={() => setHovered(i)}
+            onMouseLeave={() => setHovered(h => (h === i ? null : h))}
           />
         );
       })}

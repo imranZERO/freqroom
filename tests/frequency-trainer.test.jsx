@@ -87,6 +87,13 @@ describe('FrequencyTrainer', () => {
     expect(hits[0]).toHaveClass('tt-start');
     expect(hits[9]).toHaveClass('tt-end');
     expect(utils.container.querySelector('.graph-heat title')).toBeNull();
+    // hovering glows the segment in its colour and marks its octave over the plot
+    expect(utils.container.querySelector('.graph-heat-ring')).toBeNull();
+    fireEvent.mouseEnter(hits[5]);
+    expect(utils.container.querySelector('.graph-heat-ring')).toHaveClass('heat-tone-mid');   // 75%: amber
+    expect(utils.container.querySelector('.graph-heat-band')).toHaveClass('heat-tone-mid');
+    fireEvent.mouseLeave(hits[5]);
+    expect(utils.container.querySelector('.graph-heat-ring')).toBeNull();
   });
 
   it('labels the EQ regions and reads out the frequency under the mouse', () => {
