@@ -29,7 +29,8 @@ Gain (1–18 dB) and Q (0.5–8) are adjustable, even mid-trial, so you can star
 - Your own music (MP3, WAV, FLAC, OGG, and anything else your browser plays), with its format, sample rate, bit depth, and bitrate shown, a position fader, and A/B loop points for drilling one section
 
 **Practice tools:**
-- Progress is saved in your browser: level per mode, session and lifetime scores, and an accuracy strip under the graph showing how you do in each octave
+- Scoring that rewards difficulty: points per answer grow with the number of choices (and Sweep near misses earn partial credit), with accuracy, streaks, your last 10 answers, and a per-mode breakdown for the session or all time
+- Progress is saved in your browser: level per mode, lifetime score, and an accuracy strip under the graph showing how you do in each octave
 - *Focus weak bands* drills the octaves you miss most
 - Keyboard: 1–9/0 pick bands, ← → step, ↑ ↓ switch boost/cut rows, Space toggles EQ/Flat, Enter checks or advances
 - Share links recreate a challenge — mode, level, gain, Q, generated source, and Sweep direction

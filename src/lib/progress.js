@@ -1,11 +1,13 @@
 // Long-term progress: level per mode, lifetime totals, and per-octave accuracy
 // used for the graph's weak-spot strip and focus practice.
 
+import { EMPTY_TALLY, addResult } from './scoring.js';
+
 // Octave buckets centred on the standard octave-band frequencies
 export const BUCKETS = [31.5, 63, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
 const MIN_ATTEMPTS = 3;
 
-export const EMPTY_PROGRESS = { levels: {}, lifetime: { total: 0, correct: 0 }, stats: {} };
+export const EMPTY_PROGRESS = { levels: {}, lifetime: EMPTY_TALLY, stats: {} };
 
 export function bucketOf(freq) {
   const i = Math.round(Math.log2(freq / BUCKETS[0]));
@@ -13,17 +15,16 @@ export function bucketOf(freq) {
 }
 
 // Returns a new progress object with one answered trial recorded
-export function recordResult(progress, { mode, family, freq, correct, level }) {
+export function recordResult(progress, result) {
+  const { mode, family, freq, correct, level } = result;
   const famStats = { ...(progress.stats[family] ?? {}) };
   const b = bucketOf(freq);
   const prev = famStats[b] ?? { n: 0, hits: 0 };
   famStats[b] = { n: prev.n + 1, hits: prev.hits + (correct ? 1 : 0) };
   return {
     levels: { ...progress.levels, [mode]: level },
-    lifetime: {
-      total: progress.lifetime.total + 1,
-      correct: progress.lifetime.correct + (correct ? 1 : 0),
-    },
+    // Same tally as the session score: points, streaks, per-mode rows
+    lifetime: addResult(progress.lifetime, result),
     stats: { ...progress.stats, [family]: famStats },
   };
 }

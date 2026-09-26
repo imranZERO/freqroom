@@ -9,6 +9,7 @@ import {
   signForMode, pickDirection, freqToNote, freqRegion, describeRegion,
   SWEEP_RANGE, SWEEP_GRID, EXPLORE_TYPES,
 } from '../lib/trainer.js';
+import { trialPoints } from '../lib/scoring.js';
 
 // family: which stats bucket set a mode records under; maxLevel caps the band count
 export const MODES = [
@@ -240,9 +241,12 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
     if (!trial || trial.userSelection === null || answeringRef.current) return;
     answeringRef.current = true;
     const { activeBand, activeSign, userSelection } = trial;
-    const correct = trial.kind === 'sweep'
-      ? withinSweepTolerance(octaveError(userSelection.freq, activeBand), level)
+    const errOct = trial.kind === 'sweep' ? octaveError(userSelection.freq, activeBand) : null;
+    const correct = errOct !== null
+      ? withinSweepTolerance(errOct, level)
       : userSelection.freq === activeBand && userSelection.sign === activeSign;
+    // Scored at the level it was answered at, before any level change
+    const points = trialPoints({ mode: testMode, level, correct, errOct });
 
     engine.stop();
     setPlayMode(null);
@@ -252,8 +256,8 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
     setWrongStreak(next.wrongStreak);
     // The challenge's starting level has done its job; let saved progress take over
     if (testMode === initialMode) challengeLevelRef.current = null;
-    onResult({ mode: testMode, family, freq: activeBand, correct, level: next.level });
-    setTrial(prev => ({ ...prev, answered: true, wasCorrect: correct }));
+    onResult({ mode: testMode, family, freq: activeBand, correct, level: next.level, points, errOct });
+    setTrial(prev => ({ ...prev, answered: true, wasCorrect: correct, points }));
   }
 
   const isMixed = testMode === 'both';
@@ -379,7 +383,7 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
     );
   } else {
     // ── Active trial ──────────────────────────────────────────────────────
-    const { kind, range, shownBands, activeBand, activeSign, userSelection, answered, wasCorrect } = trial;
+    const { kind, range, shownBands, activeBand, activeSign, userSelection, answered, wasCorrect, points } = trial;
     const dirLabel = activeSign > 0 ? 'boost' : 'cut';
     const activeType = typeAt(kind === 'sweep' ? 'peaking' : kind, activeBand);
     const sweepError = kind === 'sweep' && userSelection ? octaveError(userSelection.freq, activeBand) : null;
@@ -415,6 +419,8 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
         ) : (
           <span className={`trainer-result ${wasCorrect ? 'result-correct' : 'result-incorrect'}`}>
             {wasCorrect ? '✓ Correct!' : '✗ Incorrect'}
+            {/* Sweep near misses still earn partial points */}
+            {points > 0 && <span className="result-points">+{points} pts</span>}
             <span className="result-note">
               {kind === 'sweep' ? `${fmtHz(activeBand)} · ${sweepError.toFixed(2)} oct off`
                 : kind === 'peaking' ? freqToNote(activeBand) : answerLabel} · {freqRegion(activeBand)}

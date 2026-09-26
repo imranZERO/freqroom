@@ -12,6 +12,7 @@ const SECTIONS = [
   ['sweep', 'Sweep Scoring'],
   ['graph', 'The Frequency Response Graph'],
   ['difficulty', 'Adaptive Difficulty'],
+  ['points', 'Points and Scoring'],
   ['progress', 'Progress and Focus Practice'],
   ['noise', 'Noise and Synthesized Loops'],
   ['uploads', 'Uploaded Audio'],
@@ -50,7 +51,7 @@ const FEATURES = [
     ['Gain and Q controls', 'Boost/cut amount (1–18 dB) and bell width (Q 0.5–8), applied live, even mid-trial.', 'peaking'],
     ['Instant A/B comparison', 'EQ and Flat switch without a click or restart, so both continue from the same point.', 'chain'],
     ['Frequency response graph', 'Every candidate curve is drawn during a trial and the hidden one is revealed after you answer; buttons sit under their curves.', 'graph'],
-    ['Sweep scoring', 'Drag on the graph to the frequency you hear; scored by octave error with a tolerance that tightens by level.', 'sweep'],
+    ['Sweep scoring', 'Drag on the graph to the frequency you hear; scored by octave error with a tolerance that tightens by level, and near misses earn partial points.', 'sweep'],
     ['Answer labels', 'The nearest note, EQ region, filter type, or (in Sweep) your error in octaves.', 'labels'],
     ['Auto-play EQ', 'Optionally starts each trial playing the EQ straight away.', null],
     ['Focus weak bands', 'Optionally drills the octaves you miss most often.', 'progress'],
@@ -63,7 +64,7 @@ const FEATURES = [
     ['Volume and limiter', 'Master volume, and a limiter so large boosts never clip.', 'chain'],
   ]],
   ['Progress', [
-    ['Scores', 'Session score with an accuracy meter, plus your lifetime score.', null],
+    ['Scores', 'Points weighted by difficulty, accuracy, streaks, your last 10 answers, and a per-mode breakdown, for the session or all time.', 'points'],
     ['Weak-spot strip', 'Accuracy per octave, shown under the graph.', 'progress'],
     ['Saved between visits', 'Levels, settings, and stats are kept in your browser.', 'storage'],
     ['Resets', 'Reset the sliders to defaults, reset your progress, or clear all saved data.', 'storage'],
@@ -280,6 +281,10 @@ export function TechnicalDetails({ chrome }) {
             ±⅙ octave is two semitones either side. After answering, the graph draws the true curve and a bracket
             from your marker to it, labelled with the error.
           </p>
+          <p className="td-p">
+            Points (see <a href="#points">Points and Scoring</a>) give partial credit: full points within the
+            tolerance, fading linearly to zero at three times it. The level still only moves on the pass/fail result.
+          </p>
         </Section>
 
         <Section id="graph">
@@ -316,6 +321,34 @@ export function TechnicalDetails({ chrome }) {
             The asymmetry (3 to advance, 2 to drop) keeps you working close to your limit. Peak modes run from 2 to
             15 bands, Shelves and Pass Filters from 2 to 8 (closer corners or cutoffs become impractical to tell
             apart), and Sweep from level 1 to 5.
+          </p>
+        </Section>
+
+        <Section id="points">
+          <p className="td-p">
+            Accuracy alone can't compare trials: picking 1 of 2 bands is a coin toss, picking 1 of 15 is not. So each
+            correct answer earns points for how many answers were possible — <strong>10 points per bit</strong>, where
+            a bit is one doubling of the choices:
+          </p>
+          <div className="td-formula">{`points = round( 10 · log₂( choices ) × credit )`}</div>
+          <p className="td-p">
+            Choices is the band count, doubled in Mixed and Shelves (each band has a boost and a cut row). For Sweep it
+            is how many tolerance-wide windows fit across its 40 Hz–16 kHz range (about 8.6 octaves ÷ 2 × tolerance).
+            Credit is 1 for a correct answer and 0 for a wrong one; Sweep's fades from 1 at the tolerance to 0 at three
+            times it. Points are scored at the level the trial was played at, before any level change.
+          </p>
+          <div className="td-table-wrap">
+            <table className="td-table td-table-compact">
+              <thead><tr><th>Trial</th><td>2 bands</td><td>4 bands</td><td>8 bands</td><td>15 bands</td><td>Mixed, 15</td><td>Sweep 1</td><td>Sweep 5</td></tr></thead>
+              <tbody><tr><th>Points</th><td>10</td><td>20</td><td>30</td><td>39</td><td>49</td><td>21</td><td>47</td></tr></tbody>
+            </table>
+          </div>
+          <p className="td-p">
+            The score panel shows the points total, accuracy, the current and best streak of correct answers, lamps
+            for the last 10 answers, and a row per mode played: current and best level, correct count, points, and
+            Sweep's average error in octaves. <strong>Session</strong> covers this visit; <strong>Lifetime</strong>{' '}
+            is saved with your progress. Scores saved before points existed keep their totals and start earning
+            points from the next answer.
           </p>
         </Section>
 

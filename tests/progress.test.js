@@ -35,7 +35,7 @@ describe('bucketOf', () => {
 
 describe('recordResult', () => {
   it('returns a new object and leaves the input untouched', () => {
-    const before = { levels: {}, lifetime: { total: 0, correct: 0 }, stats: {} };
+    const before = structuredClone(EMPTY_PROGRESS);
     const after = recordResult(before, { mode: 'boost', family: 'peak', freq: 1000, correct: true, level: 3 });
     expect(after).not.toBe(before);
     expect(before).toEqual(EMPTY_PROGRESS);
@@ -44,7 +44,14 @@ describe('recordResult', () => {
   it('increments lifetime during and total', () => {
     const a = recordResult(EMPTY_PROGRESS, { mode: 'boost', family: 'peak', freq: 1000, correct: true, level: 3 });
     const b = recordResult(a, { mode: 'boost', family: 'peak', freq: 500, correct: false, level: 3 });
-    expect(b.lifetime).toEqual({ total: 2, correct: 1 });
+    expect(b.lifetime).toMatchObject({ total: 2, correct: 1, points: 0, streak: 0, bestStreak: 1, recent: [true, false] });
+    expect(b.lifetime.modes.boost).toMatchObject({ total: 2, correct: 1, level: 3 });
+  });
+
+  it('upgrades an old { total, correct } lifetime in place', () => {
+    const old = { levels: {}, lifetime: { total: 10, correct: 7 }, stats: {} };
+    const a = recordResult(old, { mode: 'cut', family: 'peak', freq: 1000, correct: true, level: 4, points: 20 });
+    expect(a.lifetime).toMatchObject({ total: 11, correct: 8, points: 20, streak: 1, bestStreak: 1, recent: [true] });
   });
 
   it('records the level per mode', () => {

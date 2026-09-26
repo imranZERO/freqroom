@@ -220,6 +220,13 @@
   margin-left: 4px;
 }
 .result-correct { color: var(--green); }
+.result-points {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--a);
+  margin-left: 10px;
+}
 .result-incorrect { color: var(--red); }
 .result-note {
   font-family: var(--font-mono);

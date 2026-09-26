@@ -79,6 +79,9 @@ describe('FrequencyTrainer', () => {
 
     expect(screen.getByText('✓ Correct!')).toBeInTheDocument();
     expect(onResult).toHaveBeenCalledWith(expect.objectContaining({ mode: 'boost', correct: true, level: 2 }));
+    // 2 bands = 1 bit of choice = 10 points
+    expect(onResult).toHaveBeenCalledWith(expect.objectContaining({ points: 10, errOct: null }));
+    expect(screen.getByText('+10 pts')).toBeInTheDocument();
     expect(engine.stop).toHaveBeenCalled();
     expect(screen.getByText('Next Trial →')).toBeInTheDocument();
     // an answered trial no longer lets you pick another band
@@ -156,6 +159,11 @@ describe('FrequencyTrainer', () => {
     // hidden sweep answer is ~42 Hz (first SWEEP_GRID entry), ~4.6 octaves off
     expect(screen.getByText('✗ Incorrect')).toBeInTheDocument();
     expect(onResult).toHaveBeenCalledWith(expect.objectContaining({ mode: 'sweep', correct: false }));
+    // far beyond 3× the tolerance: no partial credit, and the error is reported
+    const r = onResult.mock.calls.at(-1)[0];
+    expect(r.points).toBe(0);
+    expect(r.errOct).toBeGreaterThan(4);
+    expect(screen.queryByText(/pts$/)).toBeNull();
   });
 
   it('sweep starts as a boost and offers a direction choice on the start screen', () => {

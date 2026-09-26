@@ -13,13 +13,14 @@ import { ResetIcon, TrashIcon } from './components/Icons.jsx';
 import { usePersistentState, clearAll } from './lib/storage.js';
 import { EMPTY_PROGRESS, recordResult } from './lib/progress.js';
 import { parseChallenge } from './lib/challenge.js';
+import { EMPTY_TALLY, addResult } from './lib/scoring.js';
 
 const DEFAULT_GAIN_DB = 6;
 const DEFAULT_Q = 1.4;
 
 function MainApp({ chrome }) {
   const engine = useAudioEngine();
-  const [scores, setScores] = useState({ total: 0, correct: 0 });
+  const [session, setSession] = useState(EMPTY_TALLY);
   const [confirmRequest, setConfirmRequest] = useState(null);
   const [gainDb, setGainDb] = usePersistentState('gainDb', DEFAULT_GAIN_DB);
   const [q, setQ] = usePersistentState('q', DEFAULT_Q);
@@ -47,8 +48,7 @@ function MainApp({ chrome }) {
 
   // Called by the trainer for every answered trial
   function handleResult(result) {
-    const { correct } = result;
-    setScores(prev => ({ total: prev.total + 1, correct: prev.correct + (correct ? 1 : 0) }));
+    setSession(prev => addResult(prev, result));
     setProgress(prev => recordResult(prev, result));
   }
 
@@ -59,7 +59,7 @@ function MainApp({ chrome }) {
       confirmLabel: 'Reset progress',
       onConfirm: () => {
         setProgress(EMPTY_PROGRESS);
-        setScores({ total: 0, correct: 0 });
+        setSession(EMPTY_TALLY);
         setConfirmRequest(null);
       },
     });
@@ -109,8 +109,8 @@ function MainApp({ chrome }) {
             initialMode={challenge?.mode} initialLevel={challenge?.level} initialSweepDir={challenge?.sweepDir} sourceId={sourceId}
           />
           <ScoreBoard
-            scores={scores} lifetime={progress.lifetime}
-            onReset={() => setScores({ total: 0, correct: 0 })}
+            session={session} lifetime={progress.lifetime} modes={MODES}
+            onReset={() => setSession(EMPTY_TALLY)}
           />
         </div>
       </main>
