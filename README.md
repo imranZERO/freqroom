@@ -26,13 +26,14 @@ Gain (1–18 dB) and Q (0.5–8) are adjustable, even mid-trial, so you can star
 **Source audio:**
 - Pink noise (recommended — equal energy per octave)
 - White noise
+- Drum Loop and Band Loop — synthesized in the browser (kick, snare, hats; plus bass and chords), so you can train on music without your own files
 - Your own music (MP3, WAV, FLAC, OGG, and anything else your browser plays), with its format, sample rate, bit depth, and bitrate shown, a position fader, and A/B loop points for drilling one section
 
 **Practice tools:**
 - Progress is saved in your browser: level per mode, session and lifetime scores, and an accuracy strip under the graph showing how you do in each octave
 - *Focus weak bands* drills the octaves you miss most
 - Keyboard: 1–9/0 pick bands, ← → step, ↑ ↓ switch boost/cut rows, Space toggles EQ/Flat, Enter checks or advances
-- Share links recreate a challenge — mode, level, gain, Q, noise source, and Sweep direction
+- Share links recreate a challenge — mode, level, gain, Q, generated source, and Sweep direction
 - System, light, and dark themes
 - Installable, works offline, and private: no account, and nothing leaves your browser
 
@@ -60,7 +61,7 @@ src/
   components/           trainer, graph, source/controls, header/footer, dialogs, Technical Details
   hooks/                useAudioEngine (the Web Audio graph), useMediaQuery
   lib/                  pure logic: filters and bands, level progression, progress stats,
-                        file-header parsing, noise generation, storage, challenge links
+                        file-header parsing, noise and loop synthesis, storage, challenge links
   styles/               CSS split by area, imported in cascade order from App.css
 tests/                  Vitest suite: pure logic, components (jsdom), and the audio engine
                         against a fake AudioContext

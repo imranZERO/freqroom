@@ -70,6 +70,13 @@ describe('buildChallengeUrl', () => {
     expect(url).not.toMatch(/[?&]level=/);
   });
 
+  it('accepts the synthesized loop sources', () => {
+    expect(parseChallenge('?mode=boost&source=drums', MODES)).toEqual({ mode: 'boost', source: 'drums' });
+    expect(parseChallenge('?mode=boost&source=band', MODES)).toEqual({ mode: 'boost', source: 'band' });
+    expect(buildChallengeUrl({ mode: 'boost', source: 'band' }))
+      .toBe('https://freqroom.test/?mode=boost&source=band');
+  });
+
   it('never writes a source outside the whitelist', () => {
     expect(buildChallengeUrl({ mode: 'boost', source: 'upload' }))
       .toBe('https://freqroom.test/?mode=boost');

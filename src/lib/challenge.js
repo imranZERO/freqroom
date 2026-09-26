@@ -1,7 +1,7 @@
 // Shareable challenge links: ?mode=cut&gain=3&q=2&source=pink&level=5
 // Only valid values are kept, so a hand-edited or stale link degrades gracefully.
 
-const SOURCES = ['pink', 'white'];
+const SOURCES = ['pink', 'white', 'drums', 'band'];
 const SWEEP_DIRS = ['boost', 'dip'];
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 

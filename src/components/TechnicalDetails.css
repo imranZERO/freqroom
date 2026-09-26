@@ -104,6 +104,32 @@
 }
 .td-p a:hover { color: var(--a); text-decoration-color: var(--a); }
 
+.td-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 14px;
+}
+.td-list li {
+  position: relative;
+  padding-left: 14px;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.td-list li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.65em;
+  width: 5px;
+  height: 5px;
+  border-radius: 1px;
+  background: var(--a);
+}
+.td-list strong { color: var(--text); }
+
 .td-code {
   font-family: var(--font-mono);
   font-size: 0.85em;

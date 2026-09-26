@@ -84,6 +84,8 @@ describe('TrackSelector', () => {
     renderSelector();
     expect(screen.getByText('Pink Noise')).toBeInTheDocument();
     expect(screen.getByText('White Noise')).toBeInTheDocument();
+    expect(screen.getByText('Drum Loop')).toBeInTheDocument();
+    expect(screen.getByText('Band Loop')).toBeInTheDocument();
     expect(screen.getByText('Upload File')).toBeInTheDocument();
   });
 

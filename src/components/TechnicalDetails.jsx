@@ -13,7 +13,7 @@ const SECTIONS = [
   ['graph', 'The Frequency Response Graph'],
   ['difficulty', 'Adaptive Difficulty'],
   ['progress', 'Progress and Focus Practice'],
-  ['noise', 'Pink and White Noise'],
+  ['noise', 'Noise and Synthesized Loops'],
   ['uploads', 'Uploaded Audio'],
   ['chain', 'Web Audio Signal Chain'],
   ['labels', 'Note and Region Labels'],
@@ -56,7 +56,7 @@ const FEATURES = [
     ['Focus weak bands', 'Optionally drills the octaves you miss most often.', 'progress'],
   ]],
   ['Audio', [
-    ['Generated noise', 'Pink noise (recommended) and white noise, generated in the browser.', 'noise'],
+    ['Generated sources', 'Pink noise (recommended), white noise, and synthesized drum and band loops, all generated in the browser.', 'noise'],
     ['Your own music', 'Upload MP3, WAV, FLAC, OGG, or anything else your browser can play.', 'uploads'],
     ['File details', "The file's format, original sample rate, bit depth, channels, average bitrate, and length.", 'uploads'],
     ['Position and loop', 'Seek within an uploaded track and loop an A/B section.', 'uploads'],
@@ -70,7 +70,7 @@ const FEATURES = [
   ]],
   ['Everything else', [
     ['Keyboard shortcuts', '1–9/0 pick bands, ← → step, ↑ ↓ switch boost/cut in Mixed and Shelves, Space toggles EQ/Flat, Enter checks or advances.', null],
-    ['Share links', 'Copy a link that recreates a challenge: mode, level, gain, Q, noise source, and for Sweep its boost/dip direction.', 'storage'],
+    ['Share links', 'Copy a link that recreates a challenge: mode, level, gain, Q, generated source, and for Sweep its boost/dip direction.', 'storage'],
     ['Light and dark themes', 'System (the default) follows your device; you can also pick Light or Dark, and your choice is remembered.', null],
     ['Installable and offline', 'Install it as an app and keep training without a connection.', 'storage'],
     ['Private', 'No account, no server: your audio and data never leave your browser.', 'storage'],
@@ -365,6 +365,23 @@ export function TechnicalDetails({ chrome }) {
             level (peaks around 0.9), and output is clamped to ±1. White noise is uniform random samples scaled by
             0.45. Both are generated as 30-second stereo buffers with independent channels and loop seamlessly.
           </p>
+          <p className="td-p">
+            Noise is ideal for learning, but music is what you'll EQ. The <strong>Drum Loop</strong> and{' '}
+            <strong>Band Loop</strong> are synthesized in plain JavaScript on demand, so no audio files ship with the
+            app. Each is 8 bars at 100 BPM (19.2 s), stereo, with light swing:
+          </p>
+          <ul className="td-list">
+            <li><strong>Kick</strong>: a sine whose pitch drops from 130 to 45 Hz, plus a 4 ms noise click.</li>
+            <li><strong>Snare</strong>: first-difference (brightened) noise over a 190 Hz tone body.</li>
+            <li><strong>Hats</strong>: second-difference noise, hiss mostly above 6 kHz; the last 8th of each bar opens.</li>
+            <li><strong>Bass</strong> (Band Loop): a sawtooth through a 500 Hz one-pole low-pass, in 8ths on the chord roots.</li>
+            <li><strong>Pad</strong> (Band Loop): C–Am–F–G triads, each note two sawtooths detuned ±7 cents and panned apart, through two 2.2 kHz one-poles with a slow attack.</li>
+          </ul>
+          <p className="td-p">
+            Every note is written at its start position modulo the loop length, so tails that run past the end wrap
+            to the start and the loop point is seamless. A seeded random generator makes each render identical.
+            Both loops are scaled toward an RMS of 0.16, close to the pink noise, with peaks held under 0.95.
+          </p>
         </Section>
 
         <Section id="uploads">
@@ -455,7 +472,7 @@ export function TechnicalDetails({ chrome }) {
             If storage is unavailable (for example in some private-browsing modes), the app works with defaults.
           </p>
           <p className="td-p">
-            Share links carry only the challenge settings in the URL (mode, level, gain, Q, noise source, plus the boost/dip
+            Share links carry only the challenge settings in the URL (mode, level, gain, Q, generated source, plus the boost/dip
             direction for Sweep). A service
             worker caches the app so it can be installed and used offline: pages load from the network when
             available, falling back to the cached copy, and other files load from the cache and refresh in the

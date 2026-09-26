@@ -1,12 +1,16 @@
 import { useRef, useState, useEffect } from 'react';
 import { generatePinkNoise, generateWhiteNoise } from '../lib/noiseGen.js';
+import { generateDrumLoop, generateBandLoop } from '../lib/musicGen.js';
 import { probeAudioFile } from '../lib/audioInfo.js';
-import { formatTime, formatSpec, PINK_LINE, WHITE_LINE, WAVE_BARS, GLYPH_W, GLYPH_H } from '../lib/trackFormat.js';
+import { formatTime, formatSpec, PINK_LINE, WHITE_LINE, WAVE_BARS, DRUM_HITS, BAND_LINE, GLYPH_W, GLYPH_H } from '../lib/trackFormat.js';
 import { ResetIcon } from './Icons.jsx';
 
+// Built-in sources, generated in the browser when picked (no audio files)
 const GENERATED_TRACKS = [
-  { id: 'pink', label: 'Pink Noise', description: 'Equal energy per octave — ideal for EQ training' },
-  { id: 'white', label: 'White Noise', description: 'Flat spectrum, bright character' },
+  { id: 'pink',  label: 'Pink Noise',  description: 'Equal energy per octave — ideal for EQ training', make: generatePinkNoise },
+  { id: 'white', label: 'White Noise', description: 'Flat spectrum, bright character', make: generateWhiteNoise },
+  { id: 'drums', label: 'Drum Loop',   description: 'Kick, snare, and hats — punchy transients', make: generateDrumLoop },
+  { id: 'band',  label: 'Band Loop',   description: 'Drums, bass, and chords across the spectrum', make: generateBandLoop },
 ];
 
 function SourceGlyph({ kind }) {
@@ -16,6 +20,17 @@ function SourceGlyph({ kind }) {
         WAVE_BARS.map((h, i) => (
           <rect key={i} x={i * 4 + 1} y={(GLYPH_H - h) / 2} width={2} height={h} rx={1} />
         ))
+      ) : kind === 'drums' ? (
+        DRUM_HITS.map(({ x, h }, i) => (
+          <rect key={i} x={x} y={GLYPH_H - 2 - h} width={2} height={h} rx={1} />
+        ))
+      ) : kind === 'band' ? (
+        <>
+          <polyline points={BAND_LINE} />
+          {DRUM_HITS.map(({ x, h }, i) => (
+            <rect key={i} x={x} y={GLYPH_H - 1 - h * 0.35} width={2} height={h * 0.35} rx={1} />
+          ))}
+        </>
       ) : (
         <polyline points={kind === 'pink' ? PINK_LINE : WHITE_LINE} />
       )}
@@ -79,9 +94,8 @@ export function TrackSelector({ engine, gainDb, setGainDb, q, setQ, focus, setFo
     onSourceChange?.(id);
     setPosition(0);
     setLoopA(null);
-    const ctx = engine.getCtx();
-    const buf = id === 'pink' ? generatePinkNoise(ctx) : generateWhiteNoise(ctx);
-    await engine.loadBuffer(buf);
+    const track = GENERATED_TRACKS.find(t => t.id === id) ?? GENERATED_TRACKS[0];
+    await engine.loadBuffer(track.make(engine.getCtx()));
   }
 
   async function handleFile(e) {

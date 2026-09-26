@@ -7,7 +7,7 @@ import { FREQ_LABEL, FREQ_UNIT, EXPLORE_TYPES } from '../lib/trainer.js';
 export function QuickStart() {
   return (
     <ol className="quickstart">
-      <li><strong>Load a source</strong> — pink noise is best for learning; your own music works too.</li>
+      <li><strong>Load a source</strong> — pink noise is best for learning; the loops or your own music come next.</li>
       <li><strong>Choose a mode</strong> — spot boosts and cuts, shelves, filter cutoffs, or sweep for the exact spot.</li>
       <li><strong>Compare EQ and Flat</strong>, then pick the band you hear changing.</li>
     </ol>
