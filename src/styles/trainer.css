@@ -24,25 +24,25 @@
   list-style: none;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-}
-/* Step cards: the mode cards' face, anatomy, and sketch; not buttons themselves */
-.qs-step {
-  position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas: "num glyph" "title glyph" "desc desc" "extra extra";
-  align-content: start;
-  align-items: center;
-  column-gap: 12px;
-  row-gap: 3px;
-  padding: 13px 14px 14px;
+  /* One panel: the three steps are columns split by hairlines */
   background: linear-gradient(to bottom, var(--key-top), var(--key-bottom));
   border: 1px solid var(--border-hover);
   border-bottom: 3px solid var(--key-edge);
   border-radius: var(--radius);
   box-shadow: inset 0 1px 0 var(--highlight), var(--key-drop);
 }
+.qs-step {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "num glyph" "title glyph" "desc desc";
+  align-content: start;
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 3px;
+  padding: 13px 14px 14px;
+}
+.qs-step + .qs-step { border-left: 1px solid var(--border-hover); }
 .qs-num {
   grid-area: num;
   display: flex;
@@ -68,12 +68,11 @@
 .qs-title { grid-area: title; font-size: 1.05rem; font-weight: 700; letter-spacing: -0.01em; color: var(--text); }
 .qs-desc { grid-area: desc; margin-top: 4px; font-size: 0.82rem; line-height: 1.45; color: var(--muted); }
 /* The current step: amber edge, lit lamp, amber sketch */
+/* The current step: a faint amber wash on its column (rounded with the panel's
+   left corners), lit lamp, amber sketch */
 .qs-step.is-current {
-  border-color: color-mix(in srgb, var(--a) 70%, var(--border-hover));
-  border-bottom-color: color-mix(in srgb, var(--a) 40%, var(--key-edge));
-  background: linear-gradient(to bottom,
-    color-mix(in srgb, var(--a) 9%, var(--key-top)),
-    color-mix(in srgb, var(--a) 5%, var(--key-bottom)));
+  background: color-mix(in srgb, var(--a) 7%, transparent);
+  border-radius: calc(var(--radius) - 1px) 0 0 calc(var(--radius) - 1px);
 }
 .qs-step.is-current .qs-num { color: var(--a); }
 .qs-step.is-current .qs-num::before { background: var(--a); box-shadow: 0 0 5px color-mix(in srgb, var(--a) 60%, transparent); }
@@ -89,7 +88,10 @@
 }
 .rack:has(.qs-step.is-current:hover) .rack-side .panel-group:first-child .panel-label { color: var(--a); }
 @media (max-width: 520px) {
-  .quickstart { grid-template-columns: 1fr; gap: 10px; }
+  .quickstart { grid-template-columns: 1fr; }
+  /* Stacked: hairlines between rows instead of columns */
+  .qs-step + .qs-step { border-left: 0; border-top: 1px solid var(--border-hover); }
+  .qs-step.is-current { border-radius: calc(var(--radius) - 1px) calc(var(--radius) - 1px) 0 0; }
 }
 
 /* Mode picker */

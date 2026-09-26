@@ -5,7 +5,7 @@ import { rowInset, biquadCoeffs, magnitudeDb } from './FreqGraph.jsx';
 import { FREQ_LABEL, FREQ_UNIT, EXPLORE_TYPES } from '../lib/trainer.js';
 import { PINK_LINE } from '../lib/trackFormat.js';
 
-// Quick start: three step cards in the mode cards' style. Step 1 is lit (it's
+// Quick start: one panel with three steps as columns, in the mode cards' style. Step 1 is lit (it's
 // what to do next); hovering it highlights the Source panel (CSS, in trainer.css).
 const QS_W = 60, QS_H = 26;
 // Computed on first use: sketch() needs constants declared further down
