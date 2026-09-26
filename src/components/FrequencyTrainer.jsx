@@ -481,11 +481,13 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
     header = (
       <>
         <div className="mode-badge">Explore · free play</div>
-        <span className="trainer-status">Drag the curve on the graph</span>
         <span className="trainer-header-end">
           {spectrumButton}
           <button className="btn-ghost trainer-back" onClick={() => selectMode(null)}>← Back</button>
         </span>
+        <div className="trainer-subline">
+          <span className="trainer-status">Drag the curve on the graph</span>
+        </div>
       </>
     );
     body = (
@@ -530,6 +532,16 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
     const answerLabel = kind === 'peaking' || kind === 'sweep' ? dirLabel
       : kind === 'shelf' ? `${TYPE_LABELS[activeType]} ${dirLabel}` : TYPE_LABELS[activeType];
     const hasSelection = userSelection !== null;
+    // Result details after answering, e.g. ['632 Hz', '~D#5', 'Midrange']
+    const resultFacts = !answered ? [] : [
+      ...(kind === 'sweep' ? [fmtHz(activeBand), `${sweepError.toFixed(2)} oct off`]
+        : kind === 'match' ? [`${fmtHz(activeBand)} ${fmtGain(activeGain)}`,
+          `${sweepError.toFixed(2)} oct · ${Math.abs(userSelection.gain - activeGain).toFixed(1)} dB off`]
+        : kind === 'gain' ? [fmtGain(activeGain), `at ${fmtHz(activeBand)}`]
+        : kind === 'peaking' ? [fmtHz(activeBand), freqToNote(activeBand)]
+        : [fmtHz(activeBand), answerLabel]),
+      freqRegion(activeBand),
+    ];
 
     // How Much? keys, by gain value
     const getGainState = g => {
@@ -558,37 +570,43 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
       <>
         <div className="level-chip">Level {level}</div>
         <div className="mode-badge">{modeBadge} · {currentMode.label}</div>
-        {!answered ? (
-          <span className="trainer-status">
-            {hasSelection ? (kind === 'sweep' ? `Guess ${fmtHz(userSelection.freq)} — ready to check`
-                : kind === 'match' ? `Yours ${fmtHz(userSelection.freq)} ${fmtGain(userSelection.gain)} — ready to check`
-                : 'Ready to check')
-              : kind === 'sweep' ? 'Click or drag on the graph'
-              : kind === 'gain' ? `How many dB at ${fmtHz(activeBand)}?`
-              : kind === 'match' ? 'Drag your curve to match the EQ'
-              : isMixed ? 'Pick the frequency and direction'
-              : kind === 'shelf' ? 'Pick the shelf corner and direction'
-              : kind !== 'peaking' ? `Find the ${TYPE_LABELS[kind]} cutoff`
-              : `Select the ${activeSign > 0 ? 'boosted' : 'cut'} band`}
-          </span>
-        ) : (
-          <span className={`trainer-result ${wasCorrect ? 'result-correct' : 'result-incorrect'}`}>
-            {wasCorrect ? '✓ Correct!' : '✗ Incorrect'}
-            {/* Sweep near misses still earn partial points */}
-            {points > 0 && <span className="result-points">+{points} pts</span>}
-            <span className="result-note">
-              {kind === 'sweep' ? `${fmtHz(activeBand)} · ${sweepError.toFixed(2)} oct off`
-                : kind === 'match' ? `${fmtHz(activeBand)} ${fmtGain(activeGain)} · ${sweepError.toFixed(2)} oct, ${Math.abs(userSelection.gain - activeGain).toFixed(1)} dB off`
-                : kind === 'gain' ? `${fmtGain(activeGain)} at ${fmtHz(activeBand)}`
-                : kind === 'peaking' ? freqToNote(activeBand) : answerLabel} · {freqRegion(activeBand)}
+        {/* After answering, the verdict and points join the chips on the top row */}
+        {answered && (
+          <>
+            <span className={`result-verdict ${wasCorrect ? 'result-correct' : 'result-incorrect'}`}>
+              {wasCorrect ? '✓ Correct' : '✗ Incorrect'}
             </span>
-          </span>
+            {/* Sweep and Match EQ near misses still earn partial points */}
+            {points > 0 && <span className="result-points">+{points} pts</span>}
+          </>
         )}
         <span className="trainer-header-end">
           {spectrumButton}
           <button className="btn-ghost trainer-back" onClick={() => selectMode(null)}>← Back</button>
           {shareButton}
         </span>
+        {/* Second row, always present so the graph doesn't jump on answering: the
+            prompt before answering, then the answer, the note or error, and the region */}
+        <div className="trainer-subline">
+          {!answered ? (
+            <span className="trainer-status">
+              {hasSelection ? (kind === 'sweep' ? `Guess ${fmtHz(userSelection.freq)} — ready to check`
+                  : kind === 'match' ? `Yours ${fmtHz(userSelection.freq)} ${fmtGain(userSelection.gain)} — ready to check`
+                  : 'Ready to check')
+                : kind === 'sweep' ? 'Click or drag on the graph'
+                : kind === 'gain' ? `How many dB at ${fmtHz(activeBand)}?`
+                : kind === 'match' ? 'Drag your curve to match the EQ'
+                : isMixed ? 'Pick the frequency and direction'
+                : kind === 'shelf' ? 'Pick the shelf corner and direction'
+                : kind !== 'peaking' ? `Find the ${TYPE_LABELS[kind]} cutoff`
+                : `Select the ${activeSign > 0 ? 'boosted' : 'cut'} band`}
+            </span>
+          ) : (
+            <span className="result-facts">
+              {resultFacts.map(f => <span key={f} className="result-fact">{f}</span>)}
+            </span>
+          )}
+        </div>
       </>
     );
 

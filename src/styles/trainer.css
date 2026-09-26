@@ -300,35 +300,71 @@
   border-color: color-mix(in srgb, var(--a) 55%, var(--border));
   background: color-mix(in srgb, var(--a) 10%, transparent);
 }
+/* The header's second row, under the chips: the prompt before answering, the
+   result details after. Always there, so the graph doesn't jump on answering. */
+.trainer-subline {
+  flex-basis: 100%;
+  order: 10;
+  display: flex;
+  align-items: center;
+  min-height: 20px;
+  margin-top: -2px;
+}
 .trainer-status {
   color: var(--muted);
   font-size: 0.86rem;
-  margin-left: 4px;
 }
-/* A long result (e.g. Match EQ's) wraps within its own space, so Back / Share
-   stay on the header's top row; below 260px it takes its own line (phones) */
-.trainer-result {
-  flex: 1 1 260px;
-  min-width: 0;
-  font-weight: 700;
-  font-size: 1rem;
-  margin-left: 4px;
-}
-.result-correct { color: var(--green); }
+/* Result after answering: a verdict chip (green or red) and a points chip on
+   the top row with the level and mode chips; the details go on the subline */
+.result-correct { --verdict: var(--green); }
+.result-incorrect { --verdict: var(--red); }
+.result-verdict,
 .result-points {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 4px;
   font-family: var(--font-mono);
-  font-size: 0.74rem;
+  font-size: 0.7rem;
   font-weight: 600;
-  color: var(--a);
-  margin-left: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
-.result-incorrect { color: var(--red); }
-.result-note {
+.result-verdict {
+  color: var(--verdict);
+  background: color-mix(in srgb, var(--verdict) 13%, transparent);
+  border: 1px solid color-mix(in srgb, var(--verdict) 50%, transparent);
+}
+.result-points {
+  color: var(--a);
+  background: color-mix(in srgb, var(--a) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--a) 35%, transparent);
+  text-transform: none;
+  letter-spacing: 0.04em;
+}
+.result-facts {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  row-gap: 2px;
   font-family: var(--font-mono);
-  font-size: 0.74rem;
-  font-weight: 400;
+  font-size: 0.76rem;
   color: var(--muted);
-  margin-left: 10px;
+}
+.result-fact { display: inline-flex; align-items: center; white-space: nowrap; }
+.result-fact:first-child { color: var(--text); font-weight: 600; }
+.result-fact + .result-fact::before {
+  content: '';
+  width: 1px;
+  height: 11px;
+  margin: 0 9px;
+  background: var(--border-hover);
+}
+/* Phones: tighter, so Match EQ's longer details usually fit on one line */
+@media (max-width: 520px) {
+  .result-facts { font-size: 0.7rem; }
+  .result-fact + .result-fact::before { margin: 0 6px; }
 }
 
 /* Transport — EQ (amber) vs Flat (neutral) toggles, then the answer action */

@@ -223,7 +223,7 @@ describe('FrequencyTrainer', () => {
     expect(screen.getByText('Ready to check')).toBeInTheDocument();
     fireEvent.click(screen.getByText('Check Answer'));
 
-    expect(screen.getByText('✓ Correct!')).toBeInTheDocument();
+    expect(screen.getByText('✓ Correct')).toBeInTheDocument();
     expect(onResult).toHaveBeenCalledWith(expect.objectContaining({ mode: 'boost', correct: true, level: 2 }));
     // 2 bands = 1 bit of choice = 10 points
     expect(onResult).toHaveBeenCalledWith(expect.objectContaining({ points: 10, errOct: null }));
@@ -362,7 +362,7 @@ describe('FrequencyTrainer', () => {
     fireEvent.keyDown(window, { key: 'Enter' });          // next trial
     fireEvent.keyDown(window, { key: 'ArrowRight' });     // first key: +3
     fireEvent.keyDown(window, { key: 'Enter' });
-    expect(screen.getByText('✓ Correct!')).toBeInTheDocument();
+    expect(screen.getByText('✓ Correct')).toBeInTheDocument();
     expect(screen.getByText('+10 pts')).toBeInTheDocument();
     expect(onResult).toHaveBeenLastCalledWith(expect.objectContaining({ mode: 'gain', correct: true, points: 10 }));
   });
@@ -392,7 +392,7 @@ describe('FrequencyTrainer', () => {
     // down to the bottom of the range (clamped at 40 Hz), within ±1 oct and ±4 dB
     for (let i = 0; i < 60; i++) fireEvent.keyDown(window, { key: 'ArrowLeft' });
     fireEvent.keyDown(window, { key: 'Enter' });
-    expect(screen.getByText('✓ Correct!')).toBeInTheDocument();
+    expect(screen.getByText('✓ Correct')).toBeInTheDocument();
     const r = onResult.mock.lastCall[0];
     expect(r).toMatchObject({ mode: 'match', family: 'match', correct: true, points: 37 });
     expect(r.errDb).toBe(2);
@@ -566,7 +566,7 @@ describe('FrequencyTrainer', () => {
     const first = utils.container.querySelectorAll('.freq-btn')[0];
     fireEvent.click(first);
     fireEvent.click(screen.getByText('Check Answer'));
-    expect(screen.getByText('✓ Correct!')).toBeInTheDocument();
+    expect(screen.getByText('✓ Correct')).toBeInTheDocument();
     fireEvent.click(screen.getByText('← Back'));
     expect(screen.getByText('Choose Test Mode')).toBeInTheDocument();
   });
