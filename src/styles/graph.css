@@ -1,14 +1,13 @@
 /* ── Frequency response graph ───────────────────────────────────────────── */
-/* The graph panel uses the same raised keycap shading as the source buttons:
-   gradient face, highlight on top, and a thicker darker bottom edge */
+/* The graph panel has the source buttons' raised keycap edge exactly: gradient
+   face, highlight on top, one 1px border, and a thicker darker bottom edge */
 .freq-graph-wrap {
   position: relative;
   background: linear-gradient(to bottom, var(--key-top), var(--key-bottom));
-  border: 1px solid color-mix(in srgb, var(--a) 22%, var(--border-hover));
+  border: 1px solid var(--border-hover);
   border-bottom: 3px solid var(--key-edge);
   border-radius: var(--radius);
-  box-shadow: inset 0 1px 0 var(--highlight), var(--key-drop),
-    0 0 0 1px color-mix(in srgb, var(--border-hover) 50%, transparent);
+  box-shadow: inset 0 1px 0 var(--highlight), var(--key-drop);
   overflow: hidden;
   line-height: 0;
 }
