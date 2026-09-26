@@ -51,7 +51,7 @@ App.jsx (Wouter Router)
   ├─ /                  → MainApp (two-column "rack": .rack-side + .rack-main)
   │    └─ useAudioEngine (hook)     — owns the AudioContext, buffer, gain, and filter chain
   │    └─ .rack-side
-  │    │    └─ TrackSelector        — Source + Controls panels; loads audio (pink/white noise or file) into engine
+  │    │    └─ TrackSelector        — Source + Controls panels; loads audio (noise, music loops, or a file) into engine
   │    └─ .rack-main
   │         └─ FrequencyTrainer     — all game logic (trial state, level progression, answer checking)
   │         │    └─ FreqGraph (SVG) — the instrument's screen; computes biquad math directly in JS
@@ -71,7 +71,7 @@ App.jsx (Wouter Router)
 
 **`noiseGen.js`** — Paul Kellet's IIR filter method for pink noise; simple uniform random for white noise. Both return an `AudioBuffer` for direct use with `loadBuffer`.
 
-**`musicGen.js`** — `generateDrumLoop` / `generateBandLoop`: seeded, synthesized 8-bar loops at 100 BPM (19.2 s, stereo). Each note is mixed in at `(start + i) % length`, so tails wrap and the loop is seamless; output is normalized toward pink noise's RMS. `TrackSelector`'s `GENERATED_TRACKS` pairs each generated source (`pink`, `white`, `drums`, `band`) with its `make(ctx)` function, run only when clicked.
+**`musicGen.js`** — `generateDrumLoop` / `generateBandLoop`: seeded, synthesized 8-bar loops at 100 BPM (19.2 s, stereo). Each note is mixed in at `(start + i) % length`, so tails wrap and the loop is seamless; output is normalized toward pink noise's RMS. `TrackSelector`'s `GENERATED_GROUPS` makes two cards, Noise (`pink`/`white`) and Music Loop (`drums`/`band`), each with a variant switch; every variant has a `make(ctx)` function, run only when clicked. The card face reloads the group's last-picked variant (`picked` state), and the source id reported to `onSourceChange` and share links is the variant id.
 
 **`audioInfo.js`** — `probeAudioFile(file)` reads format, original sample rate, bit depth, and channels from WAV/FLAC/MP3/Ogg/Opus headers (M4A reports format only). `decodeAudioData` resamples to the context rate, so this is the only source of the file's real specs. `TrackSelector` shows them, plus average bitrate (file size ÷ duration), on the upload button.
 

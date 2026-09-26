@@ -24,9 +24,8 @@ Difficulty adapts per mode: 3 correct in a row levels you up, 2 wrong in a row s
 Gain (1–18 dB) and Q (0.5–8) are adjustable, even mid-trial, so you can start broad and easy and tighten the challenge as your ears improve.
 
 **Source audio:**
-- Pink noise (recommended — equal energy per octave)
-- White noise
-- Drum Loop and Band Loop — synthesized in the browser (kick, snare, hats; plus bass and chords), so you can train on music without your own files
+- Noise: pink (recommended — equal energy per octave) or white
+- Music loops: drums, or a full band with bass and chords — synthesized in the browser, so you can train on music without your own files
 - Your own music (MP3, WAV, FLAC, OGG, and anything else your browser plays), with its format, sample rate, bit depth, and bitrate shown, a position fader, and A/B loop points for drilling one section
 
 **Practice tools:**

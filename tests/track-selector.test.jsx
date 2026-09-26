@@ -27,7 +27,7 @@ function makeEngine(overrides = {}) {
   };
 }
 
-function renderSelector({ engine: engineOverrides = {}, controlsChanged = false } = {}) {
+function renderSelector({ engine: engineOverrides = {}, controlsChanged = false, initialSource } = {}) {
   const engine = makeEngine(engineOverrides);
   const onSourceChange = vi.fn();
   const onResetControls = vi.fn();
@@ -35,7 +35,7 @@ function renderSelector({ engine: engineOverrides = {}, controlsChanged = false 
     <TrackSelector
       engine={engine} gainDb={6} setGainDb={vi.fn()} q={1.4} setQ={vi.fn()}
       focus={false} setFocus={vi.fn()} autoplay={false} setAutoplay={vi.fn()}
-      initialSource={undefined} onSourceChange={onSourceChange}
+      initialSource={initialSource} onSourceChange={onSourceChange}
       controlsChanged={controlsChanged} onResetControls={onResetControls}
     />
   );
@@ -82,21 +82,43 @@ async function uploadAndSettle(container, file) {
 describe('TrackSelector', () => {
   it('lists the built-in sources and the upload slot', () => {
     renderSelector();
-    expect(screen.getByText('Pink Noise')).toBeInTheDocument();
-    expect(screen.getByText('White Noise')).toBeInTheDocument();
-    expect(screen.getByText('Drum Loop')).toBeInTheDocument();
-    expect(screen.getByText('Band Loop')).toBeInTheDocument();
+    expect(screen.getByText('Noise')).toBeInTheDocument();
+    expect(screen.getByText('Music Loop')).toBeInTheDocument();
+    for (const name of ['Pink noise', 'White noise', 'Drums loop', 'Band loop']) {
+      expect(screen.getByRole('button', { name })).toBeInTheDocument();
+    }
     expect(screen.getByText('Upload File')).toBeInTheDocument();
   });
 
   it('loads pink noise on click and reports the source change', async () => {
     const { engine, onSourceChange } = renderSelector();
-    fireEvent.click(screen.getByText('Pink Noise'));
+    fireEvent.click(screen.getByText('Noise'));
     expect(onSourceChange).toHaveBeenCalledWith('pink');
     await waitFor(() => expect(engine.loadBuffer).toHaveBeenCalledTimes(1));
     // the generated AudioBuffer goes straight to loadBuffer
     expect(engine.loadBuffer.mock.calls[0][0].numberOfChannels).toBe(2);
-    expect(document.querySelector('.track-btn.active')).toHaveTextContent('Pink Noise');
+    expect(document.querySelector('.track-btn.active')).toHaveTextContent('Noise');
+  });
+
+  it('switches variants within a card and remembers the pick', async () => {
+    const { engine, onSourceChange } = renderSelector();
+    fireEvent.click(screen.getByRole('button', { name: 'White noise' }));
+    expect(onSourceChange).toHaveBeenLastCalledWith('white');
+    expect(screen.getByRole('button', { name: 'White noise' })).toHaveAttribute('aria-pressed', 'true');
+    // another card, then back: the Noise card reloads White, not Pink
+    fireEvent.click(screen.getByRole('button', { name: 'Band loop' }));
+    expect(onSourceChange).toHaveBeenLastCalledWith('band');
+    expect(screen.getByRole('button', { name: 'White noise' })).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(screen.getByText('Noise'));
+    expect(onSourceChange).toHaveBeenLastCalledWith('white');
+    await waitFor(() => expect(engine.loadBuffer).toHaveBeenCalledTimes(3));
+  });
+
+  it('picks the variant a challenge link names', async () => {
+    const { onSourceChange } = renderSelector({ initialSource: 'drums' });
+    await waitFor(() => expect(onSourceChange).toHaveBeenCalledWith('drums'));
+    expect(screen.getByRole('button', { name: 'Drums loop' })).toHaveAttribute('aria-pressed', 'true');
+    expect(document.querySelector('.track-btn.active')).toHaveTextContent('Music Loop');
   });
 
   it('shows uploaded file specs from the parsed header', async () => {

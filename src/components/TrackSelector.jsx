@@ -5,13 +5,20 @@ import { probeAudioFile } from '../lib/audioInfo.js';
 import { formatTime, formatSpec, PINK_LINE, WHITE_LINE, WAVE_BARS, DRUM_HITS, BAND_LINE, GLYPH_W, GLYPH_H } from '../lib/trackFormat.js';
 import { ResetIcon } from './Icons.jsx';
 
-// Built-in sources, generated in the browser when picked (no audio files)
-const GENERATED_TRACKS = [
-  { id: 'pink',  label: 'Pink Noise',  description: 'Equal energy per octave — ideal for EQ training', make: generatePinkNoise },
-  { id: 'white', label: 'White Noise', description: 'Flat spectrum, bright character', make: generateWhiteNoise },
-  { id: 'drums', label: 'Drum Loop',   description: 'Kick, snare, and hats — punchy transients', make: generateDrumLoop },
-  { id: 'band',  label: 'Band Loop',   description: 'Drums, bass, and chords across the spectrum', make: generateBandLoop },
+// Built-in sources, generated in the browser when picked (no audio files).
+// Each group is one card with a switch between its variants.
+const GENERATED_GROUPS = [
+  { id: 'noise', label: 'Noise', variants: [
+    { id: 'pink',  label: 'Pink',  description: 'Equal energy per octave — ideal for EQ training', make: generatePinkNoise },
+    { id: 'white', label: 'White', description: 'Flat spectrum, bright character', make: generateWhiteNoise },
+  ] },
+  { id: 'loop', label: 'Music Loop', variants: [
+    { id: 'drums', label: 'Drums', description: 'Kick, snare, and hats — punchy transients', make: generateDrumLoop },
+    { id: 'band',  label: 'Band',  description: 'Drums, bass, and chords across the spectrum', make: generateBandLoop },
+  ] },
 ];
+const VARIANTS = GENERATED_GROUPS.flatMap(g => g.variants);
+const groupOf = id => GENERATED_GROUPS.find(g => g.variants.some(v => v.id === id));
 
 function SourceGlyph({ kind }) {
   return (
@@ -53,6 +60,10 @@ function FileName({ name }) {
 export function TrackSelector({ engine, gainDb, setGainDb, q, setQ, focus, setFocus, autoplay, setAutoplay, initialSource, onSourceChange, controlsChanged, onResetControls }) {
   const fileRef = useRef(null);
   const [activeId, setActiveId] = useState(null);
+  // The variant each group's card loads when clicked: { noise: 'pink', loop: 'drums' }
+  const [picked, setPicked] = useState(() => Object.fromEntries(
+    GENERATED_GROUPS.map(g => [g.id, groupOf(initialSource)?.id === g.id ? initialSource : g.variants[0].id])
+  ));
   const [uploading, setUploading] = useState(false);
   const [position, setPosition] = useState(0);
   const [fileInfo, setFileInfo] = useState(null);
@@ -90,11 +101,14 @@ export function TrackSelector({ engine, gainDb, setGainDb, q, setQ, focus, setFo
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function loadGenerated(id) {
+    const group = groupOf(id);
+    if (!group) return;
+    setPicked(p => ({ ...p, [group.id]: id }));
     setActiveId(id);
     onSourceChange?.(id);
     setPosition(0);
     setLoopA(null);
-    const track = GENERATED_TRACKS.find(t => t.id === id) ?? GENERATED_TRACKS[0];
+    const track = VARIANTS.find(v => v.id === id);
     await engine.loadBuffer(track.make(engine.getCtx()));
   }
 
@@ -163,20 +177,43 @@ export function TrackSelector({ engine, gainDb, setGainDb, q, setQ, focus, setFo
         <h2 className="panel-label">Source</h2>
         <section className="card source-card">
           <div className="track-grid">
-            {GENERATED_TRACKS.map((t, i) => (
-              <button
-                key={t.id}
-                className={`track-btn ${activeId === t.id ? 'active' : ''} ${activeId === t.id && engine.isPlaying ? 'live' : ''}`}
-                onClick={() => loadGenerated(t.id)}
-                disabled={engine.isLoading}
-                aria-pressed={activeId === t.id}
-              >
-                <span className="track-tag">IN {i + 1}</span>
-                <SourceGlyph kind={t.id} />
-                <span className="track-name">{t.label}</span>
-                <span className="track-desc">{t.description}</span>
-              </button>
-            ))}
+            {GENERATED_GROUPS.map(g => {
+              const sel = g.variants.find(v => v.id === picked[g.id]);
+              const isActive = activeId === sel.id;
+              return (
+                <div
+                  key={g.id}
+                  className={`track-btn track-group ${isActive ? 'active' : ''} ${isActive && engine.isPlaying ? 'live' : ''}`}
+                  role="group"
+                  aria-label={g.label}
+                >
+                  <button
+                    className="track-main"
+                    onClick={() => loadGenerated(sel.id)}
+                    disabled={engine.isLoading}
+                    aria-pressed={isActive}
+                  >
+                    <SourceGlyph kind={sel.id} />
+                    <span className="track-name">{g.label}</span>
+                    <span className="track-desc">{sel.description}</span>
+                  </button>
+                  <div className="track-variants">
+                    {g.variants.map(v => (
+                      <button
+                        key={v.id}
+                        className={`track-variant ${v.id === sel.id ? 'is-active' : ''}`}
+                        onClick={() => loadGenerated(v.id)}
+                        disabled={engine.isLoading}
+                        aria-pressed={activeId === v.id}
+                        aria-label={`${v.label} ${g.id === 'noise' ? 'noise' : 'loop'}`}
+                      >
+                        {v.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
             <button
               className={`track-btn upload-btn ${isUpload ? 'active' : ''} ${isUpload && engine.isPlaying ? 'live' : ''}`}
               onClick={() => fileRef.current?.click()}
@@ -184,7 +221,6 @@ export function TrackSelector({ engine, gainDb, setGainDb, q, setQ, focus, setFo
               data-tooltip={isUpload ? activeId.slice(7) : undefined}
               aria-pressed={isUpload}
             >
-              <span className="track-tag">IN {GENERATED_TRACKS.length + 1}</span>
               <SourceGlyph kind="upload" />
               <span className="track-name">
                 {uploading ? 'Loading…' : isUpload ? <FileName name={activeId.slice(7)} /> : 'Upload File'}

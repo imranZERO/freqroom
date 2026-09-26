@@ -67,7 +67,7 @@
   position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas: "tag glyph" "name glyph" "desc desc";
+  grid-template-areas: "name glyph" "desc desc";
   align-items: center;
   column-gap: 12px;
   row-gap: 2px;
@@ -83,26 +83,95 @@
   font-family: inherit;
   transition: border-color 0.15s, background 0.15s, transform 0.08s, border-bottom-width 0.08s;
 }
-.track-tag   { grid-area: tag; }
 .track-name  { grid-area: name; }
 .track-desc  { grid-area: desc; }
-.track-glyph { grid-area: glyph; align-self: start; margin-top: 2px; }
+.track-glyph { grid-area: glyph; align-self: center; }
 
-/* Channel tag with its status lamp */
-.track-tag {
+/* Grouped source (Noise, Music Loop): the card face loads the picked variant,
+   the switch below picks and loads another. Padding moves onto the inner
+   button so the whole face is clickable. */
+.track-group {
   display: flex;
-  align-items: center;
-  gap: 7px;
-  font-family: var(--font-mono);
-  font-size: 0.62rem;
-  font-weight: 500;
-  letter-spacing: 0.14em;
-  color: var(--muted);
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0;
+  cursor: default;
 }
-.track-tag::before {
+.track-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "name glyph" "desc desc";
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 2px;
+  padding: 11px 14px 9px;
+  flex: 1;              /* fill the card so the switch sits at the bottom */
+  align-content: start;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.track-main:focus-visible { outline: 2px solid var(--a); outline-offset: -2px; border-radius: var(--radius); }
+.track-group:has(.track-main:disabled) { opacity: 0.5; }
+.track-main:disabled, .track-variant:disabled { cursor: default; }
+.track-variants {
+  display: flex;
+  margin: 0 14px 12px;
+  border: 1px solid var(--border-hover);
+  border-radius: var(--radius);
+  background: var(--card-2);
+}
+.track-variant {
+  flex: 1;
+  padding: 4px 8px;
+  background: none;
+  border: 0;
+  border-radius: calc(var(--radius) - 1px);
+  color: var(--muted);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transition: color 0.15s, background 0.15s;
+}
+.track-variant + .track-variant { border-left: 1px solid var(--border-hover); border-radius: 0 calc(var(--radius) - 1px) calc(var(--radius) - 1px) 0; }
+.track-variant:first-child { border-radius: calc(var(--radius) - 1px) 0 0 calc(var(--radius) - 1px); }
+.track-variant:hover:not(:disabled) { color: var(--text); }
+.track-variant.is-active { color: var(--text); background: color-mix(in srgb, var(--muted) 12%, transparent); }
+/* Caret on the picked variant, pointing up at the description it names */
+.track-variant { position: relative; }
+.track-variant.is-active::before {
   content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  margin-bottom: 1px;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top: 0;
+  border-bottom-color: var(--muted);
+  opacity: 0.7;
+  transition: border-color 0.15s, opacity 0.15s;
+}
+.track-btn.active .track-variant.is-active::before { border-bottom-color: var(--a); opacity: 1; }
+.track-btn.active .track-variant.is-active {
+  color: var(--a);
+  background: color-mix(in srgb, var(--a) 14%, transparent);
+}
+
+/* Status lamp before the source name */
+.track-name::before {
+  content: '';
+  flex-shrink: 0;
+  align-self: center;
   width: 6px;
   height: 6px;
+  margin-right: 8px;
   border-radius: 50%;
   background: var(--border-hover);
   transition: background 0.2s, box-shadow 0.2s;
@@ -129,8 +198,7 @@
       color-mix(in srgb, var(--a) 5%, var(--key-bottom)));
     transform: translateY(-1px);
   }
-  .track-btn:hover:not(:disabled) .track-tag { color: var(--text); }
-  .track-btn:hover:not(:disabled) .track-tag::before { background: color-mix(in srgb, var(--a) 60%, var(--border-hover)); }
+  .track-btn:hover:not(:disabled) .track-name::before { background: color-mix(in srgb, var(--a) 60%, var(--border-hover)); }
   .track-btn:hover:not(:disabled) .track-glyph polyline { stroke: color-mix(in srgb, var(--a) 70%, var(--muted)); opacity: 1; }
   .track-btn:hover:not(:disabled) .track-glyph rect { fill: color-mix(in srgb, var(--a) 70%, var(--muted)); opacity: 1; }
   .track-btn.active:hover:not(:disabled) {
@@ -149,8 +217,7 @@
     color-mix(in srgb, var(--a) 12%, var(--key-top)),
     color-mix(in srgb, var(--a) 7%, var(--key-bottom)));
 }
-.track-btn.active .track-tag { color: var(--a); }
-.track-btn.active .track-tag::before {
+.track-btn.active .track-name::before {
   background: var(--a);
   box-shadow: 0 0 5px color-mix(in srgb, var(--a) 60%, transparent);
 }
@@ -161,7 +228,7 @@
 @keyframes source-live {
   50% { opacity: 0.45; }
 }
-.track-btn.live .track-tag::before { animation: source-live 1.4s ease-in-out infinite; }
+.track-btn.live .track-name::before { animation: source-live 1.4s ease-in-out infinite; }
 .track-btn.live .track-glyph { animation: source-live 2.8s ease-in-out infinite; }
 
 .track-btn:disabled { opacity: 0.5; cursor: default; }
@@ -185,4 +252,9 @@
   font-family: var(--font-mono);
   font-size: 0.7rem;
   letter-spacing: 0.01em;
+}
+/* Narrow cards (two per row on phones) have no room for the sketch beside the name */
+.track-btn { container-type: inline-size; }
+@container (max-width: 240px) {
+  .track-glyph { display: none; }
 }
