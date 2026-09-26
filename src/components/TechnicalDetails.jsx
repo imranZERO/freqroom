@@ -45,7 +45,7 @@ const RESOURCES = [
 // Every feature, grouped; `see` links to the section that explains it in depth
 const FEATURES = [
   ['Training', [
-    ['Six training modes', 'Boosts, Cuts, Mixed, Shelves, Pass Filters, and Sweep — peaks, dips, shelves, filter cutoffs, and free-form location.', 'modes'],
+    ['Eight training modes', 'Boosts, Cuts, Mixed, Shelves, Pass Filters, Sweep, How Much?, and Match EQ — peaks, dips, shelves, filter cutoffs, free-form location, gain amounts, and dialling in a whole bell.', 'modes'],
     ['Explore', 'A free-play EQ: drag a bell, shelf, or pass filter on the graph and hear it live, with a guide to what each region sounds like.', 'modes'],
     ['Adaptive difficulty', 'Each mode has its own level: 3 correct in a row levels up, 2 wrong levels down.', 'difficulty'],
     ['Gain and Q controls', 'Boost/cut amount (1–18 dB) and bell width (Q 0.5–8), applied live, even mid-trial.', 'peaking'],
@@ -165,6 +165,8 @@ export function TechnicalDetails({ chrome }) {
                 <tr><td>Shelves</td><td>low/high shelf, ±gain</td><td>corner and direction</td><td>60 Hz – 10 kHz</td><td>2–8 corners</td></tr>
                 <tr><td>Pass Filters</td><td>high-pass or low-pass</td><td>cutoff frequency</td><td>HP 40 Hz – 1 kHz, LP 1 – 16 kHz</td><td>2–8 cutoffs</td></tr>
                 <tr><td>Sweep</td><td>peaking, ±gain</td><td>any frequency, by dragging</td><td>40 Hz – 16 kHz</td><td>1–5 (tolerance)</td></tr>
+                <tr><td>How Much?</td><td>peaking at a marked frequency</td><td>its gain</td><td>60 Hz – 12 kHz</td><td>1–6 (2–12 gain choices)</td></tr>
+                <tr><td>Match EQ</td><td>peaking, ±3–12 dB</td><td>frequency and gain, by dragging your own bell</td><td>40 Hz – 16 kHz, ±12 dB</td><td>1–5 (tolerance)</td></tr>
               </tbody>
             </table>
           </div>
@@ -173,7 +175,35 @@ export function TechnicalDetails({ chrome }) {
             (boost or cut) is random, and you answer it with the corner using the boost and cut rows. In Pass Filters the Gain slider has no effect.
           </p>
           <p className="td-p">
-            <strong>Explore</strong> sits above the six modes and isn't scored. You drag one filter across the graph — left and
+            <strong>How Much?</strong> turns the question around: the bell's frequency is marked on the graph and you
+            pick its gain from a row of dB keys. The choices per level are:
+          </p>
+          <div className="td-table-wrap">
+            <table className="td-table td-table-compact">
+              <thead><tr><th>Level</th><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td></tr></thead>
+              <tbody><tr><th>Choices (dB)</th><td>+3 +9</td><td>+3 +6 +9</td><td>+3 … +12, step 3</td><td>+2 … +12, step 2</td><td>±3 … ±12, step 3</td><td>±2 … ±12, step 2</td></tr></tbody>
+            </table>
+          </div>
+          <p className="td-p">
+            <strong>Match EQ</strong> hides a bell anywhere from 40 Hz to 16 kHz with a gain of ±3 to ±12 dB (in 1.5 dB
+            steps). You drag your own bell on the graph — left and right for frequency, up and down for gain — and
+            compare <strong>Target</strong> (the hidden bell), <strong>Yours</strong>, and <strong>Flat</strong>; both
+            bells use the Q fader. Your guess counts when it is within the level's tolerance on both axes:
+          </p>
+          <div className="td-table-wrap">
+            <table className="td-table td-table-compact">
+              <thead><tr><th>Level</th><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td></tr></thead>
+              <tbody>
+                <tr><th>Frequency</th><td>±1 oct</td><td>±⅔ oct</td><td>±½ oct</td><td>±⅓ oct</td><td>±⅙ oct</td></tr>
+                <tr><th>Gain</th><td>±4 dB</td><td>±3 dB</td><td>±2.5 dB</td><td>±2 dB</td><td>±1.5 dB</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p className="td-p">
+            In both, the hidden bell carries its own gain, so the Gain slider has no effect.
+          </p>
+          <p className="td-p">
+            <strong>Explore</strong> sits after the eight modes and isn't scored. You drag one filter across the graph — left and
             right set the frequency, up and down the gain (±18 dB) — and pick its type: bell, low or high shelf, high-pass,
             or low-pass. The bell uses the Q fader. The engine retunes the filter live while EQ plays, and a guide under the
             graph names the region, the nearest note, and what a boost or cut there tends to sound like (for example,
@@ -309,7 +339,7 @@ export function TechnicalDetails({ chrome }) {
 
         <Section id="difficulty">
           <p className="td-p">
-            Each mode keeps its own level, which sets the number of candidates (or, in Sweep, the tolerance).
+            Each mode keeps its own level, which sets the number of candidates (or, in Sweep and Match EQ, the tolerance).
             Levels change on consecutive-answer streaks:
           </p>
           <div className="td-callout">
@@ -320,7 +350,7 @@ export function TechnicalDetails({ chrome }) {
             A single wrong answer resets the correct streak but doesn't drop the level, so one slip isn't punished.
             The asymmetry (3 to advance, 2 to drop) keeps you working close to your limit. Peak modes run from 2 to
             15 bands, Shelves and Pass Filters from 2 to 8 (closer corners or cutoffs become impractical to tell
-            apart), and Sweep from level 1 to 5.
+            apart), Sweep and Match EQ from level 1 to 5, and How Much? from 1 to 6.
           </p>
         </Section>
 
@@ -332,21 +362,23 @@ export function TechnicalDetails({ chrome }) {
           </p>
           <div className="td-formula">{`points = round( 10 · log₂( choices ) × credit )`}</div>
           <p className="td-p">
-            Choices is the band count, doubled in Mixed and Shelves (each band has a boost and a cut row). For Sweep it
-            is how many tolerance-wide windows fit across its 40 Hz–16 kHz range (about 8.6 octaves ÷ 2 × tolerance).
-            Credit is 1 for a correct answer and 0 for a wrong one; Sweep's fades from 1 at the tolerance to 0 at three
-            times it. Points are scored at the level the trial was played at, before any level change.
+            Choices is the band count, doubled in Mixed and Shelves (each band has a boost and a cut row), or the
+            number of dB keys in How Much?. For Sweep it is how many tolerance-wide windows fit across its 40 Hz–16 kHz
+            range (about 8.6 octaves ÷ 2 × tolerance); Match EQ multiplies that by the windows across its ±12 dB gain
+            range (24 dB ÷ 2 × gain tolerance). Credit is 1 for a correct answer and 0 for a wrong one; Sweep's fades
+            from 1 at the tolerance to 0 at three times it, and Match EQ takes the weaker of its frequency and gain
+            credits, each faded the same way. Points are scored at the level the trial was played at, before any level change.
           </p>
           <div className="td-table-wrap">
             <table className="td-table td-table-compact">
-              <thead><tr><th>Trial</th><td>2 bands</td><td>4 bands</td><td>8 bands</td><td>15 bands</td><td>Mixed, 15</td><td>Sweep 1</td><td>Sweep 5</td></tr></thead>
-              <tbody><tr><th>Points</th><td>10</td><td>20</td><td>30</td><td>39</td><td>49</td><td>21</td><td>47</td></tr></tbody>
+              <thead><tr><th>Trial</th><td>2 bands</td><td>4 bands</td><td>8 bands</td><td>15 bands</td><td>Mixed, 15</td><td>Sweep 1</td><td>Sweep 5</td><td>How Much? 6</td><td>Match 1</td><td>Match 5</td></tr></thead>
+              <tbody><tr><th>Points</th><td>10</td><td>20</td><td>30</td><td>39</td><td>49</td><td>21</td><td>47</td><td>36</td><td>37</td><td>77</td></tr></tbody>
             </table>
           </div>
           <p className="td-p">
             The score panel shows the points total, accuracy, the current and best streak of correct answers, lamps
             for the last 10 answers, and a row per mode played: current and best level, correct count, points, and
-            Sweep's average error in octaves. <strong>Session</strong> covers this visit; <strong>Lifetime</strong>{' '}
+            Sweep's and Match EQ's average error (octaves, and dB for Match EQ). <strong>Session</strong> covers this visit; <strong>Lifetime</strong>{' '}
             is saved with your progress. Scores saved before points existed keep their totals and start earning
             points from the next answer.
           </p>
@@ -483,8 +515,8 @@ export function TechnicalDetails({ chrome }) {
         <Section id="labels">
           <p className="td-p">
             After each answer the hidden frequency is labelled with an EQ region name, plus its nearest musical note
-            (Boosts, Cuts, Mixed), its exact frequency and your error (Sweep), or its filter type (Shelves, Pass
-            Filters).
+            (Boosts, Cuts, Mixed), its exact frequency and your error (Sweep), its gain (How Much?), its frequency,
+            gain, and both errors (Match EQ), or its filter type (Shelves, Pass Filters).
           </p>
           <h3 className="td-h3">Note name</h3>
           <p className="td-p">

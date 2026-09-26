@@ -22,6 +22,39 @@ export function withinSweepTolerance(errOct, level) {
   return errOct <= SWEEP_TOLERANCE[level - 1];
 }
 
+// How Much? mode: the gain choices (dB) offered at each level 1–6. Every level
+// adds choices: steps shrink and cuts join in; 0 dB is never a choice.
+export const GAIN_LEVELS = [
+  [3, 9],
+  [3, 6, 9],
+  [3, 6, 9, 12],
+  [2, 4, 6, 8, 10, 12],
+  [-12, -9, -6, -3, 3, 6, 9, 12],
+  [-12, -10, -8, -6, -4, -2, 2, 4, 6, 8, 10, 12],
+];
+// Frequencies the How Much? bell is placed at (kept off the extremes, where
+// level changes are hardest to judge)
+export const GAIN_FREQS = generateBands(24, 60, 12000);
+
+// Match EQ mode: how close the matched bell must be, in octaves and dB, by level 1–5
+export const MATCH_TOLERANCE = [
+  { oct: 1, db: 4 },
+  { oct: 2 / 3, db: 3 },
+  { oct: 1 / 2, db: 2.5 },
+  { oct: 1 / 3, db: 2 },
+  { oct: 1 / 6, db: 1.5 },
+];
+// The hidden bell's gain magnitudes (dB); each trial picks one and a random sign
+export const MATCH_GAINS = [3, 4.5, 6, 7.5, 9, 10.5, 12];
+// The matched bell's gain is limited to ±this (also the graph's dB range)
+export const MATCH_RANGE_DB = 12;
+
+// Whether a Match EQ guess at `level` is within both tolerances
+export function withinMatchTolerance(errOct, errDb, level) {
+  const tol = MATCH_TOLERANCE[level - 1];
+  return errOct <= tol.oct && errDb <= tol.db;
+}
+
 // Frequency span the candidates are spread over for a trial
 export function bandRange(family, kind) {
   if (family === 'shelf') return [60, 10000];

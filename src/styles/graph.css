@@ -68,6 +68,7 @@
 
 .graph-fill-boost  { fill: color-mix(in srgb, var(--a) 16%, transparent); }
 .graph-fill-cut    { fill: color-mix(in srgb, var(--cut) 16%, transparent); }
+.graph-fill-mine   { fill: color-mix(in srgb, var(--cut) 10%, transparent); }
 
 .graph-curve-boost,
 .graph-curve-cut {
@@ -107,9 +108,12 @@
 }
 .graph-selected { animation: graph-in 0.2s ease-out both; pointer-events: none; }
 .graph-selected .graph-hl-boost,
-.graph-selected .graph-hl-cut { stroke-width: 2; }
+.graph-selected .graph-hl-cut,
+.graph-selected .graph-hl-mine { stroke-width: 2; }
 .graph-hl-boost,
-.graph-hl-cut { fill: none; stroke-linejoin: round; }
+.graph-hl-cut,
+.graph-hl-mine { fill: none; stroke-linejoin: round; }
+.graph-hl-mine  { stroke: var(--cut); stroke-dasharray: 6 4; }
 .graph-hl-boost { stroke: var(--a); }
 .graph-hl-cut   { stroke: var(--cut); }
 

@@ -38,6 +38,8 @@ const MODE_SKETCHES = {
   pass:  [['cut', sketch({ type: 'highpass', frequency: 120, Q: -3.01 })], ['cut', sketch({ type: 'lowpass', frequency: 8000, Q: -3.01 })]],
   sweep: [['boost', sketch(peak(1400, 11))]],
   explore: [['boost', sketch(peak(500, 10))], ['cut', sketch(peak(5000, -7))]],
+  gain:  [['boost', sketch(peak(1000, 4))], ['boost', sketch(peak(1000, 8))], ['boost', sketch(peak(1000, 12))]],
+  match: [['cut', sketch(peak(1300, 8))], ['boost', sketch(peak(900, 11))]],
 };
 
 function ModeGlyph({ id }) {
@@ -55,15 +57,6 @@ function ModeGlyph({ id }) {
 export function ModePicker({ modes, gainDb, onSelect }) {
   return (
     <div className="mode-grid">
-      {/* Explore: free play, no quiz; full width above the six test modes */}
-      <button className="mode-card mode-card-explore" onClick={() => onSelect('explore')}>
-        <span className="mode-sign">FREE PLAY</span>
-        <ModeGlyph id="explore" />
-        <span className="mode-label">Explore</span>
-        <span className="mode-desc">
-          No quiz: drag an EQ curve on the graph and hear what each region sounds like before testing yourself.
-        </span>
-      </button>
       {modes.map(m => (
         <button key={m.id} className="mode-card" onClick={() => onSelect(m.id)}>
           <span className="mode-sign">{m.badge(gainDb)}</span>
@@ -72,6 +65,15 @@ export function ModePicker({ modes, gainDb, onSelect }) {
           <span className="mode-desc">{m.desc}</span>
         </button>
       ))}
+      {/* Explore: free play, no quiz; last in the grid */}
+      <button className="mode-card mode-card-explore" onClick={() => onSelect('explore')}>
+        <span className="mode-sign">FREE PLAY</span>
+        <ModeGlyph id="explore" />
+        <span className="mode-label">Explore</span>
+        <span className="mode-desc">
+          No quiz: drag an EQ curve on the graph and hear what each region sounds like before testing yourself.
+        </span>
+      </button>
     </div>
   );
 }
@@ -123,6 +125,30 @@ export function BandRows({ twoRows, sign, ...rowProps }) {
   );
 }
 
+// How Much? keys: one per gain choice, in equal columns under the graph
+export function GainRow({ options, getBtnState, select, answered, onHover }) {
+  return (
+    <div className="freq-grid gain-grid" style={{ '--n': options.length }}>
+      {options.map(g => (
+        <button
+          key={g}
+          className={`freq-btn ${getBtnState(g)}`}
+          onClick={() => select(g)}
+          onMouseEnter={() => onHover(g)}
+          onMouseLeave={() => onHover(null)}
+          onFocus={() => onHover(g)}
+          onBlur={() => onHover(null)}
+          disabled={answered}
+          aria-label={`${g > 0 ? 'plus' : 'minus'} ${Math.abs(g)} dB`}
+        >
+          <span className="freq-num">{g > 0 ? '+' : '−'}{Math.abs(g)}</span>
+          <span className="freq-unit">dB</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // Key to the button colours after answering, plus the direction reveal
 export function AnswerLegend({ wasCorrect, hasSelection, directionLabel }) {
   return (
@@ -145,15 +171,26 @@ export function AnswerLegend({ wasCorrect, hasSelection, directionLabel }) {
 
 // EQ/Flat toggles on the left; keyboard hint and Check / Next on the right
 // hideAction: no Check / Next buttons (Explore mode has nothing to answer)
-export function Transport({ playMode, onPlay, shortcuts, answered, canCheck, onCheck, onNext, hideAction = false }) {
+// yours: Match EQ's third toggle for hearing your own curve ({ disabled });
+// the EQ toggle is then labelled Target
+export function Transport({ playMode, onPlay, shortcuts, answered, canCheck, onCheck, onNext, hideAction = false, yours = null }) {
   return (
     <div className="transport">
       <button
         className={`play-toggle play-toggle-eq ${playMode === 'eq' ? 'ptog-eq' : ''}`}
         onClick={() => onPlay('eq')}
       >
-        {playMode === 'eq' ? '◼' : '▶'} EQ
+        {playMode === 'eq' ? '◼' : '▶'} {yours ? 'Target' : 'EQ'}
       </button>
+      {yours && (
+        <button
+          className={`play-toggle play-toggle-mine ${playMode === 'mine' ? 'ptog-mine' : ''}`}
+          onClick={() => onPlay('mine')}
+          disabled={yours.disabled}
+        >
+          {playMode === 'mine' ? '◼' : '▶'} Yours
+        </button>
+      )}
       <button
         className={`play-toggle play-toggle-flat ${playMode === 'flat' ? 'ptog-flat' : ''}`}
         onClick={() => onPlay('flat')}

@@ -88,6 +88,14 @@ export function HowItWorksModal({ isOpen, onClose }) {
                 (← → nudge by a semitone). You're scored on how many octaves off you are; the allowed error
                 shrinks from 1 octave at level 1 to ⅙ octave at level 5.
               </div>
+              <div className="info-mode-item">
+                <strong>How Much?</strong> — the frequency is marked; pick how many dB it was boosted or cut.
+                Higher levels offer closer steps, then cuts as well.
+              </div>
+              <div className="info-mode-item">
+                <strong>Match EQ</strong> — drag your own bell until it sounds like the hidden one, comparing
+                Target, Yours, and Flat. Frequency and gain both have to be close.
+              </div>
             </div>
           </div>
 

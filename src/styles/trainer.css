@@ -281,14 +281,20 @@
   background: var(--border-hover);
   transition: background 0.2s, box-shadow 0.2s;
 }
-.play-toggle:hover { border-color: var(--border-hover); background: var(--card-hover); }
-.play-toggle:active { transform: translateY(1px); }
+.play-toggle:hover:not(:disabled) { border-color: var(--border-hover); background: var(--card-hover); }
+.play-toggle:active:not(:disabled) { transform: translateY(1px); }
 
 .play-toggle-eq { color: var(--a); }
 .play-toggle-eq.ptog-eq {
   background: color-mix(in srgb, var(--a) 14%, var(--card-2));
   border-color: var(--a);
 }
+.play-toggle-mine { color: var(--cut); }
+.play-toggle-mine.ptog-mine {
+  background: color-mix(in srgb, var(--cut) 14%, var(--card-2));
+  border-color: var(--cut);
+}
+.play-toggle:disabled { opacity: 0.45; cursor: default; }
 .play-toggle-flat.ptog-flat {
   background: color-mix(in srgb, var(--text) 8%, var(--card-2));
   border-color: var(--text);
@@ -297,16 +303,15 @@
   50% { opacity: 0.55; }
 }
 .ptog-eq::after,
+.ptog-mine::after,
 .ptog-flat::after {
   animation: lamp 1.6s ease-in-out infinite;
 }
 .ptog-eq::after   { background: var(--a);    box-shadow: 0 0 4px color-mix(in srgb, var(--a) 60%, transparent); }
+.ptog-mine::after { background: var(--cut); box-shadow: 0 0 4px color-mix(in srgb, var(--cut) 60%, transparent); }
 .ptog-flat::after { background: var(--text); box-shadow: 0 0 4px color-mix(in srgb, var(--text) 40%, transparent); }
 
 /* ── Explore (free play) ─────────────────────────────────────────────────── */
-/* Full-width card above the six test modes */
-.mode-card-explore { grid-column: 1 / -1; }
-.mode-card-explore .mode-desc { max-width: 60ch; }
 
 /* Filter type selector: a row of small keycaps with their number key */
 .explore-types {

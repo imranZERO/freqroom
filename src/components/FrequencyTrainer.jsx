@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { FreqGraph, fmtHz } from './FreqGraph.jsx';
-import { QuickStart, ModePicker, BandRows, AnswerLegend, Transport, StreakMeter, ExploreBody } from './TrainerParts.jsx';
+import { QuickStart, ModePicker, BandRows, GainRow, AnswerLegend, Transport, StreakMeter, ExploreBody } from './TrainerParts.jsx';
 import { heatFor, pickWeighted } from '../lib/progress.js';
 import { buildChallengeUrl, copyText } from '../lib/challenge.js';
 import { applyAnswer, CORRECT_TO_ADVANCE, WRONG_TO_DECREASE, MIN_LEVEL, MAX_LEVEL } from '../lib/progression.js';
 import {
-  generateBands, octaveError, withinSweepTolerance, bandRange, typeAt, makeFilter,
+  generateBands, octaveError, withinSweepTolerance, withinMatchTolerance, bandRange, typeAt, makeFilter,
   signForMode, pickDirection, freqToNote, freqRegion, describeRegion,
-  SWEEP_RANGE, SWEEP_GRID, EXPLORE_TYPES,
+  SWEEP_RANGE, SWEEP_GRID, EXPLORE_TYPES, GAIN_LEVELS, GAIN_FREQS, MATCH_TOLERANCE, MATCH_GAINS, MATCH_RANGE_DB,
 } from '../lib/trainer.js';
 import { trialPoints } from '../lib/scoring.js';
 
@@ -19,10 +19,16 @@ export const MODES = [
   { id: 'shelf', label: 'Shelves',      family: 'shelf', badge: g => `±${g}dB`, desc: 'Find the corner of a low or high shelf and whether it boosts or cuts', maxLevel: 8 },
   { id: 'pass',  label: 'Pass Filters', family: 'pass',  badge: () => 'HP / LP', desc: 'Find the cutoff of a high-pass or low-pass filter', maxLevel: 8 },
   { id: 'sweep', label: 'Sweep',        family: 'sweep', badge: g => `±${g}dB`, desc: 'Drag on the graph to where you hear the boost or dip', minLevel: 1, maxLevel: 5 },
+  { id: 'gain',  label: 'How Much?',    family: 'gain',  badge: () => '? dB',    desc: 'The frequency is marked — pick how many dB it was boosted or cut', minLevel: 1, maxLevel: 6 },
+  { id: 'match', label: 'Match EQ',     family: 'match', badge: () => 'FREQ + dB', desc: 'Drag your own curve until it sounds like the hidden one', minLevel: 1, maxLevel: 5 },
 ];
 
-// Sweep mode: the per-level tolerance labels ("within ±1 octave counts")
+// Sweep and Match EQ: the per-level octave tolerance labels ("within ±1 octave counts")
 const SWEEP_TOL_LABEL = ['1', '⅔', '½', '⅓', '⅙'];
+// Match EQ: where a guess starts when first nudged from the keyboard
+const MATCH_START = { freq: 1000, gain: 0 };
+const fmtGain = db => `${db > 0 ? '+' : db < 0 ? '−' : ''}${Math.abs(db)} dB`;
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 
 // Explore mode: free play with one draggable filter (not a scored mode)
 const EXPLORE_START = { type: 'peaking', freq: 1000, gain: 6 };
@@ -30,6 +36,8 @@ const EXPLORE_RANGE_DB = 18;
 const isPassType = type => type === 'highpass' || type === 'lowpass';
 const clampFreq = f => Math.max(20, Math.min(20000, f));
 const clampGain = db => Math.max(-EXPLORE_RANGE_DB, Math.min(EXPLORE_RANGE_DB, db));
+const clampMatchFreq = f => Math.max(SWEEP_RANGE[0], Math.min(SWEEP_RANGE[1], f));
+const clampMatchGain = db => Math.max(-MATCH_RANGE_DB, Math.min(MATCH_RANGE_DB, db));
 
 // Filter type names used in the answer reveal ("low shelf cut", "low-pass")
 const TYPE_LABELS = {
@@ -42,6 +50,8 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
   const currentMode = MODES.find(m => m.id === testMode);
   const family = currentMode?.family ?? 'peak';
   const isSweep = family === 'sweep';
+  const isGain = family === 'gain';
+  const isMatch = family === 'match';
   const minLevel = currentMode?.minLevel ?? MIN_LEVEL;
   const maxLevel = currentMode?.maxLevel ?? MAX_LEVEL;
   const answeringRef = useRef(false);
@@ -69,12 +79,24 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
 
   // The hidden filter for a trial at the current Gain/Q settings. engine.play
   // takes a list of filters, so calls wrap this in [ ]; an empty list is Flat.
-  const activeFilter = t => makeFilter(typeAt(t.kind === 'sweep' ? 'peaking' : t.kind, t.activeBand), t.activeBand, t.activeSign * gainDb, q);
+  // How Much? and Match EQ carry their own gain (activeGain), so the Gain
+  // slider doesn't apply to them.
+  const activeFilter = t => t.activeGain !== undefined
+    ? makeFilter('peaking', t.activeBand, t.activeGain, q)
+    : makeFilter(typeAt(t.kind === 'sweep' ? 'peaking' : t.kind, t.activeBand), t.activeBand, t.activeSign * gainDb, q);
+  // Match EQ: the player's own bell
+  const guessFilter = sel => makeFilter('peaking', sel.freq, sel.gain, q);
 
   // Apply Gain/Q slider changes to the live EQ without restarting playback
   useEffect(() => {
     if (trial && playMode === 'eq') engine.play([activeFilter(trial)]);
   }, [gainDb, q]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Match EQ: retune "Yours" live as the guess is dragged or Q changes
+  const guess = trial?.kind === 'match' ? trial.userSelection : null;
+  useEffect(() => {
+    if (guess && playMode === 'mine') engine.play([guessFilter(guess)]);
+  }, [guess, q]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Explore: retune the live EQ as the curve is dragged or Q changes
   useEffect(() => {
@@ -116,13 +138,44 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
 
       if (!trial) return;
 
-      // EQ/Flat stays available after answering so the reveal can be re-heard
+      // EQ/Flat stays available after answering so the reveal can be re-heard.
+      // Match EQ compares Target with Yours once there's a guess.
       if (key === ' ') {
         e.preventDefault();
-        handlePlayMode(playMode === 'eq' ? 'flat' : 'eq');
+        const other = trial.kind === 'match' && trial.userSelection ? 'mine' : 'flat';
+        handlePlayMode(playMode === 'eq' ? other : 'eq');
         return;
       }
       if (trial.answered || e.metaKey || e.ctrlKey || e.altKey) return;
+
+      if (trial.kind === 'match') {
+        // Steps build on the latest guess, so held or rapid keys all count
+        const nudge = f => setTrial(prev => (prev.answered ? prev : { ...prev, userSelection: f(prev.userSelection ?? MATCH_START) }));
+        if (key === 'ArrowLeft' || key === 'ArrowRight') {
+          e.preventDefault();
+          const step = Math.pow(2, (key === 'ArrowLeft' ? -1 : 1) / 12); // a semitone
+          nudge(g => ({ ...g, freq: clampMatchFreq(g.freq * step) }));
+        } else if (key === 'ArrowUp' || key === 'ArrowDown') {
+          e.preventDefault();
+          const step = key === 'ArrowUp' ? 0.5 : -0.5;
+          nudge(g => ({ ...g, gain: clampMatchGain(g.gain + step) }));
+        }
+        return;
+      }
+
+      if (trial.kind === 'gain') {
+        const opts = trial.options;
+        const cur = trial.userSelection ? opts.indexOf(trial.userSelection.gain) : -1;
+        if (/^[0-9]$/.test(key)) {
+          const idx = key === '0' ? 9 : Number(key) - 1;
+          if (idx < opts.length) select({ gain: opts[idx] });
+        } else if (key === 'ArrowLeft' || key === 'ArrowRight') {
+          e.preventDefault();
+          const next = key === 'ArrowLeft' ? Math.max(0, cur - 1) : Math.min(opts.length - 1, cur + 1);
+          select({ gain: opts[next] });
+        }
+        return;
+      }
 
       if (trial.kind === 'sweep') {
         if (key === 'ArrowLeft' || key === 'ArrowRight') {
@@ -161,8 +214,9 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
   async function shareChallenge() {
     const url = buildChallengeUrl({
       mode: testMode,
-      gainDb: family === 'pass' ? undefined : gainDb,
-      q: family === 'peak' || family === 'sweep' ? q : undefined,
+      // How Much? and Match EQ pick their own gains, so only Q applies
+      gainDb: family === 'pass' || isGain || isMatch ? undefined : gainDb,
+      q: family === 'peak' || isSweep || isGain || isMatch ? q : undefined,
       source: sourceId,
       level,
       sweepDir: isSweep ? (sweepSign > 0 ? 'boost' : 'dip') : undefined,
@@ -196,6 +250,7 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
     engine.stop();
     setPlayMode(null);
     // kind: 'peaking', 'shelf' (low/high chosen by the corner), 'highpass' or 'lowpass'
+    if (isGain || isMatch) { startGainOrMatchTrial(); return; }
     const kind = family === 'shelf' ? 'shelf'
       : family === 'pass' ? (Math.random() < 0.5 ? 'highpass' : 'lowpass')
       : isSweep ? 'sweep'
@@ -216,9 +271,31 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
     }
   }
 
+  // How Much?: a bell at a marked frequency with a gain from this level's keys.
+  // Match EQ: a bell anywhere on the Sweep grid with a random gain to match.
+  function startGainOrMatchTrial() {
+    const pool = isGain ? GAIN_FREQS : SWEEP_GRID;
+    const activeBand = focus ? pickWeighted(pool, progress, family) : pick(pool);
+    const options = isGain ? GAIN_LEVELS[level - 1] : null;
+    const activeGain = isGain ? pick(options) : pick(MATCH_GAINS) * (Math.random() < 0.5 ? -1 : 1);
+    const next = {
+      kind: family, range: SWEEP_RANGE, shownBands: [], options, activeBand, activeGain,
+      activeSign: Math.sign(activeGain), userSelection: null, answered: false, wasCorrect: null,
+    };
+    setTrial(next);
+    if (autoplay) {
+      engine.play([activeFilter(next)]);
+      setPlayMode('eq');
+    }
+  }
+
+  // playMode: 'eq' (the hidden filter), 'flat', or 'mine' (Match EQ's own curve)
   function handlePlayMode(mode) {
     if (playMode === mode) { engine.stop(); setPlayMode(null); return; }
-    engine.play(mode === 'eq' ? [isExplore ? exploreFilter : activeFilter(trial)] : []);
+    if (mode === 'mine' && !trial?.userSelection) return;
+    engine.play(mode === 'eq' ? [isExplore ? exploreFilter : activeFilter(trial)]
+      : mode === 'mine' ? [guessFilter(trial.userSelection)]
+      : []);
     setPlayMode(mode);
   }
 
@@ -231,22 +308,31 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
     }));
   }
 
-  // userSelection stores { freq, sign } where sign is ±1
-  function selectBand(freq, sign) {
+  // userSelection is { freq, sign } for band modes and Sweep (sign ±1),
+  // { gain } for How Much?, and { freq, gain } for Match EQ
+  function select(sel) {
     if (!trial || trial.answered) return;
-    setTrial(prev => ({ ...prev, userSelection: { freq, sign } }));
+    setTrial(prev => ({ ...prev, userSelection: sel }));
+  }
+  const selectBand = (freq, sign) => select({ freq, sign });
+
+  // Match EQ: dragging on the graph moves your bell (frequency and gain)
+  function handleMatchPoint({ freq, db }) {
+    select({ freq: clampMatchFreq(freq), gain: clampMatchGain(Math.round(db * 2) / 2) });
   }
 
   function checkAnswer() {
     if (!trial || trial.userSelection === null || answeringRef.current) return;
     answeringRef.current = true;
-    const { activeBand, activeSign, userSelection } = trial;
-    const errOct = trial.kind === 'sweep' ? octaveError(userSelection.freq, activeBand) : null;
-    const correct = errOct !== null
-      ? withinSweepTolerance(errOct, level)
+    const { kind, activeBand, activeSign, activeGain, userSelection } = trial;
+    const errOct = kind === 'sweep' || kind === 'match' ? octaveError(userSelection.freq, activeBand) : null;
+    const errDb = kind === 'match' ? Math.abs(userSelection.gain - activeGain) : null;
+    const correct = kind === 'sweep' ? withinSweepTolerance(errOct, level)
+      : kind === 'match' ? withinMatchTolerance(errOct, errDb, level)
+      : kind === 'gain' ? userSelection.gain === activeGain
       : userSelection.freq === activeBand && userSelection.sign === activeSign;
     // Scored at the level it was answered at, before any level change
-    const points = trialPoints({ mode: testMode, level, correct, errOct });
+    const points = trialPoints({ mode: testMode, level, correct, errOct, errDb });
 
     engine.stop();
     setPlayMode(null);
@@ -256,7 +342,7 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
     setWrongStreak(next.wrongStreak);
     // The challenge's starting level has done its job; let saved progress take over
     if (testMode === initialMode) challengeLevelRef.current = null;
-    onResult({ mode: testMode, family, freq: activeBand, correct, level: next.level, points, errOct });
+    onResult({ mode: testMode, family, freq: activeBand, correct, level: next.level, points, errOct, errDb });
     setTrial(prev => ({ ...prev, answered: true, wasCorrect: correct, points }));
   }
 
@@ -265,7 +351,10 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
 
   // Candidates in gray: both directions where the direction is part of the puzzle
   let curves = [];
-  if (trial && trial.kind !== 'sweep') {
+  if (trial?.kind === 'gain') {
+    // How Much?: every gain choice at the marked frequency
+    curves = trial.options.map(g => makeFilter('peaking', trial.activeBand, g, q));
+  } else if (trial && trial.kind !== 'sweep' && trial.kind !== 'match') {
     const gains = twoRows ? [gainDb, -gainDb] : [trial.activeSign * gainDb];
     curves = trial.shownBands.flatMap(f => gains.map(g => makeFilter(typeAt(trial.kind, f), f, g, q)));
   }
@@ -274,7 +363,15 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
   // the hovered button's curve is previewed faintly (its row sets the direction)
   const curveFor = ({ freq, sign }) => makeFilter(typeAt(trial.kind, freq), freq, sign * gainDb, q);
   let selectedCurve = null, hoverCurve = null;
-  if (trial && !trial.answered && trial.kind !== 'sweep') {
+  if (trial?.kind === 'match') {
+    // Your bell stays drawn after answering, beside the revealed target
+    if (trial.userSelection) selectedCurve = guessFilter(trial.userSelection);
+  } else if (trial?.kind === 'gain') {
+    const gainCurve = g => makeFilter('peaking', trial.activeBand, g, q);
+    const sel = trial.userSelection;
+    if (!trial.answered && sel) selectedCurve = gainCurve(sel.gain);
+    if (!trial.answered && hovered !== null && hovered !== sel?.gain) hoverCurve = gainCurve(hovered);
+  } else if (trial && !trial.answered && trial.kind !== 'sweep') {
     const sel = trial.userSelection;
     if (sel) selectedCurve = curveFor(sel);
     if (hovered && !(sel && sel.freq === hovered.freq && sel.sign === hovered.sign)) hoverCurve = curveFor(hovered);
@@ -284,10 +381,11 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
   const SIGN = { boost: '+', cut: '−', both: '±', shelf: '±', sweep: sweepSign > 0 ? '+' : '−' };
   const qText = `Q ${q.toFixed(1)}`;
   const exploreLabel = EXPLORE_TYPES.find(t => t.type === explore.type).label.toUpperCase();
-  const fmtGain = db => `${db > 0 ? '+' : db < 0 ? '−' : ''}${Math.abs(db)} dB`;
   const readout = isExplore
     ? (isPassType(explore.type) ? `${exploreLabel} · 12 dB/oct` : `${exploreLabel} · ${fmtGain(explore.gain)}${explore.type === 'peaking' ? ` · ${qText}` : ''}`)
     : !currentMode ? `±${gainDb} dB · ${qText}`
+    : isGain ? `PEAK · ${trial ? fmtHz(trial.activeBand) : '?'} · ${trial?.answered ? fmtGain(trial.activeGain) : '? dB'} · ${qText}`
+    : isMatch ? (guess ? `YOURS · ${fmtHz(guess.freq)} · ${fmtGain(guess.gain)} · ${qText}` : `PEAK · ? · ? dB · ${qText}`)
     : family === 'pass' ? `${trial ? (trial.kind === 'highpass' ? 'HIGH-PASS' : 'LOW-PASS') : 'HP / LP'} · 12 dB/oct`
     : family === 'shelf' ? `SHELF · ±${gainDb} dB`
     : `PEAK · ${SIGN[testMode]}${gainDb} dB · ${qText}`;
@@ -298,14 +396,19 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
       curves={curves}
       hover={hoverCurve}
       selected={isExplore ? exploreFilter : selectedCurve}
+      selectedTone={trial?.kind === 'match' ? 'mine' : null}
       answer={trial?.answered ? activeFilter(trial) : null}
-      gainDb={isExplore ? EXPLORE_RANGE_DB : gainDb}
+      gainDb={isExplore ? EXPLORE_RANGE_DB : isGain || isMatch ? MATCH_RANGE_DB : gainDb}
       sampleRate={engine.sampleRate}
       heat={heatFor(progress, family)}
-      marker={isExplore ? explore.freq : trial?.kind === 'sweep' ? trial.userSelection?.freq ?? null : null}
+      marker={isExplore ? explore.freq
+        : trial?.kind === 'sweep' || trial?.kind === 'match' ? trial.userSelection?.freq ?? null
+        : trial?.kind === 'gain' && !trial.answered ? trial.activeBand
+        : null}
       onPick={trial?.kind === 'sweep' && !trial.answered ? f => selectBand(f, trial.activeSign) : null}
-      onPoint={isExplore ? handleExplorePoint : null}
-      pickText={sweepSign > 0 ? 'Click or drag where you hear the boost' : 'Click or drag where you hear the dip'}
+      onPoint={isExplore ? handleExplorePoint : trial?.kind === 'match' && !trial.answered ? handleMatchPoint : null}
+      pickText={isMatch ? 'Click or drag to place your curve'
+        : sweepSign > 0 ? 'Click or drag where you hear the boost' : 'Click or drag where you hear the dip'}
       readout={readout}
       idle={!engine.isLoaded}
     />
@@ -376,6 +479,10 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
         )}
         <p className="start-desc">{isSweep
           ? <>Drag on the graph to where you hear the <strong>{sweepSign > 0 ? 'boost' : 'dip'}</strong> — within <strong>±{SWEEP_TOL_LABEL[level - 1]}</strong> octave counts</>
+          : isGain
+          ? <>Pick how many dB the marked bell adds or removes — from <strong>{GAIN_LEVELS[level - 1].map(g => (g > 0 ? `+${g}` : `−${-g}`)).join(' ')}</strong> dB</>
+          : isMatch
+          ? <>Drag your own bell until it sounds like the hidden one — within <strong>±{SWEEP_TOL_LABEL[level - 1]} oct</strong> and <strong>±{MATCH_TOLERANCE[level - 1].db} dB</strong> counts</>
           : <>{currentMode.desc} — pick from <strong>{level}</strong> {family === 'shelf' ? 'corners' : family === 'pass' ? 'cutoffs' : 'bands'}</>}
         </p>
         <button className="btn-primary large" onClick={startTrial}>Start Trial</button>
@@ -383,14 +490,26 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
     );
   } else {
     // ── Active trial ──────────────────────────────────────────────────────
-    const { kind, range, shownBands, activeBand, activeSign, userSelection, answered, wasCorrect, points } = trial;
+    const { kind, range, shownBands, options, activeBand, activeSign, activeGain, userSelection, answered, wasCorrect, points } = trial;
     const dirLabel = activeSign > 0 ? 'boost' : 'cut';
-    const activeType = typeAt(kind === 'sweep' ? 'peaking' : kind, activeBand);
-    const sweepError = kind === 'sweep' && userSelection ? octaveError(userSelection.freq, activeBand) : null;
+    const activeType = kind === 'sweep' || kind === 'gain' || kind === 'match' ? 'peaking' : typeAt(kind, activeBand);
+    const sweepError = (kind === 'sweep' || kind === 'match') && userSelection ? octaveError(userSelection.freq, activeBand) : null;
     // What the answer was, spelled out after answering (e.g. "low shelf cut")
     const answerLabel = kind === 'peaking' || kind === 'sweep' ? dirLabel
       : kind === 'shelf' ? `${TYPE_LABELS[activeType]} ${dirLabel}` : TYPE_LABELS[activeType];
     const hasSelection = userSelection !== null;
+
+    // How Much? keys, by gain value
+    const getGainState = g => {
+      const isSel = hasSelection && userSelection.gain === g;
+      const isAct = g === activeGain;
+      if (answered) {
+        if (isAct && isSel) return 'f-hit';
+        if (isAct) return 'f-missed';
+        if (isSel) return 'f-wrong';
+      }
+      return isSel ? 'f-selected' : '';
+    };
 
     const getBtnState = (freq, sign) => {
       const isSel = hasSelection && userSelection.freq === freq && userSelection.sign === sign;
@@ -409,8 +528,12 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
         <div className="mode-badge">{currentMode.badge(gainDb)} · {currentMode.label}</div>
         {!answered ? (
           <span className="trainer-status">
-            {hasSelection ? (kind === 'sweep' ? `Guess ${fmtHz(userSelection.freq)} — ready to check` : 'Ready to check')
+            {hasSelection ? (kind === 'sweep' ? `Guess ${fmtHz(userSelection.freq)} — ready to check`
+                : kind === 'match' ? `Yours ${fmtHz(userSelection.freq)} ${fmtGain(userSelection.gain)} — ready to check`
+                : 'Ready to check')
               : kind === 'sweep' ? 'Click or drag on the graph'
+              : kind === 'gain' ? `How many dB at ${fmtHz(activeBand)}?`
+              : kind === 'match' ? 'Drag your curve to match the EQ'
               : isMixed ? 'Pick the frequency and direction'
               : kind === 'shelf' ? 'Pick the shelf corner and direction'
               : kind !== 'peaking' ? `Find the ${TYPE_LABELS[kind]} cutoff`
@@ -423,6 +546,8 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
             {points > 0 && <span className="result-points">+{points} pts</span>}
             <span className="result-note">
               {kind === 'sweep' ? `${fmtHz(activeBand)} · ${sweepError.toFixed(2)} oct off`
+                : kind === 'match' ? `${fmtHz(activeBand)} ${fmtGain(activeGain)} · ${sweepError.toFixed(2)} oct, ${Math.abs(userSelection.gain - activeGain).toFixed(1)} dB off`
+                : kind === 'gain' ? `${fmtGain(activeGain)} at ${fmtHz(activeBand)}`
                 : kind === 'peaking' ? freqToNote(activeBand) : answerLabel} · {freqRegion(activeBand)}
             </span>
           </span>
@@ -436,6 +561,10 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
 
     const shortcuts = kind === 'sweep'
       ? 'Click/drag the graph · ← → nudge · Space EQ/Flat · Enter check/next'
+      : kind === 'match'
+      ? 'Drag the graph · ← → frequency · ↑ ↓ gain · Space Target/Yours · Enter check/next'
+      : kind === 'gain'
+      ? `1–${Math.min(options.length, 9)}${options.length > 9 ? ', 0' : ''} pick gain · ← → move · Space EQ/Flat · Enter check/next`
       : `1–9, 0 pick band · ← → move${twoRows ? ' · ↑ ↓ boost/cut' : ''} · Space EQ/Flat · Enter check/next`;
 
     body = (
@@ -444,6 +573,15 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
           <p className="sweep-hint">
             Within <strong>±{SWEEP_TOL_LABEL[level - 1]} oct</strong> counts · ← → nudge by a semitone
           </p>
+        ) : kind === 'match' ? (
+          <p className="sweep-hint">
+            Within <strong>±{SWEEP_TOL_LABEL[level - 1]} oct</strong> and <strong>±{MATCH_TOLERANCE[level - 1].db} dB</strong> counts · ← → frequency · ↑ ↓ gain
+          </p>
+        ) : kind === 'gain' ? (
+          <GainRow
+            options={options} getBtnState={getGainState} select={g => select({ gain: g })}
+            answered={answered} onHover={setHovered}
+          />
         ) : (
           <BandRows
             twoRows={twoRows} sign={activeSign}
@@ -452,7 +590,7 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
           />
         )}
 
-        {answered && kind !== 'sweep' && (
+        {answered && kind !== 'sweep' && kind !== 'match' && (
           <AnswerLegend
             wasCorrect={wasCorrect} hasSelection={hasSelection}
             directionLabel={twoRows ? answerLabel : null}
@@ -462,6 +600,7 @@ export function FrequencyTrainer({ engine, gainDb, q, progress, focus, autoplay,
         <Transport
           playMode={playMode} onPlay={handlePlayMode} shortcuts={shortcuts}
           answered={answered} canCheck={hasSelection} onCheck={checkAnswer} onNext={startTrial}
+          yours={kind === 'match' ? { disabled: !hasSelection } : null}
         />
 
         <StreakMeter

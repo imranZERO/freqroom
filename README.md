@@ -10,7 +10,7 @@ Difficulty adapts per mode: 3 correct in a row levels you up, 2 wrong in a row s
 
 **Explore** is a free-play EQ with no quiz: drag a bell, shelf, or pass filter across the graph, hear it live, and read what that region tends to sound like (boomy, boxy, harsh, airy…).
 
-**Six training modes:**
+**Eight training modes:**
 
 | Mode | You identify | Levels |
 |---|---|---|
@@ -20,6 +20,8 @@ Difficulty adapts per mode: 3 correct in a row levels you up, 2 wrong in a row s
 | **Shelves** | the corner of a low or high shelf, and its direction | 2–8 corners |
 | **Pass Filters** | the cutoff of a high-pass or low-pass filter | 2–8 cutoffs |
 | **Sweep** | the exact frequency of a boost or a dip, by dragging on the graph — scored by how many octaves off you are | 1–5 (±1 → ±⅙ octave) |
+| **How Much?** | the gain of a bell at a marked frequency | 1–6 (2 → 12 dB choices) |
+| **Match EQ** | a hidden bell's frequency *and* gain, by dragging your own bell until Target and Yours sound the same | 1–5 (±1 oct/±4 dB → ±⅙ oct/±1.5 dB) |
 
 Gain (1–18 dB) and Q (0.5–8) are adjustable, even mid-trial, so you can start broad and easy and tighten the challenge as your ears improve.
 

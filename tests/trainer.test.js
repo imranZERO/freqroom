@@ -3,6 +3,7 @@ import {
   generateBands, octaveError, withinSweepTolerance, bandRange, typeAt, makeFilter,
   signForMode, pickDirection, freqToNote, freqRegion, FREQ_LABEL, FREQ_UNIT,
   SWEEP_TOLERANCE, SWEEP_RANGE, SWEEP_GRID, FREQ_MIN, FREQ_MAX, describeRegion, EXPLORE_TYPES,
+  GAIN_LEVELS, GAIN_FREQS, MATCH_TOLERANCE, MATCH_GAINS, MATCH_RANGE_DB, withinMatchTolerance,
 } from '../src/lib/trainer.js';
 
 afterEach(() => vi.restoreAllMocks());
@@ -204,5 +205,49 @@ describe('describeRegion', () => {
 describe('EXPLORE_TYPES', () => {
   it('offers bell, shelves, and pass filters in keyboard order', () => {
     expect(EXPLORE_TYPES.map(t => t.type)).toEqual(['peaking', 'lowshelf', 'highshelf', 'highpass', 'lowpass']);
+  });
+});
+
+describe('How Much? levels', () => {
+  it('adds choices every level, sorted, never 0 dB, within ±12 dB', () => {
+    GAIN_LEVELS.forEach((opts, i) => {
+      if (i > 0) expect(opts.length).toBeGreaterThan(GAIN_LEVELS[i - 1].length);
+      expect([...opts].sort((a, b) => a - b)).toEqual(opts);
+      expect(opts).not.toContain(0);
+      for (const g of opts) expect(Math.abs(g)).toBeLessThanOrEqual(12);
+    });
+    // cuts join in at level 5
+    expect(GAIN_LEVELS[3].every(g => g > 0)).toBe(true);
+    expect(GAIN_LEVELS[4].some(g => g < 0)).toBe(true);
+  });
+
+  it('places the bell between 60 Hz and 12 kHz', () => {
+    expect(GAIN_FREQS).toHaveLength(24);
+    expect(Math.min(...GAIN_FREQS)).toBeGreaterThanOrEqual(60);
+    expect(Math.max(...GAIN_FREQS)).toBeLessThanOrEqual(12000);
+  });
+});
+
+describe('Match EQ tolerance', () => {
+  it('tightens in both octaves and dB as the level rises', () => {
+    for (let i = 1; i < MATCH_TOLERANCE.length; i++) {
+      expect(MATCH_TOLERANCE[i].oct).toBeLessThan(MATCH_TOLERANCE[i - 1].oct);
+      expect(MATCH_TOLERANCE[i].db).toBeLessThan(MATCH_TOLERANCE[i - 1].db);
+    }
+    // frequency tolerances match Sweep's
+    expect(MATCH_TOLERANCE.map(t => t.oct)).toEqual(SWEEP_TOLERANCE);
+  });
+
+  it('needs both errors inside the level\'s tolerance', () => {
+    expect(withinMatchTolerance(1, 4, 1)).toBe(true);
+    expect(withinMatchTolerance(1.01, 0, 1)).toBe(false);
+    expect(withinMatchTolerance(0, 4.5, 1)).toBe(false);
+    expect(withinMatchTolerance(1 / 6, 1.5, 5)).toBe(true);
+    expect(withinMatchTolerance(0.2, 1, 5)).toBe(false);
+  });
+
+  it('hides gains the match range can reach', () => {
+    for (const g of MATCH_GAINS) expect(g).toBeLessThanOrEqual(MATCH_RANGE_DB);
+    expect(Math.min(...MATCH_GAINS)).toBeGreaterThanOrEqual(3);
   });
 });

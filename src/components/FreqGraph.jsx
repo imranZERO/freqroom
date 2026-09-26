@@ -171,7 +171,7 @@ const sameFilter = (a, b) => a.type === b.type && a.frequency === b.frequency &&
 // readout: short status line drawn in the top-right of the plot (filter, gain, Q)
 // idle: nothing loaded yet, so the display runs its scanning animation
 // onPoint: like onPick but reports { freq, db } (Explore mode drags a curve)
-export function FreqGraph({ curves = [], answer = null, hover = null, selected = null, gainDb = 6, sampleRate = 48000, heat = [], marker = null, onPick = null, onPoint = null, pickText = 'Click or drag where you hear the boost', readout = '', idle = false }) {
+export function FreqGraph({ curves = [], answer = null, hover = null, selected = null, selectedTone = null, gainDb = 6, sampleRate = 48000, heat = [], marker = null, onPick = null, onPoint = null, pickText = 'Click or drag where you hear the boost', readout = '', idle = false }) {
   const g = graphLayout(useMediaQuery(COMPACT_QUERY));
   const isBoost = answer ? (answer.gain ?? 0) > 0 : false;
   // ±12 dB by default; widens in 6 dB steps so high gains aren't clipped
@@ -238,14 +238,15 @@ export function FreqGraph({ curves = [], answer = null, hover = null, selected =
           );
         })}
 
-        {/* Selected, then hovered candidate: amber for boosts, blue for cuts and pass filters */}
+        {/* Selected, then hovered candidate: amber for boosts, blue for cuts and pass
+            filters; Match EQ's own curve (selectedTone "mine") is always dashed blue */}
         {selected && (() => {
           const pts = computeCurve(selected, sampleRate, range, g);
-          const up = (selected.gain ?? 0) > 0;
+          const tone = selectedTone ?? ((selected.gain ?? 0) > 0 ? 'boost' : 'cut');
           return (
             <g key={`sel-${selected.type}-${selected.frequency}-${selected.gain}`} className="graph-selected">
-              <path d={makeFill(pts, range, g)} className={up ? 'graph-fill-boost' : 'graph-fill-cut'} />
-              <path d={makeLine(pts)} className={up ? 'graph-hl-boost' : 'graph-hl-cut'} />
+              <path d={makeFill(pts, range, g)} className={`graph-fill-${tone}`} />
+              <path d={makeLine(pts)} className={`graph-hl-${tone}`} />
             </g>
           );
         })()}

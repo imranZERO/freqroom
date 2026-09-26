@@ -201,6 +201,63 @@ describe('FrequencyTrainer', () => {
     expect(readout).toContain('−6 dB');
   });
 
+  it('How Much? offers the level\'s gain keys at a marked frequency and scores the pick', () => {
+    // random() = 0 → the first frequency and the first gain choice (+3 dB)
+    const { engine, onResult, utils } = renderTrainer({ random: 0, props: { initialMode: 'gain' } });
+    expect(screen.getByText('Level 1')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Start Trial'));
+    const keys = [...utils.container.querySelectorAll('.gain-grid .freq-btn')].map(b => b.textContent);
+    expect(keys).toEqual(['+3dB', '+9dB']);
+    expect(screen.getByText(/How many dB at/)).toBeInTheDocument();
+    // the hidden bell carries its own gain; the Gain slider (6 dB) doesn't apply
+    fireEvent.keyDown(window, { key: ' ' });
+    expect(engine.play).toHaveBeenLastCalledWith([expect.objectContaining({ type: 'peaking', gain: 3 })]);
+
+    fireEvent.keyDown(window, { key: '2' });              // +9: wrong
+    fireEvent.keyDown(window, { key: 'Enter' });
+    expect(screen.getByText('✗ Incorrect')).toBeInTheDocument();
+    expect(onResult).toHaveBeenLastCalledWith(expect.objectContaining({ mode: 'gain', family: 'gain', correct: false, points: 0 }));
+
+    fireEvent.keyDown(window, { key: 'Enter' });          // next trial
+    fireEvent.keyDown(window, { key: 'ArrowRight' });     // first key: +3
+    fireEvent.keyDown(window, { key: 'Enter' });
+    expect(screen.getByText('✓ Correct!')).toBeInTheDocument();
+    expect(screen.getByText('+10 pts')).toBeInTheDocument();
+    expect(onResult).toHaveBeenLastCalledWith(expect.objectContaining({ mode: 'gain', correct: true, points: 10 }));
+  });
+
+  it('Match EQ lets you shape your own bell, compare it with the target, and scores both errors', () => {
+    // random() = 0 → the lowest grid frequency and a −3 dB bell
+    const { engine, onResult } = renderTrainer({ random: 0, props: { initialMode: 'match' } });
+    fireEvent.click(screen.getByText('Start Trial'));
+    expect(screen.getByText('▶ Target')).toBeInTheDocument();
+    expect(screen.getByText('▶ Yours')).toBeDisabled();
+    expect(screen.getByText('Check Answer')).toBeDisabled();
+
+    // keys move your bell from 1 kHz / 0 dB
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
+    expect(screen.getByText(/Yours 1.00 kHz −0.5 dB/)).toBeInTheDocument();
+    expect(screen.getByText('▶ Yours')).not.toBeDisabled();
+
+    // Space: Target, then Yours (your bell as a one-item list)
+    fireEvent.keyDown(window, { key: ' ' });
+    expect(engine.play).toHaveBeenLastCalledWith([expect.objectContaining({ gain: -3 })]);
+    fireEvent.keyDown(window, { key: ' ' });
+    expect(engine.play).toHaveBeenLastCalledWith([expect.objectContaining({ frequency: 1000, gain: -0.5 })]);
+    // moving your bell while it plays retunes it live
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
+    expect(engine.play).toHaveBeenLastCalledWith([expect.objectContaining({ gain: -1 })]);
+
+    // down to the bottom of the range (clamped at 40 Hz), within ±1 oct and ±4 dB
+    for (let i = 0; i < 60; i++) fireEvent.keyDown(window, { key: 'ArrowLeft' });
+    fireEvent.keyDown(window, { key: 'Enter' });
+    expect(screen.getByText('✓ Correct!')).toBeInTheDocument();
+    const r = onResult.mock.lastCall[0];
+    expect(r).toMatchObject({ mode: 'match', family: 'match', correct: true, points: 37 });
+    expect(r.errDb).toBe(2);
+    expect(r.errOct).toBeLessThan(1);
+  });
+
   it('Explore mode moves the curve with the keyboard and plays it without scoring', () => {
     const { engine, onResult, utils } = renderTrainer();
     const readout = () => [...utils.container.querySelectorAll('.graph-readout')].map(n => n.textContent).join('');

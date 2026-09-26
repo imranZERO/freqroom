@@ -88,7 +88,11 @@ export function ScoreBoard({ session, lifetime, modes, onReset }) {
                   <tr key={m.id}>
                     <td>
                       {m.label}
-                      {r.errN > 0 && <span className="score-mode-note">avg {(r.errSum / r.errN).toFixed(2)} oct off</span>}
+                      {r.errN > 0 && (
+                        <span className="score-mode-note">
+                          avg {(r.errSum / r.errN).toFixed(2)} oct{r.errDbN > 0 && ` · ${(r.errDbSum / r.errDbN).toFixed(1)} dB`} off
+                        </span>
+                      )}
                     </td>
                     <td>{r.level}{r.bestLevel > r.level && <span className="score-mode-note">best {r.bestLevel}</span>}</td>
                     <td>{r.correct}/{r.total}<span className="score-mode-note">{accuracy(r)}%</span></td>

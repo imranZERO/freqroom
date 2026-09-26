@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
-  choicesFor, maxPoints, sweepCredit, trialPoints, addResult, accuracy,
+  choicesFor, maxPoints, sweepCredit, matchCredit, fadeCredit, trialPoints, addResult, accuracy,
   EMPTY_TALLY, RECENT_COUNT, POINTS_PER_BIT, SWEEP_ZERO_AT,
 } from '../src/lib/scoring.js';
-import { SWEEP_TOLERANCE } from '../src/lib/trainer.js';
+import { SWEEP_TOLERANCE, GAIN_LEVELS, MATCH_TOLERANCE } from '../src/lib/trainer.js';
 
 describe('choicesFor / maxPoints', () => {
   it('counts bands, doubled where the direction is part of the answer', () => {
@@ -23,7 +23,7 @@ describe('choicesFor / maxPoints', () => {
   });
 
   it('rewards harder levels in every mode', () => {
-    for (const [mode, lo, hi] of [['boost', 2, 15], ['cut', 2, 15], ['both', 2, 15], ['shelf', 2, 8], ['pass', 2, 8], ['sweep', 1, 5]]) {
+    for (const [mode, lo, hi] of [['boost', 2, 15], ['cut', 2, 15], ['both', 2, 15], ['shelf', 2, 8], ['pass', 2, 8], ['sweep', 1, 5], ['gain', 1, 6], ['match', 1, 5]]) {
       for (let l = lo; l < hi; l++) expect(maxPoints(mode, l + 1)).toBeGreaterThan(maxPoints(mode, l));
     }
   });
@@ -34,6 +34,36 @@ describe('choicesFor / maxPoints', () => {
     expect(choicesFor('sweep', 5)).toBeCloseTo(25.93, 2);
     expect(maxPoints('sweep', 1)).toBe(21);
     expect(maxPoints('sweep', 5)).toBe(47);
+  });
+});
+
+describe('How Much? and Match EQ pricing', () => {
+  it('counts How Much? keys', () => {
+    GAIN_LEVELS.forEach((opts, i) => expect(choicesFor('gain', i + 1)).toBe(opts.length));
+    expect([1, 2, 3, 4, 5, 6].map(l => maxPoints('gain', l))).toEqual([10, 16, 20, 26, 30, 36]);
+  });
+
+  it('multiplies Sweep\'s frequency windows by the ±12 dB gain windows for Match EQ', () => {
+    // level 1: ~4.32 octave windows × 24 dB / (2 × 4 dB) = 3 gain windows
+    expect(choicesFor('match', 1)).toBeCloseTo(4.32 * 3, 1);
+    expect([1, 2, 3, 4, 5].map(l => maxPoints('match', l))).toEqual([37, 47, 54, 63, 77]);
+  });
+});
+
+describe('matchCredit', () => {
+  it('takes the weaker of the frequency and gain credits', () => {
+    const { oct, db } = MATCH_TOLERANCE[0];
+    expect(matchCredit(oct, db, 1)).toBe(1);
+    expect(matchCredit(0, db * 2, 1)).toBeCloseTo(0.5, 9);
+    expect(matchCredit(oct * 2, 0, 1)).toBeCloseTo(0.5, 9);
+    expect(matchCredit(oct * 2, db * 2.5, 1)).toBeCloseTo(fadeCredit(db * 2.5, db), 9);
+    expect(matchCredit(0, db * 3, 1)).toBeCloseTo(0, 9);
+  });
+
+  it('feeds Match EQ points', () => {
+    expect(trialPoints({ mode: 'match', level: 1, correct: true, errOct: 0.1, errDb: 1 })).toBe(37);
+    expect(trialPoints({ mode: 'match', level: 1, correct: false, errOct: 0.1, errDb: 8 })).toBe(19);
+    expect(trialPoints({ mode: 'gain', level: 3, correct: true })).toBe(20);
   });
 });
 
@@ -96,7 +126,10 @@ describe('addResult', () => {
     expect(t.modes.boost).toMatchObject({ total: 2, correct: 1, points: 16, level: 3, bestLevel: 4, errN: 0 });
     expect(t.modes.sweep).toMatchObject({ total: 2, correct: 1, points: 35, errN: 2 });
     expect(t.modes.sweep.errSum).toBeCloseTo(0.8, 9);
-    expect(t.points).toBe(51);
+    expect(t.modes.sweep.errDbN).toBe(0);
+    t = addResult(t, { mode: 'match', level: 1, correct: true, points: 37, errOct: 0.1, errDb: 1.5 });
+    expect(t.modes.match).toMatchObject({ errN: 1, errDbN: 1, errDbSum: 1.5 });
+    expect(t.points).toBe(51 + 37);
   });
 
   it('accepts an old saved lifetime with only total and correct', () => {

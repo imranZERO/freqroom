@@ -17,7 +17,7 @@
   .header-actions { grid-area: actions; }
 }
 @media (max-width: 520px) {
-  .transport .play-toggle { flex: 1 1 0; }
+  .transport .play-toggle { flex: 1 1 0; padding-inline: 8px; gap: 6px; white-space: nowrap; }
   .transport-action { margin-left: 0; width: 100%; }
   .transport-action .btn-primary { flex: 1; }
 }
