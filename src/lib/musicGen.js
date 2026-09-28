@@ -173,25 +173,38 @@ function normalize(L, R) {
   for (let i = 0; i < L.length; i++) { L[i] *= gain; R[i] *= gain; }
 }
 
-function render(audioCtx, parts) {
-  const sr = audioCtx.sampleRate;
-  const len = Math.round(LOOP_SECONDS * sr);
-  const buf = audioCtx.createBuffer(2, len, sr);
-  const L = buf.getChannelData(0), R = buf.getChannelData(1);
-  parts(L, R, sr);
+// Renders into plain arrays, so this also runs in a Web Worker (see
+// sourceCache.js), where there's no AudioContext
+function renderArrays(sampleRate, parts) {
+  const len = Math.round(LOOP_SECONDS * sampleRate);
+  const L = new Float32Array(len), R = new Float32Array(len);
+  parts(L, R, sampleRate);
   normalize(L, R);
+  return { L, R };
+}
+
+const LOOP_PARTS = {
+  // Kick, snare, and swung hats: transient-heavy material across the spectrum
+  drums: (L, R, sr) => renderDrums(L, R, sr, rng(0xd2a5), 1),
+  // Drums with a bass line and a chord pad: fills the lows, mids, and highs
+  band: (L, R, sr) => {
+    renderDrums(L, R, sr, rng(0xba4d), 0.8);
+    renderBandParts(L, R, sr);
+  },
+};
+
+// A loop's two channels as Float32Arrays: kind is 'drums' or 'band'
+export function renderLoop(kind, sampleRate) {
+  return renderArrays(sampleRate, LOOP_PARTS[kind]);
+}
+
+// Copies rendered channels into an AudioBuffer on the given context
+export function loopBuffer(audioCtx, { L, R }) {
+  const buf = audioCtx.createBuffer(2, L.length, audioCtx.sampleRate);
+  buf.getChannelData(0).set(L);
+  buf.getChannelData(1).set(R);
   return buf;
 }
 
-// Kick, snare, and swung hats: transient-heavy material across the spectrum
-export function generateDrumLoop(audioCtx) {
-  return render(audioCtx, (L, R, sr) => renderDrums(L, R, sr, rng(0xd2a5), 1));
-}
-
-// Drums with a bass line and a chord pad: fills the lows, mids, and highs
-export function generateBandLoop(audioCtx) {
-  return render(audioCtx, (L, R, sr) => {
-    renderDrums(L, R, sr, rng(0xba4d), 0.8);
-    renderBandParts(L, R, sr);
-  });
-}
+export const generateDrumLoop = audioCtx => loopBuffer(audioCtx, renderLoop('drums', audioCtx.sampleRate));
+export const generateBandLoop = audioCtx => loopBuffer(audioCtx, renderLoop('band', audioCtx.sampleRate));

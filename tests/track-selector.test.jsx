@@ -2,6 +2,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, fireEvent, screen, cleanup, waitFor } from '@testing-library/preact';
 import { TrackSelector } from '../src/components/TrackSelector.jsx';
+import { getSourceBuffer } from '../src/lib/sourceCache.js';
 
 afterEach(() => {
   cleanup();
@@ -17,12 +18,14 @@ const fakeCtx = () => ({
 });
 
 function makeEngine(overrides = {}) {
+  // One context per engine, as in the app, so generated sources are cached per engine
+  const ctx = fakeCtx();
   return {
     isLoaded: true, isLoading: false, isPlaying: false, loadError: null,
     volume: 0.5, sampleRate: 48000, duration: 30, loop: null,
     play: vi.fn(), stop: vi.fn(), seek: vi.fn(), setVolume: vi.fn(),
     getCurrentOffset: vi.fn(() => 0), setLoop: vi.fn(),
-    loadBuffer: vi.fn(async () => {}), getCtx: fakeCtx,
+    loadBuffer: vi.fn(async () => {}), getCtx: () => ctx,
     ...overrides,
   };
 }
@@ -111,7 +114,30 @@ describe('TrackSelector', () => {
     expect(screen.getByRole('button', { name: 'White noise' })).toHaveAttribute('aria-pressed', 'false');
     fireEvent.click(screen.getByText('Noise'));
     expect(onSourceChange).toHaveBeenLastCalledWith('white');
+    // the last pick wins: the Band loop, still rendering, never reaches the engine
+    const white = await getSourceBuffer('white', engine.getCtx());
+    await waitFor(() => expect(engine.loadBuffer).toHaveBeenLastCalledWith(white));
+    const band = await getSourceBuffer('band', engine.getCtx());
+    expect(engine.loadBuffer.mock.calls.map(c => c[0])).not.toContain(band);
+  });
+
+  it('reuses a generated source instead of building it again', async () => {
+    const { engine } = renderSelector();
+    fireEvent.click(screen.getByRole('button', { name: 'Drums loop' }));
+    await waitFor(() => expect(engine.loadBuffer).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole('button', { name: 'Pink noise' }));
+    await waitFor(() => expect(engine.loadBuffer).toHaveBeenCalledTimes(2));
+    fireEvent.click(screen.getByRole('button', { name: 'Drums loop' }));
     await waitFor(() => expect(engine.loadBuffer).toHaveBeenCalledTimes(3));
+    const [first, , again] = engine.loadBuffer.mock.calls.map(c => c[0]);
+    expect(again).toBe(first);   // the same AudioBuffer, not a fresh render
+  });
+
+  it('prepares the music loops in the background once a source has loaded', async () => {
+    const { engine } = renderSelector();   // stub engine starts loaded
+    // both loops are already cached, so picking one later is instant
+    const drums = getSourceBuffer('drums', engine.getCtx());
+    expect(await drums).toBe(await getSourceBuffer('drums', engine.getCtx()));
   });
 
   it('picks the variant a challenge link names', async () => {

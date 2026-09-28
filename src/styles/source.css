@@ -232,6 +232,8 @@
   50% { opacity: 0.45; }
 }
 .track-btn.live .track-name::before { animation: source-live 1.4s ease-in-out infinite; }
+/* A loop still being generated (first pick only): the lamp blinks quickly */
+.track-btn.is-preparing .track-name::before { background: var(--a); animation: source-live 0.5s ease-in-out infinite; }
 .track-btn.live .track-glyph { animation: source-live 2.8s ease-in-out infinite; }
 
 .track-btn:disabled { opacity: 0.5; cursor: default; }

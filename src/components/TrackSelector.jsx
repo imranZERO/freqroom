@@ -1,23 +1,22 @@
 import { useRef, useState, useEffect } from 'react';
-import { generatePinkNoise, generateWhiteNoise } from '../lib/noiseGen.js';
-import { generateDrumLoop, generateBandLoop } from '../lib/musicGen.js';
+import { getSourceBuffer, prepareSources } from '../lib/sourceCache.js';
 import { probeAudioFile } from '../lib/audioInfo.js';
 import { formatTime, formatSpec, PINK_LINE, WHITE_LINE, WAVE_BARS, DRUM_HITS, BAND_LINE, GLYPH_W, GLYPH_H } from '../lib/trackFormat.js';
 import { ResetIcon } from './Icons.jsx';
 
-// Built-in sources, generated in the browser when picked (no audio files).
+// Built-in sources, generated in the browser (no audio files). sourceCache.js
+// builds each one once and reuses it; the music loops render in a worker.
 // Each group is one card with a switch between its variants.
 const GENERATED_GROUPS = [
   { id: 'noise', label: 'Noise', variants: [
-    { id: 'pink',  label: 'Pink',  description: 'Equal energy per octave — ideal for EQ training', make: generatePinkNoise },
-    { id: 'white', label: 'White', description: 'Flat spectrum, bright character', make: generateWhiteNoise },
+    { id: 'pink',  label: 'Pink',  description: 'Equal energy per octave — ideal for EQ training' },
+    { id: 'white', label: 'White', description: 'Flat spectrum, bright character' },
   ] },
   { id: 'loop', label: 'Music Loop', variants: [
-    { id: 'drums', label: 'Drums', description: 'Kick, snare, and hats — punchy transients', make: generateDrumLoop },
-    { id: 'band',  label: 'Band',  description: 'Drums, bass, and chords across the spectrum', make: generateBandLoop },
+    { id: 'drums', label: 'Drums', description: 'Kick, snare, and hats — punchy transients' },
+    { id: 'band',  label: 'Band',  description: 'Drums, bass, and chords across the spectrum' },
   ] },
 ];
-const VARIANTS = GENERATED_GROUPS.flatMap(g => g.variants);
 const groupOf = id => GENERATED_GROUPS.find(g => g.variants.some(v => v.id === id));
 
 function SourceGlyph({ kind }) {
@@ -100,21 +99,43 @@ export function TrackSelector({ engine, gainDb, setGainDb, q, setQ, focus, setFo
     if (initialSource) loadGenerated(initialSource);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Each load takes a ticket; a slower one that finishes after a newer click
+  // (or an upload) is dropped, so the last choice always wins
+  const loadTicketRef = useRef(0);
+  // A built-in source still being generated (only the first time for a loop,
+  // if it wasn't prepared in the background yet)
+  const [preparing, setPreparing] = useState(null);
+
   async function loadGenerated(id) {
     const group = groupOf(id);
     if (!group) return;
+    const ticket = ++loadTicketRef.current;
     setPicked(p => ({ ...p, [group.id]: id }));
     setActiveId(id);
     onSourceChange?.(id);
     setPosition(0);
     setLoopA(null);
-    const track = VARIANTS.find(v => v.id === id);
-    await engine.loadBuffer(track.make(engine.getCtx()));
+    setPreparing(id);
+    try {
+      const buffer = await getSourceBuffer(id, engine.getCtx());
+      if (ticket !== loadTicketRef.current) return;
+      await engine.loadBuffer(buffer);
+    } finally {
+      if (ticket === loadTicketRef.current) setPreparing(null);
+    }
   }
+
+  // Once something has loaded (so the AudioContext exists), render the music
+  // loops in the background so picking one is instant
+  useEffect(() => {
+    if (engine.isLoaded) prepareSources(engine.getCtx());
+  }, [engine.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleFile(e) {
     const file = e.target.files?.[0];
     if (!file) return;
+    loadTicketRef.current++;   // supersedes a built-in source still being prepared
+    setPreparing(null);
     setUploading(true);
     setActiveId(`upload:${file.name}`);
     onSourceChange?.('upload');
@@ -183,9 +204,10 @@ export function TrackSelector({ engine, gainDb, setGainDb, q, setQ, focus, setFo
               return (
                 <div
                   key={g.id}
-                  className={`track-btn track-group ${isActive ? 'active' : ''} ${isActive && engine.isPlaying ? 'live' : ''}`}
+                  className={`track-btn track-group ${isActive ? 'active' : ''} ${isActive && engine.isPlaying ? 'live' : ''} ${preparing === sel.id ? 'is-preparing' : ''}`}
                   role="group"
                   aria-label={g.label}
+                  aria-busy={preparing === sel.id}
                 >
                   <button
                     className="track-main"
