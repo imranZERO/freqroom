@@ -6,7 +6,7 @@ This file provides guidance to AI coding agents (Claude Code, Codex, Cursor, etc
 
 ```bash
 npm run dev      # dev server at http://localhost:5173
-npm run build    # production build → dist/
+npm run build    # production build → dist/, then scripts/prerender.js writes each page's static HTML
 npm run preview  # serve the production build
 npm test         # run the vitest suite once
 npm run test:watch  # watch mode
@@ -29,6 +29,7 @@ Vitest runs under Vite's own config (aliases like `react → preact/compat` appl
 - `tests/noiseGen.test.js` — white/pink noise buffers (finite, in range, RMS bands)
 - `tests/music-gen.test.js` — Drum/Band loops: length, range, RMS, determinism, seamless wrap, band loop's lo/mid/hi energy
 - `tests/source-cache.test.js` — `src/lib/sourceCache.js`: one build per source per AudioContext (shared while in flight), same output as direct generation (Worker-less fallback), `prepareSources`, unknown ids not cached; `renderLoop` returns plain arrays
+- `tests/pages.test.js` — `src/lib/pages.js` lookups (unknown paths → Not found), distinct titles/descriptions, and `public/sitemap.xml` / `robots.txt` matching `PAGES`
 - `tests/audio-engine-math.test.js` — `clampStartOffset` / `clampToLoopOffset`
 - `tests/trainer.test.js` — `src/lib/trainer.js`: `generateBands` subdivision, `bandRange`, `makeFilter`, octave error calc, Sweep tolerance gating, note naming, `pickDirection`, How Much? levels, Match EQ tolerance
 - `tests/scoring.test.js` — `src/lib/scoring.js`: `choicesFor`/`maxPoints` (10 points per bit, incl. How Much? and Match EQ), `sweepCredit`/`matchCredit` fades, `trialPoints`, `addResult` tallies (streaks, last-10, per-mode rows, old `{ total, correct }` lifetimes)
@@ -61,6 +62,7 @@ App.jsx (Wouter Router)
   │         │    └─ calls engine.play(filters) / engine.stop()
   │         └─ ScoreBoard           — points, accuracy, streaks, last 10 answers, and per-mode rows; Session/Lifetime tabs; always shown, dimmed until the first answer
   └─ /technical-details → TechnicalDetails
+  └─ anything else      → NotFound (prerendered as 404.html)
   App owns the theme and the How it works dialog; both pages render SiteHeader / SiteFooter (src/components/SiteChrome.jsx)
 ```
 
@@ -90,11 +92,11 @@ App.jsx (Wouter Router)
 
 **Theme** — `App` resolves `theme` (default `system`, which follows `prefers-color-scheme` live) to `data-theme="dark|light"` on `document.documentElement`; the CSS variables in `src/styles/base.css` handle the rest. The header button cycles System → Light → Dark. The choice is saved (see Persistence), and `index.html` applies it before first paint.
 
-**Offline / install (`public/sw.js`, `public/manifest.webmanifest`)** — the service worker is registered from `main.jsx` in production builds only. Page navigations are network-first with the cached `/` shell as the offline fallback; other same-origin GETs are cache-first and refreshed in the background (asset names are content-hashed). Bump `CACHE` in `sw.js` when changing the caching strategy. Icons: `icon-192/512.png` (rounded), `icon-maskable-512.png` (full-bleed), and `apple-touch-icon.png`, all rendered from `favicon.svg`.
+**Offline / install (`public/sw.js`, `public/manifest.webmanifest`)** — the service worker is registered from `main.jsx` in production builds only. Page navigations are network-first, cached per path, with the cached `/` page as the offline fallback for any path (the app routes on the client); other same-origin GETs are cache-first and refreshed in the background (asset names are content-hashed). Bump `CACHE` in `sw.js` when changing the caching strategy. Icons: `icon-192/512.png` (rounded), `icon-maskable-512.png` (full-bleed), and `apple-touch-icon.png`, all rendered from `favicon.svg`.
 
 ## Deployment
 
-Deployed on Cloudflare Pages. `public/_redirects` contains `/* /index.html 200` to enable client-side routing — any new Wouter routes will work automatically without changes to this file.
+Deployed on Cloudflare Pages. There is no `_redirects` catch-all: `npm run build` runs `scripts/prerender.js`, which renders the app in jsdom (through Vite's SSR loader) for each entry in `PAGES` (`src/lib/pages.js`) and writes `dist/index.html`, `dist/technical-details.html` (Pages serves it at `/technical-details`), and `dist/404.html` (served with a 404 status for unknown paths, `noindex`). Each gets its own `<title>`, description, canonical, and Open Graph tags; the JSON-LD in `index.html` (`WebSite`, which gives Google the site name shown above results, plus `WebApplication`) is kept on the home page only. `main.jsx` renders over the prerendered markup with a plain `render` (not `hydrate`, which would leave stale attributes when saved settings change the markup); Preact diffs against the existing nodes and reuses them, so the entrance animation isn't restarted. **Adding a route** means adding it to `PAGES` and to `public/sitemap.xml` (`tests/pages.test.js` checks they match). The link-preview image is `public/og-image.png` (1200×630).
 
 ## Key constants (`src/lib/progression.js`)
 

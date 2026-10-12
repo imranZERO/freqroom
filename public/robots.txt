@@ -1,2 +1,4 @@
 User-agent: *
 Allow: /
+
+Sitemap: https://freqroom.pages.dev/sitemap.xml

@@ -1,0 +1,77 @@
+<!-- Source for public/og-image.png (1200×630). Regenerate with:
+     firefox --headless --no-remote -profile "$(mktemp -d)" --window-size=1200,630 --screenshot "$PWD/public/og-image.png" "file://$PWD/scripts/og-image.html" -->
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  :root { --bg:#121110; --text:#ede6d8; --muted:#8b8375; --a:#eba542; --cut:#6fb0cf; --border:#2e2b27; --bh:#45403a;
+    --sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --mono: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { width:1200px; height:630px; overflow:hidden; background:var(--bg); color:var(--text); font-family:var(--sans); }
+  .wrap { position:relative; width:1200px; height:630px; padding:64px 64px; display:flex; gap:48px; align-items:center;
+    background: radial-gradient(900px 500px at 85% 40%, rgba(235,165,66,0.07), transparent 70%), var(--bg); }
+  .text { flex: 0 0 440px; }
+  .brand { display:flex; align-items:center; gap:18px; margin-bottom:34px; }
+  .brand svg { width:64px; height:64px; }
+  .brand polyline { fill:none; stroke:var(--a); stroke-width:2.6; stroke-linecap:round; stroke-linejoin:round; }
+  .name { font-size:68px; font-weight:800; letter-spacing:-0.02em; line-height:1; }
+  .name span { color:var(--a); }
+  h2 { font-size:44px; font-weight:700; line-height:1.12; letter-spacing:-0.01em; margin-bottom:22px; }
+  p { font-size:24px; line-height:1.4; color:var(--muted); }
+  .foot { position:absolute; left:64px; bottom:48px; font-family:var(--mono); font-size:17px; letter-spacing:0.14em; text-transform:uppercase; color:var(--muted); }
+  .foot b { color:var(--text); font-weight:500; }
+  .panel { flex:1; height:440px; border:1px solid #3d3832; border-radius:10px;
+    background:linear-gradient(to bottom,#2b2824,#211e1a); box-shadow: inset 0 1px 0 rgba(255,244,222,0.04), 0 10px 40px rgba(0,0,0,0.45); padding:22px 22px 18px; display:flex; flex-direction:column; }
+  .label { font-family:var(--mono); font-size:14px; letter-spacing:0.16em; text-transform:uppercase; color:var(--muted); display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+  .label::before { content:''; width:8px; height:8px; border-radius:2px; background:var(--a); box-shadow:0 0 8px var(--a); }
+  .label .right { margin-left:auto; color:var(--a); text-transform:none; letter-spacing:0.08em; }
+  svg.graph { flex:1; width:100%; }
+</style></head>
+<body><div class="wrap">
+  <div class="text">
+    <div class="brand">
+      <svg viewBox="0 0 32 32"><polyline points="2,22 8,22 11,18 14,8 17,18 20,22 30,22"/></svg>
+      <div class="name">Fr<span>eq</span>Room</div>
+    </div>
+    <h2>Train your ears to hear EQ.</h2>
+    <p>Hear a boost or cut, name the frequency. Adaptive levels, eight modes, free in your browser.</p>
+  </div>
+  <div class="panel">
+    <div class="label">Response <span class="right">1.25 kHz · +9 dB</span></div>
+    <svg class="graph" id="g" viewBox="0 0 600 340" preserveAspectRatio="none"></svg>
+  </div>
+  <div class="foot"><b>freqroom.pages.dev</b> · EQ ear training</div>
+</div>
+<script>
+const W=600, H=340, PADB=26, fs=48000, F0=20, F1=20000, DB=12;
+const x = f => Math.log(f/F0)/Math.log(F1/F0)*W;
+const y = db => (H-PADB) - 40 - db/DB*((H-PADB)-80);
+function peak(f0, g, Q) { // RBJ peaking, magnitude in dB
+  const A=10**(g/40), w0=2*Math.PI*f0/fs, al=Math.sin(w0)/(2*Q), c=Math.cos(w0);
+  const b=[1+al*A,-2*c,1-al*A], a=[1+al/A,-2*c,1-al/A];
+  return f => { const w=2*Math.PI*f/fs;
+    const re=(k)=>k[0]+k[1]*Math.cos(w)+k[2]*Math.cos(2*w), im=(k)=>-(k[1]*Math.sin(w)+k[2]*Math.sin(2*w));
+    return 10*Math.log10((re(b)**2+im(b)**2)/(re(a)**2+im(a)**2)); };
+}
+const pts = n => Array.from({length:n},(_,i)=>F0*(F1/F0)**(i/(n-1)));
+const path = fn => pts(240).map((f,i)=>(i?'L':'M')+x(f).toFixed(1)+','+y(fn(f)).toFixed(1)).join('');
+let s='';
+const regions=[[20,60,'SUB'],[60,250,'BASS'],[250,500,'LOW MID'],[500,2000,'MID'],[2000,4000,'UPPER MID'],[4000,20000,'PRESENCE · AIR']];
+regions.forEach(([a,b,l],i)=>{ if(i%2) s+=`<rect x="${x(a)}" y="0" width="${x(b)-x(a)}" height="${H-PADB}" fill="rgba(255,244,222,0.025)"/>`;
+  s+=`<text x="${(x(a)+x(b))/2}" y="${H-8}" fill="#6b645a" font-family="ui-monospace,Menlo,monospace" font-size="10.5" letter-spacing="1" text-anchor="middle">${l}</text>`; });
+[100,1000,10000].forEach(f=> s+=`<line x1="${x(f)}" x2="${x(f)}" y1="0" y2="${H-PADB}" stroke="#3a3530" stroke-width="1"/>`);
+[3,6,9,12].forEach(d=> s+=`<line x1="0" x2="${W}" y1="${y(d)}" y2="${y(d)}" stroke="#2f2b27" stroke-dasharray="3 5"/>`);
+s+=`<line x1="0" x2="${W}" y1="${y(0)}" y2="${y(0)}" stroke="#4a443d" stroke-width="1"/>`;
+const bands=[63,160,400,1250,3150,8000];
+bands.forEach(f=>{ if(f!==1250) s+=`<path d="${path(peak(f,9,1.4))}" fill="none" stroke="#8b8375" stroke-opacity="0.45" stroke-width="1.6"/>`; });
+// faint spectrum
+let sp=''; pts(120).forEach((f,i)=>{ const db=-3 - 0.9*Math.log2(f/1000) + 1.6*Math.sin(i*1.7)+1.1*Math.sin(i*0.63) + peak(1250,9,1.4)(f)*0.6; sp+=(i?'L':'M')+x(f).toFixed(1)+','+y(db*0.6-1).toFixed(1); });
+
+const ans=path(peak(1250,9,1.4));
+s+=`<path d="${ans}L${W},${y(0)}L0,${y(0)}Z" fill="#eba542" fill-opacity="0.16"/>`;
+s+=`<path d="${ans}" fill="none" stroke="#eba542" stroke-width="3.2" stroke-linejoin="round"/>`;
+s+=`<line x1="${x(1250)}" x2="${x(1250)}" y1="${y(9)-4}" y2="${H-PADB}" stroke="#eba542" stroke-opacity="0.5" stroke-dasharray="2 4"/>`;
+s+=`<circle cx="${x(1250)}" cy="${y(9)}" r="5.5" fill="#eba542"/>`;
+document.getElementById('g').innerHTML=s;
+</script>
+</body></html>

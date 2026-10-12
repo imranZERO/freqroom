@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Router, Route, Switch } from 'wouter';
+import { Router, Route, Switch, useLocation } from 'wouter';
 import { useAudioEngine, DEFAULT_VOLUME } from './hooks/useAudioEngine.js';
 import { useMediaQuery } from './hooks/useMediaQuery.js';
 import { TrackSelector } from './components/TrackSelector.jsx';
@@ -9,11 +9,13 @@ import { HowItWorksModal } from './components/HowItWorksModal.jsx';
 import { ConfirmDialog } from './components/ConfirmDialog.jsx';
 import { TechnicalDetails } from './components/TechnicalDetails.jsx';
 import { SiteHeader, SiteFooter } from './components/SiteChrome.jsx';
+import { NotFound } from './components/NotFound.jsx';
 import { ResetIcon, TrashIcon } from './components/Icons.jsx';
 import { usePersistentState, clearAll } from './lib/storage.js';
 import { EMPTY_PROGRESS, recordResult } from './lib/progress.js';
 import { parseChallenge } from './lib/challenge.js';
 import { EMPTY_TALLY, addResult } from './lib/scoring.js';
+import { pageFor } from './lib/pages.js';
 
 const DEFAULT_GAIN_DB = 6;
 const DEFAULT_Q = 1.4;
@@ -138,6 +140,12 @@ export default function App() {
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
   }, [isDark]);
 
+  // The static HTML already has each page's title; keep it right on in-app navigation
+  const [path] = useLocation();
+  useEffect(() => {
+    document.title = pageFor(path).title;
+  }, [path]);
+
   const chrome = {
     theme,
     onCycleTheme: () => setTheme(t => THEME_ORDER[(THEME_ORDER.indexOf(t) + 1) % THEME_ORDER.length]),
@@ -148,7 +156,8 @@ export default function App() {
     <Router>
       <Switch>
         <Route path="/technical-details"><TechnicalDetails chrome={chrome} /></Route>
-        <Route><MainApp chrome={chrome} /></Route>
+        <Route path="/"><MainApp chrome={chrome} /></Route>
+        <Route><NotFound chrome={chrome} /></Route>
       </Switch>
       <HowItWorksModal isOpen={showInfo} onClose={() => setShowInfo(false)} />
     </Router>

@@ -10,6 +10,9 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   });
 }
 
+// The build prerenders each page's markup for crawlers (scripts/prerender.js).
+// A plain render (not hydrate) diffs against it, fixing up anything saved
+// settings change, and reuses the nodes so the entrance animation plays once.
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <App />
